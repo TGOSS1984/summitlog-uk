@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getCollections, getMountains, getProgressLogs } from "../lib/api";
+import { Link } from "react-router-dom";
 
 function DashboardPage() {
   const [mountains, setMountains] = useState([]);
@@ -145,6 +146,44 @@ function DashboardPage() {
                         <span style={{ width: `${collection.percent}%` }} />
                       </div>
                     </article>
+                  ))}
+                </div>
+              </div>
+              <div className="my-progress-panel">
+                <div>
+                  <p className="section-kicker">My progress</p>
+                  <h2>Saved mountain logs</h2>
+                  <p>
+                    Review completed and planned mountains, then open each summit to update
+                    your route notes, date, distance or status.
+                  </p>
+                </div>
+
+                <div className="my-progress-list">
+                  {logs.length === 0 && (
+                    <p>No mountain logs yet. Open a mountain and save your first record.</p>
+                  )}
+
+                  {logs.map((log) => (
+                    <Link
+                      to={`/mountains/${log.mountain_detail?.slug}`}
+                      className="my-progress-card"
+                      key={log.id}
+                    >
+                      <div>
+                        <p className="my-progress-card__status">{log.status}</p>
+                        <h3>{log.mountain_detail?.name}</h3>
+                        <p>
+                          {log.mountain_detail?.collection?.name} /{" "}
+                          {log.mountain_detail?.region?.name}
+                        </p>
+                      </div>
+
+                      <div className="my-progress-card__meta">
+                        <span>{log.completed_date || "No date"}</span>
+                        <span>{log.hike_distance_km || "—"}km</span>
+                      </div>
+                    </Link>
                   ))}
                 </div>
               </div>
