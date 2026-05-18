@@ -5,6 +5,8 @@ from rest_framework.views import APIView
 
 from .serializers import RegisterSerializer, UserSerializer
 
+from django.middleware.csrf import get_token
+
 
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -72,5 +74,14 @@ class CurrentUserView(APIView):
 
         return Response(
             {"user": UserSerializer(request.user).data},
+            status=status.HTTP_200_OK,
+        )
+    
+class CsrfTokenView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        return Response(
+            {"csrfToken": get_token(request)},
             status=status.HTTP_200_OK,
         )
