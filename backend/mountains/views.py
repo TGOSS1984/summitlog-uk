@@ -1,3 +1,6 @@
+from rest_framework import filters
+from django_filters.rest_framework import DjangoFilterBackend
+
 from rest_framework import generics
 
 from .models import Mountain, MountainCollection, Region, SubRegion
@@ -31,6 +34,29 @@ class MountainListView(generics.ListAPIView):
         "subregion",
     ).all()
     serializer_class = MountainSerializer
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.OrderingFilter,
+        filters.SearchFilter,
+    ]
+    filterset_fields = [
+        "collection__slug",
+        "region__slug",
+        "subregion__slug",
+    ]
+    ordering_fields = [
+        "name",
+        "height_m",
+        "height_ft",
+        "rank_in_collection",
+    ]
+    search_fields = [
+        "name",
+        "summary",
+        "region__name",
+        "collection__name",
+        "subregion__name",
+    ]
 
 
 class MountainDetailView(generics.RetrieveAPIView):
