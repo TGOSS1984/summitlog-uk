@@ -1,0 +1,72 @@
+:root {
+
+/* ---------- backgrounds ---------- */
+
+--color-bg-dark: #07110d;
+--color-bg-slate: #101923;
+--color-bg-light: #f7f7f4;
+--color-bg-white: #ffffff;
+
+/* ---------- text ---------- */
+
+--color-text: #17212b;
+--color-text-soft: #55606c;
+--color-text-light: #f8fafc;
+
+/* ---------- accents ---------- */
+
+--color-accent: #d0aa62;
+--color-accent-soft: #e4c78f;
+
+/* ---------- surfaces ---------- */
+
+--surface-dark: rgba(15,23,42,0.78);
+--surface-light: rgba(255,255,255,0.8);
+
+--glass-dark:
+rgba(18,28,34,.68);
+
+--glass-light:
+rgba(255,255,255,.7);
+
+/* ---------- borders ---------- */
+
+--border-soft:
+rgba(255,255,255,.08);
+
+--border-dark:
+rgba(0,0,0,.08);
+
+/* ---------- spacing ---------- */
+
+--space-xs: .5rem;
+--space-sm: .75rem;
+--space-md: 1rem;
+--space-lg: 2rem;
+--space-xl: 4rem;
+--space-xxl: 8rem;
+
+/* ---------- radius ---------- */
+
+--radius-sm:12px;
+--radius-md:18px;
+--radius-lg:28px;
+--radius-xl:40px;
+
+/* ---------- shadows ---------- */
+
+--shadow-soft:
+0 12px 40px rgba(0,0,0,.08);
+
+--shadow-large:
+0 25px 60px rgba(0,0,0,.15);
+
+/* ---------- images ---------- */
+
+--hero-image:
+url("/images/placeholders/hero.jpg");
+
+--topography-pattern:
+url("/patterns/topography.svg");
+
+}
