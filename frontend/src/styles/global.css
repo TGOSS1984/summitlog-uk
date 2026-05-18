@@ -528,3 +528,129 @@ var(--space-lg);
 flex:1;
 
 }
+
+/*Dashboard*/
+
+.dashboard-hero {
+  background:
+    radial-gradient(circle at 80% 30%, rgba(127, 181, 179, 0.22), transparent 28%),
+    linear-gradient(135deg, var(--color-bg-dark), var(--color-teal-deep));
+}
+
+.dashboard-hero p:not(.section-kicker) {
+  max-width: 620px;
+  margin-top: var(--space-md);
+  color: rgba(248, 250, 252, 0.76);
+}
+
+.dashboard-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xxl);
+}
+
+.dashboard-stat-card {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-soft);
+}
+
+.dashboard-stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: var(--color-accent);
+}
+
+.dashboard-stat-card p {
+  color: var(--color-text-soft);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+}
+
+.dashboard-stat-card strong {
+  display: block;
+  margin: 0.6rem 0;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  line-height: 1;
+  color: var(--color-teal-deep);
+}
+
+.dashboard-stat-card span {
+  color: var(--color-text-soft);
+}
+
+.collection-progress-panel {
+  display: grid;
+  grid-template-columns: 0.75fr 1.25fr;
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+.collection-progress-list {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.collection-progress-card {
+  background: #ffffff;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-md);
+}
+
+.collection-progress-card h3 {
+  font-size: 1.1rem;
+}
+
+.collection-progress-card p {
+  color: var(--color-text-soft);
+}
+
+.collection-progress-card strong {
+  color: var(--color-teal-deep);
+  font-size: 1.5rem;
+}
+
+.progress-track {
+  grid-column: 1 / -1;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(4, 57, 59, 0.1);
+}
+
+.progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-teal), var(--color-accent));
+}
+
+@media (max-width: 920px) {
+  .dashboard-stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .collection-progress-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .dashboard-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
