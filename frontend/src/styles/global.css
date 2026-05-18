@@ -488,3 +488,43 @@ color:var(--color-teal);
     grid-template-columns: 1fr;
   }
 }
+
+/*Account Page*/
+
+.account-grid{
+
+display:grid;
+grid-template-columns:
+1fr 420px;
+
+gap:
+var(--space-xl);
+
+align-items:start;
+
+}
+
+.account-panel{
+
+padding:
+var(--space-xl);
+
+}
+
+.account-switch{
+
+display:flex;
+
+gap:
+var(--space-sm);
+
+margin-bottom:
+var(--space-lg);
+
+}
+
+.account-switch button{
+
+flex:1;
+
+}

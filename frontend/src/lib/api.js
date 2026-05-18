@@ -84,3 +84,38 @@ export async function updateProgressLog(logId, payload) {
     body: JSON.stringify(payload),
   });
 }
+
+export async function registerUser(payload) {
+  const csrfToken = await getCsrfToken();
+
+  return request("/auth/register/", {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": csrfToken,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function loginUser(payload) {
+  const csrfToken = await getCsrfToken();
+
+  return request("/auth/login/", {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": csrfToken,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function logoutUser() {
+  const csrfToken = await getCsrfToken();
+
+  return request("/auth/logout/", {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": csrfToken,
+    },
+  });
+}
