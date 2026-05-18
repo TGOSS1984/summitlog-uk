@@ -6,6 +6,7 @@ import DashboardPage from "./pages/DashboardPage";
 import HomePage from "./pages/HomePage";
 import MapPage from "./pages/MapPage";
 import MountainsPage from "./pages/MountainsPage";
+import MountainDetailPage from "./pages/MountainDetailPage";
 
 const router = createBrowserRouter([
   {
@@ -17,6 +18,7 @@ const router = createBrowserRouter([
       { path: "dashboard", element: <DashboardPage /> },
       { path: "map", element: <MapPage /> },
       { path: "account", element: <AccountPage /> },
+      {path:"mountains/:slug", element: <MountainDetailPage/>}
     ],
   },
 ]);

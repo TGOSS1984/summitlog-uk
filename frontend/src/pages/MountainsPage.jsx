@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getCollections, getMountains, getRegions } from "../lib/api";
+import { Link } from "react-router-dom";
 
 function MountainsPage() {
   const [mountains, setMountains] = useState([]);
@@ -161,28 +162,32 @@ function MountainsPage() {
           {status === "success" && (
             <div className="mountain-card-grid">
               {mountains.map((mountain) => (
-                <article className="mountain-card" key={mountain.id}>
-                  <div className="mountain-card__image">
+                <Link
+                    to={`/mountains/${mountain.slug}`}
+                    className="mountain-card"
+                    key={mountain.id}
+                >
+                    <div className="mountain-card__image">
                     <span>{mountain.rank_in_collection || "—"}</span>
-                  </div>
+                    </div>
 
-                  <div className="mountain-card__body">
+                    <div className="mountain-card__body">
                     <div>
-                      <p className="mountain-card__meta">
+                        <p className="mountain-card__meta">
                         {mountain.collection?.name} / {mountain.region?.name}
-                      </p>
-                      <h3>{mountain.name}</h3>
-                      <p>{mountain.summary}</p>
+                        </p>
+                        <h3>{mountain.name}</h3>
+                        <p>{mountain.summary}</p>
                     </div>
 
                     <div className="mountain-card__stats">
-                      <span>{mountain.height_m}m</span>
-                      <span>{mountain.height_ft || "—"}ft</span>
-                      <span>Prom. {mountain.prominence_m || "—"}m</span>
+                        <span>{mountain.height_m}m</span>
+                        <span>{mountain.height_ft || "—"}ft</span>
+                        <span>Prom. {mountain.prominence_m || "—"}m</span>
                     </div>
-                  </div>
-                </article>
-              ))}
+                    </div>
+                </Link>
+                ))}
             </div>
           )}
         </div>
