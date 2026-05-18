@@ -424,3 +424,67 @@ font-size:2rem;
 color:var(--color-teal);
 
 }
+
+/*Mountain Detail*/
+
+.tracking-panel {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+.tracking-panel > div > p:not(.section-kicker) {
+  max-width: 520px;
+  color: rgba(248, 250, 252, 0.72);
+  margin-top: var(--space-md);
+}
+
+.tracking-form {
+  padding: var(--space-lg);
+  display: grid;
+  gap: var(--space-md);
+}
+
+.tracking-form label {
+  display: grid;
+  gap: 0.4rem;
+  color: rgba(248, 250, 252, 0.8);
+  font-weight: 700;
+}
+
+.tracking-form input,
+.tracking-form select,
+.tracking-form textarea {
+  width: 100%;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.94);
+  padding: 0.85rem 1rem;
+  font: inherit;
+  color: var(--color-text);
+}
+
+.tracking-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.tracking-form button {
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-bg-dark);
+  padding: 0.9rem 1.2rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+@media (max-width: 800px) {
+  .tracking-panel,
+  .tracking-form__row,
+  .mountain-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}

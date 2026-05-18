@@ -1,20 +1,27 @@
 const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
 
 async function request(endpoint, options = {}) {
   const response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {}),
     },
-    ...options,
   });
 
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    throw new Error(data?.detail || "Something went wrong.");
+    console.error("API error:", response.status, data);
+
+    throw new Error(
+      data?.detail ||
+        data?.non_field_errors?.join(" ") ||
+        JSON.stringify(data) ||
+        "Something went wrong."
+    );
   }
 
   return data;
@@ -43,4 +50,37 @@ export function getMountain(slug) {
 
 export function getCurrentUser() {
   return request("/auth/me/");
+}
+
+export async function getCsrfToken() {
+  const data = await request("/auth/csrf/");
+  return data.csrfToken;
+}
+
+export async function getProgressLogs() {
+  return request("/progress/logs/");
+}
+
+export async function createProgressLog(payload) {
+  const csrfToken = await getCsrfToken();
+
+  return request("/progress/logs/", {
+    method: "POST",
+    headers: {
+      "X-CSRFToken": csrfToken,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateProgressLog(logId, payload) {
+  const csrfToken = await getCsrfToken();
+
+  return request(`/progress/logs/${logId}/`, {
+    method: "PATCH",
+    headers: {
+      "X-CSRFToken": csrfToken,
+    },
+    body: JSON.stringify(payload),
+  });
 }
