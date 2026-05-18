@@ -1,0 +1,290 @@
+[
+  {
+    "model": "mountains.mountaincollection",
+    "pk": 1,
+    "fields": {
+      "name": "Wainwrights",
+      "slug": "wainwrights",
+      "description": "The 214 Lake District fells described by Alfred Wainwright.",
+      "expected_total": 214
+    }
+  },
+  {
+    "model": "mountains.mountaincollection",
+    "pk": 2,
+    "fields": {
+      "name": "Munros",
+      "slug": "munros",
+      "description": "Scottish mountains over 3,000 feet.",
+      "expected_total": 282
+    }
+  },
+  {
+    "model": "mountains.mountaincollection",
+    "pk": 3,
+    "fields": {
+      "name": "Welsh Nuttalls",
+      "slug": "welsh-nuttalls",
+      "description": "Welsh mountains over 2,000 feet with sufficient prominence.",
+      "expected_total": 190
+    }
+  },
+  {
+    "model": "mountains.mountaincollection",
+    "pk": 4,
+    "fields": {
+      "name": "Peak District Summits",
+      "slug": "peak-district-summits",
+      "description": "Significant hills and summits across the Peak District.",
+      "expected_total": 0
+    }
+  },
+  {
+    "model": "mountains.mountaincollection",
+    "pk": 5,
+    "fields": {
+      "name": "Yorkshire Dales Summits",
+      "slug": "yorkshire-dales-summits",
+      "description": "Significant hills and summits across the Yorkshire Dales.",
+      "expected_total": 0
+    }
+  },
+  {
+    "model": "mountains.region",
+    "pk": 1,
+    "fields": {
+      "name": "Lake District",
+      "slug": "lake-district",
+      "description": "England's largest mountain landscape, home to the Wainwright fells."
+    }
+  },
+  {
+    "model": "mountains.region",
+    "pk": 2,
+    "fields": {
+      "name": "Scotland",
+      "slug": "scotland",
+      "description": "Home to the Munros and many of the highest mountains in the UK."
+    }
+  },
+  {
+    "model": "mountains.region",
+    "pk": 3,
+    "fields": {
+      "name": "Wales",
+      "slug": "wales",
+      "description": "A mountain-rich region including Snowdonia, the Carneddau, Glyderau and Brecon Beacons."
+    }
+  },
+  {
+    "model": "mountains.region",
+    "pk": 4,
+    "fields": {
+      "name": "Peak District",
+      "slug": "peak-district",
+      "description": "Rolling gritstone edges, moorland plateaus and classic English hills."
+    }
+  },
+  {
+    "model": "mountains.region",
+    "pk": 5,
+    "fields": {
+      "name": "Yorkshire Dales",
+      "slug": "yorkshire-dales",
+      "description": "Limestone valleys, high moorland and famous summits such as Ingleborough, Whernside and Pen-y-ghent."
+    }
+  },
+  {
+    "model": "mountains.region",
+    "pk": 6,
+    "fields": {
+      "name": "North Pennines",
+      "slug": "north-pennines",
+      "description": "High moorland country including Cross Fell."
+    }
+  },
+  {
+    "model": "mountains.subregion",
+    "pk": 1,
+    "fields": {
+      "name": "Eastern Fells",
+      "slug": "eastern-fells",
+      "region": 1,
+      "description": "A major Wainwright group including Helvellyn, Fairfield and High Street."
+    }
+  },
+  {
+    "model": "mountains.subregion",
+    "pk": 2,
+    "fields": {
+      "name": "Far Eastern Fells",
+      "slug": "far-eastern-fells",
+      "region": 1,
+      "description": "Remote eastern Lakeland fells stretching towards Haweswater and Kentmere."
+    }
+  },
+  {
+    "model": "mountains.subregion",
+    "pk": 3,
+    "fields": {
+      "name": "Central Fells",
+      "slug": "central-fells",
+      "region": 1,
+      "description": "Central Lakeland fells around Langdale, Grasmere and Borrowdale."
+    }
+  },
+  {
+    "model": "mountains.subregion",
+    "pk": 4,
+    "fields": {
+      "name": "Southern Fells",
+      "slug": "southern-fells",
+      "region": 1,
+      "description": "The high rugged heart of the Lakes, including Scafell Pike and Great Gable."
+    }
+  },
+  {
+    "model": "mountains.subregion",
+    "pk": 5,
+    "fields": {
+      "name": "Northern Fells",
+      "slug": "northern-fells",
+      "region": 1,
+      "description": "Northern Lakeland fells including Skiddaw and Blencathra."
+    }
+  },
+  {
+    "model": "mountains.subregion",
+    "pk": 6,
+    "fields": {
+      "name": "North Western Fells",
+      "slug": "north-western-fells",
+      "region": 1,
+      "description": "A varied group of fells west of Keswick and Buttermere."
+    }
+  },
+  {
+    "model": "mountains.subregion",
+    "pk": 7,
+    "fields": {
+      "name": "Western Fells",
+      "slug": "western-fells",
+      "region": 1,
+      "description": "A dramatic western group including Pillar, Red Pike and the Buttermere fells."
+    }
+  },
+  {
+    "model": "mountains.mountain",
+    "pk": 1,
+    "fields": {
+      "name": "Scafell Pike",
+      "slug": "scafell-pike",
+      "collection": 1,
+      "region": 1,
+      "subregion": 4,
+      "height_m": "978.00",
+      "height_ft": 3209,
+      "prominence_m": "912.00",
+      "rank_in_collection": 1,
+      "latitude": "54.454167",
+      "longitude": "-3.211389",
+      "summary": "The highest mountain in England and one of the most iconic Lake District objectives.",
+      "image_placeholder": "/images/mountains/scafell-pike.jpg"
+    }
+  },
+  {
+    "model": "mountains.mountain",
+    "pk": 2,
+    "fields": {
+      "name": "Helvellyn",
+      "slug": "helvellyn",
+      "collection": 1,
+      "region": 1,
+      "subregion": 1,
+      "height_m": "950.00",
+      "height_ft": 3117,
+      "prominence_m": "712.00",
+      "rank_in_collection": 3,
+      "latitude": "54.526944",
+      "longitude": "-3.017500",
+      "summary": "A famous Lake District summit known for Striding Edge and Swirral Edge.",
+      "image_placeholder": "/images/mountains/helvellyn.jpg"
+    }
+  },
+  {
+    "model": "mountains.mountain",
+    "pk": 3,
+    "fields": {
+      "name": "Ben Nevis",
+      "slug": "ben-nevis",
+      "collection": 2,
+      "region": 2,
+      "subregion": null,
+      "height_m": "1345.00",
+      "height_ft": 4413,
+      "prominence_m": "1345.00",
+      "rank_in_collection": 1,
+      "latitude": "56.796850",
+      "longitude": "-5.003508",
+      "summary": "The highest mountain in the UK and a flagship Munro.",
+      "image_placeholder": "/images/mountains/ben-nevis.jpg"
+    }
+  },
+  {
+    "model": "mountains.mountain",
+    "pk": 4,
+    "fields": {
+      "name": "Snowdon / Yr Wyddfa",
+      "slug": "snowdon-yr-wyddfa",
+      "collection": 3,
+      "region": 3,
+      "subregion": null,
+      "height_m": "1085.00",
+      "height_ft": 3560,
+      "prominence_m": "1039.00",
+      "rank_in_collection": 1,
+      "latitude": "53.068504",
+      "longitude": "-4.076277",
+      "summary": "The highest mountain in Wales and one of the most visited summits in the UK.",
+      "image_placeholder": "/images/mountains/snowdon-yr-wyddfa.jpg"
+    }
+  },
+  {
+    "model": "mountains.mountain",
+    "pk": 5,
+    "fields": {
+      "name": "Kinder Scout",
+      "slug": "kinder-scout",
+      "collection": 4,
+      "region": 4,
+      "subregion": null,
+      "height_m": "636.00",
+      "height_ft": 2087,
+      "prominence_m": "496.00",
+      "rank_in_collection": 1,
+      "latitude": "53.384167",
+      "longitude": "-1.872222",
+      "summary": "The highest point in the Peak District and a landmark moorland plateau.",
+      "image_placeholder": "/images/mountains/kinder-scout.jpg"
+    }
+  },
+  {
+    "model": "mountains.mountain",
+    "pk": 6,
+    "fields": {
+      "name": "Cross Fell",
+      "slug": "cross-fell",
+      "collection": 5,
+      "region": 6,
+      "subregion": null,
+      "height_m": "893.00",
+      "height_ft": 2930,
+      "prominence_m": "651.00",
+      "rank_in_collection": 1,
+      "latitude": "54.703056",
+      "longitude": "-2.487500",
+      "summary": "The highest point in the Pennines and a major standalone summit.",
+      "image_placeholder": "/images/mountains/cross-fell.jpg"
+    }
+  }
+]
