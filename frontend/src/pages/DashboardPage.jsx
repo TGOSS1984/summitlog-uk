@@ -16,33 +16,17 @@ import {
 import { getCollections, getMountains, getProgressLogs } from "../lib/api";
 
 const DASHBOARD_COLLECTIONS = [
-  {
-    name: "Wainwrights",
-    slug: "wainwrights",
-    expectedTotal: 214,
-  },
-  {
-    name: "Munros",
-    slug: "munros",
-    expectedTotal: 282,
-  },
-  {
-    name: "Nuttalls",
-    slug: "nuttalls",
-    expectedTotal: 443,
-  },
+  { name: "Wainwrights", slug: "wainwrights", expectedTotal: 214 },
+  { name: "Munros", slug: "munros", expectedTotal: 282 },
+  { name: "Nuttalls", slug: "nuttalls", expectedTotal: 443 },
 ];
 
 function mountainBelongsToCollection(mountain, collectionSlug) {
-  const membershipMatch = mountain.collection_memberships?.some(
-    (membership) => membership.collection?.slug === collectionSlug
+  return (
+    mountain.collection_memberships?.some(
+      (membership) => membership.collection?.slug === collectionSlug
+    ) || mountain.collection?.slug === collectionSlug
   );
-
-  if (membershipMatch) {
-    return true;
-  }
-
-  return mountain.collection?.slug === collectionSlug;
 }
 
 function getMountainCollectionNames(mountain) {
@@ -62,6 +46,15 @@ function getLogCollectionNames(log) {
   }
 
   return "Unlisted";
+}
+
+function formatDate(dateValue) {
+  if (!dateValue) return "No date";
+  return new Date(dateValue).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function DashboardPage() {
@@ -145,14 +138,8 @@ function DashboardPage() {
     });
 
     const statusChartData = [
-      {
-        name: "Completed",
-        value: completedLogs.length,
-      },
-      {
-        name: "Planned",
-        value: plannedLogs.length,
-      },
+      { name: "Completed", value: completedLogs.length },
+      { name: "Planned", value: plannedLogs.length },
       {
         name: "Remaining",
         value: Math.max(mountains.length - loggedMountainIds.size, 0),
@@ -165,6 +152,22 @@ function DashboardPage() {
       remaining: Math.max(collection.total - collection.completed, 0),
     }));
 
+    const recentLogs = [...logs]
+      .sort(
+        (a, b) =>
+          new Date(b.completed_date || b.updated_at || b.created_at) -
+          new Date(a.completed_date || a.updated_at || a.created_at)
+      )
+      .slice(0, 4);
+
+    const nextObjective = plannedLogs[0] || null;
+
+    const photoLogs = logs
+      .filter((log) => log.uploaded_image)
+      .slice(0, 4);
+
+    const elevationPercent = Math.min(Math.round((totalHeight / 10000) * 100), 100);
+
     return {
       completed: completedLogs.length,
       planned: plannedLogs.length,
@@ -174,6 +177,10 @@ function DashboardPage() {
       collectionStats,
       statusChartData,
       collectionChartData,
+      recentLogs,
+      nextObjective,
+      photoLogs,
+      elevationPercent,
     };
   }, [collections, logs, mountains]);
 
@@ -223,6 +230,53 @@ function DashboardPage() {
                   <p>Height total</p>
                   <strong>{Math.round(stats.totalHeight)}m</strong>
                   <span>summit height completed</span>
+                </article>
+              </div>
+
+              <div className="dashboard-journey-grid">
+                <article className="dashboard-journey-card dashboard-next-card">
+                  <p className="section-kicker">Next objective</p>
+
+                  {stats.nextObjective ? (
+                    <>
+                      <h3>{stats.nextObjective.mountain_detail?.name}</h3>
+                      <p>
+                        {getLogCollectionNames(stats.nextObjective)} /{" "}
+                        {stats.nextObjective.mountain_detail?.region?.name}
+                      </p>
+                      <div className="dashboard-journey-meta">
+                        <span>
+                          {stats.nextObjective.mountain_detail?.height_m}m
+                        </span>
+                        <span>
+                          {stats.nextObjective.route_taken || "Route not set"}
+                        </span>
+                      </div>
+                      <Link to={`/mountains/${stats.nextObjective.mountain_detail?.slug}`}>
+                        Open mountain
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <h3>No objective planned yet</h3>
+                      <p>Open a mountain and mark it as planned.</p>
+                      <Link to="/mountains">Explore mountains</Link>
+                    </>
+                  )}
+                </article>
+
+                <article className="dashboard-journey-card dashboard-elevation-card">
+                  <p className="section-kicker">Elevation climbed</p>
+                  <h3>{Math.round(stats.totalHeight)}m</h3>
+
+                  <div className="elevation-mountain">
+                    <div
+                      className="elevation-mountain__fill"
+                      style={{ height: `${stats.elevationPercent}%` }}
+                    />
+                  </div>
+
+                  <p>{stats.elevationPercent}% of a 10,000m milestone</p>
                 </article>
               </div>
 
@@ -282,6 +336,58 @@ function DashboardPage() {
                 </article>
               </div>
 
+              <div className="dashboard-story-grid">
+                <article className="dashboard-story-card">
+                  <p className="section-kicker">Recent activity</p>
+                  <h3>Latest mountain logs</h3>
+
+                  <div className="dashboard-timeline">
+                    {stats.recentLogs.length === 0 && (
+                      <p>No recent activity yet.</p>
+                    )}
+
+                    {stats.recentLogs.map((log) => (
+                      <Link
+                        to={`/mountains/${log.mountain_detail?.slug}`}
+                        className="dashboard-timeline-item"
+                        key={log.id}
+                      >
+                        <span>{log.status === "completed" ? "✓" : "○"}</span>
+                        <div>
+                          <strong>{log.mountain_detail?.name}</strong>
+                          <small>
+                            {log.status} / {formatDate(log.completed_date)}
+                          </small>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </article>
+
+                <article className="dashboard-story-card">
+                  <p className="section-kicker">Summit memories</p>
+                  <h3>Recent photos</h3>
+
+                  <div className="dashboard-photo-strip">
+                    {stats.photoLogs.length === 0 && (
+                      <p>No uploaded summit photos yet.</p>
+                    )}
+
+                    {stats.photoLogs.map((log) => (
+                      <Link
+                        to={`/mountains/${log.mountain_detail?.slug}`}
+                        key={log.id}
+                      >
+                        <img
+                          src={log.uploaded_image}
+                          alt={log.mountain_detail?.name}
+                        />
+                      </Link>
+                    ))}
+                  </div>
+                </article>
+              </div>
+
               <div className="collection-progress-panel">
                 <div>
                   <p className="section-kicker">Collection progress</p>
@@ -337,9 +443,7 @@ function DashboardPage() {
                       key={log.id}
                     >
                       <div>
-                        <p className="my-progress-card__status">
-                          {log.status}
-                        </p>
+                        <p className="my-progress-card__status">{log.status}</p>
                         <h3>{log.mountain_detail?.name}</h3>
                         <p>
                           {getLogCollectionNames(log)} /{" "}
