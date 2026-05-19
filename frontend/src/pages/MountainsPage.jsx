@@ -1,6 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { getCollections, getMountains, getRegions } from "../lib/api";
+import { getMountains } from "../lib/api";
 import { Link } from "react-router-dom";
+
+const COLLECTION_FILTERS = [
+  { label: "All collections", value: "" },
+  { label: "Wainwrights", value: "wainwrights" },
+  { label: "Munros", value: "munros" },
+  { label: "Nuttalls", value: "nuttalls" },
+];
+
+const REGION_FILTERS = [
+  { label: "All regions", value: "" },
+  { label: "Lake District", value: "lake-district" },
+  { label: "Scotland", value: "scotland" },
+  { label: "England", value: "england" },
+  { label: "Wales", value: "wales" },
+];
 
 function getCollectionNames(mountain) {
   if (mountain.collection_memberships?.length) {
@@ -13,43 +28,15 @@ function getCollectionNames(mountain) {
   return mountain.collection?.name || "Unlisted";
 }
 
-function getMountainRank(mountain) {
-  const firstRank = mountain.collection_memberships
-    ?.map((membership) => membership.rank_in_collection)
-    .find((rank) => rank !== null && rank !== undefined);
-
-  return firstRank || mountain.rank_in_collection || "—";
-}
-
 function MountainsPage() {
   const [mountains, setMountains] = useState([]);
-  const [collections, setCollections] = useState([]);
-  const [regions, setRegions] = useState([]);
   const [filters, setFilters] = useState({
     search: "",
-    collection__slug: "",
+    collection_memberships__collection__slug: "",
     region__slug: "",
-    ordering: "rank_in_collection",
+    ordering: "-height_m",
   });
   const [status, setStatus] = useState("loading");
-
-  useEffect(() => {
-    async function loadFilters() {
-      try {
-        const [collectionData, regionData] = await Promise.all([
-          getCollections(),
-          getRegions(),
-        ]);
-
-        setCollections(Array.isArray(collectionData) ? collectionData : []);
-        setRegions(Array.isArray(regionData) ? regionData : []);
-      } catch (error) {
-        console.error(error);
-      }
-    }
-
-    loadFilters();
-  }, []);
 
   useEffect(() => {
     async function loadMountains() {
@@ -134,14 +121,13 @@ function MountainsPage() {
               />
 
               <select
-                name="collection__slug"
-                value={filters.collection__slug}
+                name="collection_memberships__collection__slug"
+                value={filters.collection_memberships__collection__slug}
                 onChange={handleChange}
               >
-                <option value="">All collections</option>
-                {collections.map((collection) => (
-                  <option key={collection.id} value={collection.slug}>
-                    {collection.name}
+                {COLLECTION_FILTERS.map((collection) => (
+                  <option key={collection.label} value={collection.value}>
+                    {collection.label}
                   </option>
                 ))}
               </select>
@@ -151,10 +137,9 @@ function MountainsPage() {
                 value={filters.region__slug}
                 onChange={handleChange}
               >
-                <option value="">All regions</option>
-                {regions.map((region) => (
-                  <option key={region.id} value={region.slug}>
-                    {region.name}
+                {REGION_FILTERS.map((region) => (
+                  <option key={region.label} value={region.value}>
+                    {region.label}
                   </option>
                 ))}
               </select>
@@ -164,7 +149,6 @@ function MountainsPage() {
                 value={filters.ordering}
                 onChange={handleChange}
               >
-                <option value="rank_in_collection">Rank</option>
                 <option value="-height_m">Highest first</option>
                 <option value="height_m">Lowest first</option>
                 <option value="name">A-Z</option>
@@ -180,33 +164,33 @@ function MountainsPage() {
 
           {status === "success" && (
             <div className="mountain-card-grid">
-              {mountains.map((mountain) => (
+              {mountains.map((mountain, index) => (
                 <Link
-                    to={`/mountains/${mountain.slug}`}
-                    className="mountain-card"
-                    key={mountain.id}
+                  to={`/mountains/${mountain.slug}`}
+                  className="mountain-card"
+                  key={mountain.id}
                 >
-                    <div className="mountain-card__image">
-                    <span>{getMountainRank(mountain)}</span>
-                    </div>
+                  <div className="mountain-card__image">
+                    <span>{index + 1}</span>
+                  </div>
 
-                    <div className="mountain-card__body">
+                  <div className="mountain-card__body">
                     <div>
-                        <p className="mountain-card__meta">
+                      <p className="mountain-card__meta">
                         {getCollectionNames(mountain)} / {mountain.region?.name}
-                        </p>
-                        <h3>{mountain.name}</h3>
-                        <p>{mountain.summary}</p>
+                      </p>
+                      <h3>{mountain.name}</h3>
+                      <p>{mountain.summary}</p>
                     </div>
 
                     <div className="mountain-card__stats">
-                        <span>{mountain.height_m}m</span>
-                        <span>{mountain.height_ft || "—"}ft</span>
-                        <span>Prom. {mountain.prominence_m || "—"}m</span>
+                      <span>{mountain.height_m}m</span>
+                      <span>{mountain.height_ft || "—"}ft</span>
+                      <span>Prom. {mountain.prominence_m || "—"}m</span>
                     </div>
-                    </div>
+                  </div>
                 </Link>
-                ))}
+              ))}
             </div>
           )}
         </div>

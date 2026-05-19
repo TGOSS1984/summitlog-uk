@@ -29,7 +29,7 @@ CLASSIFICATION_COLLECTIONS = {
     "N": {
         "name": "Nuttalls",
         "slug": "nuttalls",
-        "region": "England and Wales",
+        "region": None,
         "expected_total": 443,
     },
 }
@@ -130,24 +130,53 @@ class Command(BaseCommand):
             if not name:
                 continue
 
+            country = row.get("Country", "").strip().upper()
             area = (
                 row.get("Area", "")
                 or row.get("Area (Nuttalls)", "")
                 or row.get("Section", "")
                 or row.get("Section/Region", "")
+            ).strip()
+
+            region_name = collection_data["region"]
+
+            if code == "N":
+                if country == "W":
+                    region_name = "Wales"
+                elif country == "E":
+                    region_name = "England"
+                else:
+                    region_name = "England and Wales"
+
+            hill_number = (
+                row.get("Number")
+                or row.get("DoBIH Number")
+                or row.get("Hill number")
+                or row.get("Hill Number")
+                or ""
             )
+
+            base_slug = slugify(name)
+
+            if hill_number:
+                mountain_slug = f"{base_slug}-{hill_number}"
+            else:
+                mountain_slug = slugify(
+                    f"{base_slug}-{row.get('Latitude', '')}-"
+                    f"{row.get('Longitude', '')}"
+                )
 
             rows.append(
                 {
                     "name": name,
-                    "slug": slugify(f"{collection_data['slug']}-{name}"),
+                    "slug": mountain_slug,
                     "collection": collection_data["name"],
                     "collection_slug": collection_data["slug"],
-                    "region": collection_data["region"],
-                    "subregion": area.strip(),
-                    "height_m": row.get("Metres") or row.get("Height (m)"),
-                    "height_ft": row.get("Feet") or row.get("Height (ft)"),
-                    "prominence_m": row.get("Drop") or row.get("Prom. (m)"),
+                    "region": region_name,
+                    "subregion": area,
+                    "height_m": row.get("Metres"),
+                    "height_ft": row.get("Feet"),
+                    "prominence_m": row.get("Drop"),
                     "rank_in_collection": "",
                     "latitude": row.get("Latitude"),
                     "longitude": row.get("Longitude"),
@@ -166,17 +195,23 @@ class Command(BaseCommand):
         region = self.get_or_create_region(row)
         subregion = self.get_or_create_subregion(row, region)
 
-        mountain_slug = slugify(row["name"])
+        mountain_slug = row["slug"] or slugify(row["name"])
 
-        mountain = Mountain.objects.filter(name=row["name"]).first()
+        mountain = Mountain.objects.filter(slug=mountain_slug).first()
+
+        if not mountain:
+            mountain = Mountain.objects.filter(
+                collection=collection,
+                name=row["name"],
+            ).first()
 
         if mountain:
             created = False
 
-            mountain.slug = mountain.slug or mountain_slug
+            mountain.slug = mountain_slug
             mountain.collection = mountain.collection or collection
-            mountain.region = mountain.region or region
-            mountain.subregion = mountain.subregion or subregion
+            mountain.region = region
+            mountain.subregion = subregion
             mountain.height_m = self.to_decimal(row.get("height_m"))
             mountain.height_ft = self.to_int(row.get("height_ft"))
             mountain.prominence_m = self.to_decimal(row.get("prominence_m"))

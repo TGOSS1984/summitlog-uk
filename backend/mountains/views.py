@@ -41,11 +41,12 @@ class MountainListView(generics.ListAPIView):
         filters.OrderingFilter,
         filters.SearchFilter,
     ]
-    filterset_fields = [
-        "collection__slug",
-        "region__slug",
-        "subregion__slug",
-    ]
+    filterset_fields = {
+        "collection__slug": ["exact"],
+        "collection_memberships__collection__slug": ["exact"],
+        "region__slug": ["exact"],
+        "subregion__slug": ["exact"],
+    }
     ordering_fields = [
         "name",
         "height_m",
