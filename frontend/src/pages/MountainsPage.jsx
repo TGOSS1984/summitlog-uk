@@ -2,6 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { getCollections, getMountains, getRegions } from "../lib/api";
 import { Link } from "react-router-dom";
 
+function getCollectionNames(mountain) {
+  if (mountain.collection_memberships?.length) {
+    return mountain.collection_memberships
+      .map((membership) => membership.collection?.name)
+      .filter(Boolean)
+      .join(" / ");
+  }
+
+  return mountain.collection?.name || "Unlisted";
+}
+
 function MountainsPage() {
   const [mountains, setMountains] = useState([]);
   const [collections, setCollections] = useState([]);
@@ -174,7 +185,7 @@ function MountainsPage() {
                     <div className="mountain-card__body">
                     <div>
                         <p className="mountain-card__meta">
-                        {mountain.collection?.name} / {mountain.region?.name}
+                        {getCollectionNames(mountain)} / {mountain.region?.name}
                         </p>
                         <h3>{mountain.name}</h3>
                         <p>{mountain.summary}</p>

@@ -18,6 +18,17 @@ const initialForm = {
   uploaded_image: "",
 };
 
+function getCollectionNames(mountain) {
+  if (mountain.collection_memberships?.length) {
+    return mountain.collection_memberships
+      .map((membership) => membership.collection?.name)
+      .filter(Boolean)
+      .join(" / ");
+  }
+
+  return mountain.collection?.name || "Unlisted";
+}
+
 function MountainDetailPage() {
   const { slug } = useParams();
 
@@ -132,7 +143,7 @@ function MountainDetailPage() {
     <main>
       <section className="section section-dark mountain-detail-hero">
         <div className="container">
-          <p className="section-kicker">{mountain.collection?.name}</p>
+          <p className="section-kicker">{getCollectionNames(mountain)}</p>
           <h1>{mountain.name}</h1>
           <p>{mountain.summary}</p>
         </div>
