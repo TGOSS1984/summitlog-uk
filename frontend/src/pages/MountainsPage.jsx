@@ -13,6 +13,14 @@ function getCollectionNames(mountain) {
   return mountain.collection?.name || "Unlisted";
 }
 
+function getMountainRank(mountain) {
+  const firstRank = mountain.collection_memberships
+    ?.map((membership) => membership.rank_in_collection)
+    .find((rank) => rank !== null && rank !== undefined);
+
+  return firstRank || mountain.rank_in_collection || "—";
+}
+
 function MountainsPage() {
   const [mountains, setMountains] = useState([]);
   const [collections, setCollections] = useState([]);
@@ -179,7 +187,7 @@ function MountainsPage() {
                     key={mountain.id}
                 >
                     <div className="mountain-card__image">
-                    <span>{mountain.rank_in_collection || "—"}</span>
+                    <span>{getMountainRank(mountain)}</span>
                     </div>
 
                     <div className="mountain-card__body">
