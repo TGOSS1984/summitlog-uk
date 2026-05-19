@@ -737,3 +737,102 @@ flex:1;
     text-align: left;
   }
 }
+
+/* Mountian Details Page*/
+
+.mountain-detail-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 560px;
+  display: flex;
+  align-items: center;
+  background:
+    radial-gradient(circle at 78% 28%, rgba(127, 181, 179, 0.22), transparent 30%),
+    linear-gradient(135deg, var(--color-bg-dark), var(--color-teal-deep));
+}
+
+.mountain-detail-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -24% 22%;
+  height: 360px;
+  background: rgba(208, 170, 98, 0.09);
+  filter: blur(90px);
+  transform: rotate(-6deg);
+}
+
+.mountain-detail-hero .container {
+  position: relative;
+  z-index: 1;
+}
+
+.mountain-detail-hero p:not(.section-kicker) {
+  max-width: 620px;
+  margin-top: var(--space-md);
+  color: rgba(248, 250, 252, 0.76);
+}
+
+.mountain-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-lg);
+}
+
+.mountain-stat-card {
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  padding: var(--space-lg);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-dark);
+  box-shadow: var(--shadow-soft);
+}
+
+.mountain-stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 5px;
+  background: linear-gradient(90deg, var(--color-teal), var(--color-accent));
+}
+
+.mountain-stat-card h3 {
+  color: var(--color-text-soft);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.mountain-stat-card strong {
+  display: block;
+  margin-top: 0.8rem;
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  line-height: 1;
+  color: var(--color-teal-deep);
+}
+
+/*Tracking Panel*/
+
+.tracking-panel {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+.tracking-form {
+  padding: var(--space-xl);
+  display: grid;
+  gap: var(--space-md);
+}
+
+.tracking-form button:hover {
+  transform: translateY(-1px);
+}
+
+.tracking-form input:focus,
+.tracking-form select:focus,
+.tracking-form textarea:focus {
+  outline: 2px solid rgba(208, 170, 98, 0.45);
+  border-color: var(--color-accent);
+}
