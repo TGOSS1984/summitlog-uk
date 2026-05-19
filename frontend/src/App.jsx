@@ -8,6 +8,7 @@ import MapPage from "./pages/MapPage";
 import MountainsPage from "./pages/MountainsPage";
 import MountainDetailPage from "./pages/MountainDetailPage";
 import CollectionDetailPage from "./pages/CollectionDetailPage";
+import RegionDetailPage from "./pages/RegionDetailPage";
 
 const router = createBrowserRouter([
   {
@@ -21,6 +22,7 @@ const router = createBrowserRouter([
       { path: "account", element: <AccountPage /> },
       { path:"mountains/:slug", element: <MountainDetailPage/> },
       { path: "collections/:slug", element: <CollectionDetailPage /> },
+      { path: "regions/:slug", element: <RegionDetailPage /> },
     ],
   },
 ]);

@@ -1121,3 +1121,55 @@ flex:1;
     grid-template-columns: 1fr;
   }
 }
+
+/*Regions Page*/
+
+.region-hero {
+  background:
+    radial-gradient(circle at 82% 28%, rgba(127, 181, 179, 0.22), transparent 30%),
+    linear-gradient(135deg, var(--color-bg-dark), var(--color-teal-deep));
+}
+
+.region-hero__grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--space-xl);
+  align-items: center;
+}
+
+.region-hero p:not(.section-kicker) {
+  max-width: 620px;
+  margin-top: var(--space-md);
+  color: rgba(248, 250, 252, 0.76);
+}
+
+.region-hero__panel {
+  padding: var(--space-lg);
+}
+
+.region-hero__panel strong {
+  display: block;
+  color: var(--color-accent);
+  font-size: 5rem;
+  line-height: 1;
+  margin: var(--space-sm) 0;
+}
+
+.region-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.region-mountain-list {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+@media (max-width: 820px) {
+  .region-hero__grid,
+  .region-overview-grid {
+    grid-template-columns: 1fr;
+  }
+}
