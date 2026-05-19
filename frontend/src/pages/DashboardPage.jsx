@@ -234,7 +234,8 @@ function DashboardPage() {
 
                 <div className="collection-progress-list">
                   {stats.collectionStats.map((collection) => (
-                    <article
+                    <Link
+                      to={`/collections/${collection.name.toLowerCase().replaceAll(" ", "-")}`}
                       className="collection-progress-card"
                       key={collection.id}
                     >
@@ -250,7 +251,7 @@ function DashboardPage() {
                       <div className="progress-track">
                         <span style={{ width: `${collection.percent}%` }} />
                       </div>
-                    </article>
+                    </Link>
                   ))}
                 </div>
               </div>
