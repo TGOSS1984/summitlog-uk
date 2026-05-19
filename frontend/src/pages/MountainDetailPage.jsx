@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   createProgressLog,
+  deleteProgressLog,
   getMountain,
   getProgressLogs,
   updateProgressLog,
@@ -90,14 +91,41 @@ function MountainDetailPage() {
     setSelectedImage(event.target.files[0] || null);
   }
 
+  async function handleDeleteLog() {
+    if (!logId) return;
+
+    const confirmed = window.confirm(
+      "Delete this mountain log? This cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteProgressLog(logId);
+
+      setLogId(null);
+      setSelectedImage(null);
+      setForm(initialForm);
+      setSaveStatus("deleted");
+    } catch (error) {
+      console.error(error);
+      setSaveStatus("error");
+    }
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
     try {
       setSaveStatus("saving");
 
+      const {
+        uploaded_image,
+        ...formWithoutImage
+      } = form;
+
       const payload = {
-        ...form,
+        ...formWithoutImage,
         mountain: mountain.id,
         completed_date: form.completed_date || null,
         hike_distance_km: form.hike_distance_km || null,
@@ -267,11 +295,28 @@ function MountainDetailPage() {
               />
             )}
 
-            <button type="submit">
-              {saveStatus === "saving" ? "Saving..." : "Save mountain log"}
-            </button>
+            <div className="tracking-form__actions">
+              <button type="submit">
+                {saveStatus === "saving"
+                  ? "Saving..."
+                  : logId
+                    ? "Update mountain log"
+                    : "Save mountain log"}
+              </button>
+
+              {logId && (
+                <button
+                  type="button"
+                  className="tracking-form__delete"
+                  onClick={handleDeleteLog}
+                >
+                  Delete log
+                </button>
+              )}
+            </div>
 
             {saveStatus === "saved" && <p>Saved successfully.</p>}
+            {saveStatus === "deleted" && <p>Mountain log deleted.</p>}
             {saveStatus === "error" && (
               <p>Unable to save. Make sure you are logged in.</p>
             )}

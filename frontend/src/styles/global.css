@@ -1439,3 +1439,21 @@ color:var(--color-teal);
     grid-template-columns: 1fr;
   }
 }
+
+/*Tracking Form*/
+
+.tracking-form__actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.tracking-form__actions button {
+  flex: 1;
+}
+
+.tracking-form__delete {
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  background: transparent !important;
+  color: rgba(248, 250, 252, 0.86) !important;
+}

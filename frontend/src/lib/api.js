@@ -85,6 +85,25 @@ export async function updateProgressLog(logId, payload) {
   });
 }
 
+export async function deleteProgressLog(logId) {
+  const csrfToken = await getCsrfToken();
+
+  const response = await fetch(`${API_BASE}/progress/logs/${logId}/`, {
+    method: "DELETE",
+    credentials: "include",
+    headers: {
+      "X-CSRFToken": csrfToken,
+    },
+  });
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.detail || JSON.stringify(data) || "Delete failed.");
+  }
+
+  return true;
+}
+
 export async function registerUser(payload) {
   const csrfToken = await getCsrfToken();
 
