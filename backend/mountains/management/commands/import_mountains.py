@@ -4,7 +4,13 @@ from decimal import Decimal
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.text import slugify
 
-from mountains.models import Mountain, MountainCollection, Region, SubRegion
+from mountains.models import (
+    Mountain,
+    MountainCollection,
+    MountainCollectionMembership,
+    Region,
+    SubRegion,
+)
 
 
 CLASSIFICATION_COLLECTIONS = {
@@ -160,25 +166,53 @@ class Command(BaseCommand):
         region = self.get_or_create_region(row)
         subregion = self.get_or_create_subregion(row, region)
 
-        slug = row["slug"] or slugify(row["name"])
+        mountain_slug = slugify(row["name"])
 
-        _, created = Mountain.objects.update_or_create(
+        mountain = Mountain.objects.filter(name=row["name"]).first()
+
+        if mountain:
+            created = False
+
+            mountain.slug = mountain.slug or mountain_slug
+            mountain.collection = mountain.collection or collection
+            mountain.region = mountain.region or region
+            mountain.subregion = mountain.subregion or subregion
+            mountain.height_m = self.to_decimal(row.get("height_m"))
+            mountain.height_ft = self.to_int(row.get("height_ft"))
+            mountain.prominence_m = self.to_decimal(row.get("prominence_m"))
+            mountain.rank_in_collection = self.to_int(
+                row.get("rank_in_collection")
+            )
+            mountain.latitude = self.to_decimal(row.get("latitude"))
+            mountain.longitude = self.to_decimal(row.get("longitude"))
+            mountain.summary = row.get("summary", "")
+            mountain.image_placeholder = f"/images/mountains/{mountain_slug}.jpg"
+            mountain.save()
+        else:
+            mountain = Mountain.objects.create(
+                name=row["name"],
+                slug=mountain_slug,
+                collection=collection,
+                region=region,
+                subregion=subregion,
+                height_m=self.to_decimal(row.get("height_m")),
+                height_ft=self.to_int(row.get("height_ft")),
+                prominence_m=self.to_decimal(row.get("prominence_m")),
+                rank_in_collection=self.to_int(row.get("rank_in_collection")),
+                latitude=self.to_decimal(row.get("latitude")),
+                longitude=self.to_decimal(row.get("longitude")),
+                summary=row.get("summary", ""),
+                image_placeholder=f"/images/mountains/{mountain_slug}.jpg",
+            )
+            created = True
+
+        MountainCollectionMembership.objects.update_or_create(
+            mountain=mountain,
             collection=collection,
-            name=row["name"],
             defaults={
-                "slug": slug,
-                "region": region,
-                "subregion": subregion,
-                "height_m": self.to_decimal(row.get("height_m")),
-                "height_ft": self.to_int(row.get("height_ft")),
-                "prominence_m": self.to_decimal(row.get("prominence_m")),
                 "rank_in_collection": self.to_int(
                     row.get("rank_in_collection")
                 ),
-                "latitude": self.to_decimal(row.get("latitude")),
-                "longitude": self.to_decimal(row.get("longitude")),
-                "summary": row.get("summary", ""),
-                "image_placeholder": f"/images/mountains/{slug}.jpg",
             },
         )
 
