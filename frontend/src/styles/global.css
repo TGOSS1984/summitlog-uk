@@ -1489,3 +1489,41 @@ color:var(--color-teal);
   background: rgba(139, 148, 147, 0.14);
   color: #5f6b69;
 }
+
+/*Map Page*/
+
+.map-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.map-popup {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 190px;
+}
+
+.map-popup strong {
+  font-size: 1rem;
+  color: var(--color-teal-deep);
+}
+
+.map-popup span {
+  color: var(--color-text-soft);
+}
+
+.map-popup a {
+  margin-top: 0.45rem;
+  color: var(--color-teal-deep);
+  font-weight: 900;
+}
+
+@media (max-width: 900px) {
+  .map-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
