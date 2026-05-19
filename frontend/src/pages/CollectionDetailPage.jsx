@@ -2,6 +2,30 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getCollections, getMountains, getProgressLogs } from "../lib/api";
 
+function getCollectionRank(mountain, collectionSlug) {
+  const membership = mountain.collection_memberships?.find(
+    (item) => item.collection?.slug === collectionSlug
+  );
+
+  return (
+    membership?.rank_in_collection ||
+    mountain.rank_in_collection ||
+    "—"
+  );
+}
+
+function getMountainLogStatus(mountain, logs) {
+  const log = logs.find((item) => item.mountain === mountain.id);
+
+  return log?.status || "not_started";
+}
+
+function getStatusLabel(status) {
+  if (status === "completed") return "Completed";
+  if (status === "planned") return "Planned";
+  return "Not started";
+}
+
 function CollectionDetailPage() {
   const { slug } = useParams();
 
@@ -15,11 +39,17 @@ function CollectionDetailPage() {
       try {
         const [collectionData, mountainData] = await Promise.all([
           getCollections(),
-          getMountains({ collection__slug: slug }),
+          getMountains({
+            collection_memberships__collection__slug: slug,
+          }),
         ]);
 
         setCollections(Array.isArray(collectionData) ? collectionData : []);
-        setMountains(Array.isArray(mountainData) ? mountainData : mountainData.results || []);
+        setMountains(
+          Array.isArray(mountainData)
+            ? mountainData
+            : mountainData.results || []
+        );
 
         try {
           const logData = await getProgressLogs();
@@ -40,17 +70,36 @@ function CollectionDetailPage() {
 
   const collection = collections.find((item) => item.slug === slug);
 
+  const orderedMountains = useMemo(() => {
+    return [...mountains].sort((a, b) => {
+      const rankA = Number(getCollectionRank(a, slug)) || 9999;
+      const rankB = Number(getCollectionRank(b, slug)) || 9999;
+
+      return rankA - rankB;
+    });
+  }, [mountains, slug]);
+
   const stats = useMemo(() => {
     const completedIds = new Set(
-      logs.filter((log) => log.status === "completed").map((log) => log.mountain)
+      logs
+        .filter((log) => log.status === "completed")
+        .map((log) => log.mountain)
     );
 
     const plannedIds = new Set(
-      logs.filter((log) => log.status === "planned").map((log) => log.mountain)
+      logs
+        .filter((log) => log.status === "planned")
+        .map((log) => log.mountain)
     );
 
-    const completed = mountains.filter((mountain) => completedIds.has(mountain.id)).length;
-    const planned = mountains.filter((mountain) => plannedIds.has(mountain.id)).length;
+    const completed = mountains.filter((mountain) =>
+      completedIds.has(mountain.id)
+    ).length;
+
+    const planned = mountains.filter((mountain) =>
+      plannedIds.has(mountain.id)
+    ).length;
+
     const total = collection?.expected_total || mountains.length || 0;
     const percent = total ? Math.round((completed / total) * 100) : 0;
 
@@ -114,17 +163,27 @@ function CollectionDetailPage() {
           </div>
 
           <div className="collection-mountain-list">
-            {mountains.map((mountain) => (
-              <Link
-                to={`/mountains/${mountain.slug}`}
-                className="collection-mountain-row"
-                key={mountain.id}
-              >
-                <span>{mountain.rank_in_collection || "—"}</span>
-                <strong>{mountain.name}</strong>
-                <small>{mountain.height_m}m</small>
-              </Link>
-            ))}
+            {orderedMountains.map((mountain) => {
+              const mountainStatus = getMountainLogStatus(mountain, logs);
+
+              return (
+                <Link
+                  to={`/mountains/${mountain.slug}`}
+                  className={`collection-mountain-row collection-mountain-row--${mountainStatus}`}
+                  key={mountain.id}
+                >
+                  <span>{getCollectionRank(mountain, slug)}</span>
+
+                  <strong>{mountain.name}</strong>
+
+                  <small>{mountain.height_m}m</small>
+
+                  <em className={`collection-status collection-status--${mountainStatus}`}>
+                    {getStatusLabel(mountainStatus)}
+                  </em>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>

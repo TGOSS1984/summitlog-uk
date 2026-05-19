@@ -1457,3 +1457,35 @@ color:var(--color-teal);
   background: transparent !important;
   color: rgba(248, 250, 252, 0.86) !important;
 }
+
+/*Collection Detail Page*/
+
+.collection-mountain-row {
+  grid-template-columns: 60px 1fr auto auto;
+}
+
+.collection-status {
+  justify-self: end;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.collection-status--completed {
+  background: rgba(4, 57, 59, 0.14);
+  color: var(--color-teal-deep);
+}
+
+.collection-status--planned {
+  background: rgba(208, 170, 98, 0.2);
+  color: #7a5610;
+}
+
+.collection-status--not_started {
+  background: rgba(139, 148, 147, 0.14);
+  color: #5f6b69;
+}
