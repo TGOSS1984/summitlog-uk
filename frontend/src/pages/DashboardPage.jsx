@@ -15,6 +15,55 @@ import {
 
 import { getCollections, getMountains, getProgressLogs } from "../lib/api";
 
+const DASHBOARD_COLLECTIONS = [
+  {
+    name: "Wainwrights",
+    slug: "wainwrights",
+    expectedTotal: 214,
+  },
+  {
+    name: "Munros",
+    slug: "munros",
+    expectedTotal: 282,
+  },
+  {
+    name: "Nuttalls",
+    slug: "nuttalls",
+    expectedTotal: 443,
+  },
+];
+
+function mountainBelongsToCollection(mountain, collectionSlug) {
+  const membershipMatch = mountain.collection_memberships?.some(
+    (membership) => membership.collection?.slug === collectionSlug
+  );
+
+  if (membershipMatch) {
+    return true;
+  }
+
+  return mountain.collection?.slug === collectionSlug;
+}
+
+function getMountainCollectionNames(mountain) {
+  if (mountain.collection_memberships?.length) {
+    return mountain.collection_memberships
+      .map((membership) => membership.collection?.name)
+      .filter(Boolean)
+      .join(" / ");
+  }
+
+  return mountain.collection?.name || "Unlisted";
+}
+
+function getLogCollectionNames(log) {
+  if (log.mountain_detail) {
+    return getMountainCollectionNames(log.mountain_detail);
+  }
+
+  return "Unlisted";
+}
+
 function DashboardPage() {
   const [mountains, setMountains] = useState([]);
   const [collections, setCollections] = useState([]);
@@ -53,6 +102,8 @@ function DashboardPage() {
       completedLogs.map((log) => log.mountain)
     );
 
+    const loggedMountainIds = new Set(logs.map((log) => log.mountain));
+
     const totalDistance = completedLogs.reduce(
       (total, log) => total + Number(log.hike_distance_km || 0),
       0
@@ -62,9 +113,13 @@ function DashboardPage() {
       .filter((mountain) => completedMountainIds.has(mountain.id))
       .reduce((total, mountain) => total + Number(mountain.height_m || 0), 0);
 
-    const collectionStats = collections.map((collection) => {
-      const collectionMountains = mountains.filter(
-        (mountain) => mountain.collection?.id === collection.id
+    const collectionStats = DASHBOARD_COLLECTIONS.map((dashboardCollection) => {
+      const apiCollection = collections.find(
+        (collection) => collection.slug === dashboardCollection.slug
+      );
+
+      const collectionMountains = mountains.filter((mountain) =>
+        mountainBelongsToCollection(mountain, dashboardCollection.slug)
       );
 
       const completedCount = collectionMountains.filter((mountain) =>
@@ -72,11 +127,15 @@ function DashboardPage() {
       ).length;
 
       const totalCount =
-        collection.expected_total || collectionMountains.length || 0;
+        apiCollection?.expected_total ||
+        dashboardCollection.expectedTotal ||
+        collectionMountains.length ||
+        0;
 
       return {
-        id: collection.id,
-        name: collection.name,
+        id: apiCollection?.id || dashboardCollection.slug,
+        name: dashboardCollection.name,
+        slug: dashboardCollection.slug,
         completed: completedCount,
         total: totalCount,
         percent: totalCount
@@ -96,10 +155,7 @@ function DashboardPage() {
       },
       {
         name: "Remaining",
-        value: Math.max(
-          mountains.length - completedLogs.length - plannedLogs.length,
-          0
-        ),
+        value: Math.max(mountains.length - loggedMountainIds.size, 0),
       },
     ];
 
@@ -235,7 +291,7 @@ function DashboardPage() {
                 <div className="collection-progress-list">
                   {stats.collectionStats.map((collection) => (
                     <Link
-                      to={`/collections/${collection.name.toLowerCase().replaceAll(" ", "-")}`}
+                      to={`/collections/${collection.slug}`}
                       className="collection-progress-card"
                       key={collection.id}
                     >
@@ -286,7 +342,7 @@ function DashboardPage() {
                         </p>
                         <h3>{log.mountain_detail?.name}</h3>
                         <p>
-                          {log.mountain_detail?.collection?.name} /{" "}
+                          {getLogCollectionNames(log)} /{" "}
                           {log.mountain_detail?.region?.name}
                         </p>
                       </div>
