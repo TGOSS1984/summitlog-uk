@@ -1,6 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { getCollections, getMountains, getProgressLogs } from "../lib/api";
 import { Link } from "react-router-dom";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+import { getCollections, getMountains, getProgressLogs } from "../lib/api";
 
 function DashboardPage() {
   const [mountains, setMountains] = useState([]);
@@ -17,7 +30,9 @@ function DashboardPage() {
           getProgressLogs(),
         ]);
 
-        setMountains(Array.isArray(mountainData) ? mountainData : mountainData.results || []);
+        setMountains(
+          Array.isArray(mountainData) ? mountainData : mountainData.results || []
+        );
         setCollections(Array.isArray(collectionData) ? collectionData : []);
         setLogs(Array.isArray(logData) ? logData : logData.results || []);
         setStatus("success");
@@ -34,7 +49,9 @@ function DashboardPage() {
     const completedLogs = logs.filter((log) => log.status === "completed");
     const plannedLogs = logs.filter((log) => log.status === "planned");
 
-    const completedMountainIds = new Set(completedLogs.map((log) => log.mountain));
+    const completedMountainIds = new Set(
+      completedLogs.map((log) => log.mountain)
+    );
 
     const totalDistance = completedLogs.reduce(
       (total, log) => total + Number(log.hike_distance_km || 0),
@@ -54,16 +71,43 @@ function DashboardPage() {
         completedMountainIds.has(mountain.id)
       ).length;
 
-      const totalCount = collection.expected_total || collectionMountains.length || 0;
+      const totalCount =
+        collection.expected_total || collectionMountains.length || 0;
 
       return {
         id: collection.id,
         name: collection.name,
         completed: completedCount,
         total: totalCount,
-        percent: totalCount ? Math.round((completedCount / totalCount) * 100) : 0,
+        percent: totalCount
+          ? Math.round((completedCount / totalCount) * 100)
+          : 0,
       };
     });
+
+    const statusChartData = [
+      {
+        name: "Completed",
+        value: completedLogs.length,
+      },
+      {
+        name: "Planned",
+        value: plannedLogs.length,
+      },
+      {
+        name: "Remaining",
+        value: Math.max(
+          mountains.length - completedLogs.length - plannedLogs.length,
+          0
+        ),
+      },
+    ];
+
+    const collectionChartData = collectionStats.map((collection) => ({
+      name: collection.name,
+      completed: collection.completed,
+      remaining: Math.max(collection.total - collection.completed, 0),
+    }));
 
     return {
       completed: completedLogs.length,
@@ -72,6 +116,8 @@ function DashboardPage() {
       totalDistance,
       totalHeight,
       collectionStats,
+      statusChartData,
+      collectionChartData,
     };
   }, [collections, logs, mountains]);
 
@@ -124,6 +170,62 @@ function DashboardPage() {
                 </article>
               </div>
 
+              <div className="dashboard-chart-grid">
+                <article className="dashboard-chart-card">
+                  <div>
+                    <p className="section-kicker">Overview</p>
+                    <h3>Progress status</h3>
+                  </div>
+
+                  <ResponsiveContainer width="100%" height={280}>
+                    <PieChart>
+                      <Pie
+                        data={stats.statusChartData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={70}
+                        outerRadius={105}
+                        paddingAngle={4}
+                      >
+                        {stats.statusChartData.map((entry) => (
+                          <Cell
+                            key={entry.name}
+                            className={`chart-cell chart-cell--${entry.name.toLowerCase()}`}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </article>
+
+                <article className="dashboard-chart-card">
+                  <div>
+                    <p className="section-kicker">Collections</p>
+                    <h3>Completed vs remaining</h3>
+                  </div>
+
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={stats.collectionChartData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Bar
+                        dataKey="completed"
+                        stackId="a"
+                        className="chart-bar chart-bar--completed"
+                      />
+                      <Bar
+                        dataKey="remaining"
+                        stackId="a"
+                        className="chart-bar chart-bar--remaining"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </article>
+              </div>
+
               <div className="collection-progress-panel">
                 <div>
                   <p className="section-kicker">Collection progress</p>
@@ -132,7 +234,10 @@ function DashboardPage() {
 
                 <div className="collection-progress-list">
                   {stats.collectionStats.map((collection) => (
-                    <article className="collection-progress-card" key={collection.id}>
+                    <article
+                      className="collection-progress-card"
+                      key={collection.id}
+                    >
                       <div>
                         <h3>{collection.name}</h3>
                         <p>
@@ -149,19 +254,23 @@ function DashboardPage() {
                   ))}
                 </div>
               </div>
+
               <div className="my-progress-panel">
                 <div>
                   <p className="section-kicker">My progress</p>
                   <h2>Saved mountain logs</h2>
                   <p>
-                    Review completed and planned mountains, then open each summit to update
-                    your route notes, date, distance or status.
+                    Review completed and planned mountains, then open each summit
+                    to update your route notes, date, distance or status.
                   </p>
                 </div>
 
                 <div className="my-progress-list">
                   {logs.length === 0 && (
-                    <p>No mountain logs yet. Open a mountain and save your first record.</p>
+                    <p>
+                      No mountain logs yet. Open a mountain and save your first
+                      record.
+                    </p>
                   )}
 
                   {logs.map((log) => (
@@ -171,7 +280,9 @@ function DashboardPage() {
                       key={log.id}
                     >
                       <div>
-                        <p className="my-progress-card__status">{log.status}</p>
+                        <p className="my-progress-card__status">
+                          {log.status}
+                        </p>
                         <h3>{log.mountain_detail?.name}</h3>
                         <p>
                           {log.mountain_detail?.collection?.name} /{" "}

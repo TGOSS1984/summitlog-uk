@@ -958,3 +958,51 @@ flex:1;
 .legend-dot--not-started {
   background: #8b9493;
 }
+
+/*Dashboard Page*/
+
+.dashboard-chart-grid {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xxl);
+}
+
+.dashboard-chart-card {
+  background: #ffffff;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-soft);
+}
+
+.dashboard-chart-card h3 {
+  font-size: 1.35rem;
+  margin-bottom: var(--space-lg);
+}
+
+.chart-cell--completed {
+  fill: var(--color-teal);
+}
+
+.chart-cell--planned {
+  fill: var(--color-accent);
+}
+
+.chart-cell--remaining {
+  fill: #d9dedc;
+}
+
+.chart-bar--completed {
+  fill: var(--color-teal);
+}
+
+.chart-bar--remaining {
+  fill: #d9dedc;
+}
+
+@media (max-width: 900px) {
+  .dashboard-chart-grid {
+    grid-template-columns: 1fr;
+  }
+}
