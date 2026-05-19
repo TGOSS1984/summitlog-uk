@@ -1,6 +1,12 @@
 from rest_framework import serializers
 
-from .models import Mountain, MountainCollection, Region, SubRegion
+from .models import (
+    Mountain,
+    MountainCollection,
+    MountainCollectionMembership,
+    Region,
+    SubRegion,
+)
 
 
 class MountainCollectionSerializer(serializers.ModelSerializer):
@@ -40,10 +46,26 @@ class SubRegionSerializer(serializers.ModelSerializer):
         ]
 
 
+class MountainCollectionMembershipSerializer(serializers.ModelSerializer):
+    collection = MountainCollectionSerializer(read_only=True)
+
+    class Meta:
+        model = MountainCollectionMembership
+        fields = [
+            "id",
+            "collection",
+            "rank_in_collection",
+        ]
+
+
 class MountainSerializer(serializers.ModelSerializer):
     collection = MountainCollectionSerializer(read_only=True)
     region = RegionSerializer(read_only=True)
     subregion = SubRegionSerializer(read_only=True)
+    collection_memberships = MountainCollectionMembershipSerializer(
+        many=True,
+        read_only=True,
+    )
 
     class Meta:
         model = Mountain
@@ -52,6 +74,7 @@ class MountainSerializer(serializers.ModelSerializer):
             "name",
             "slug",
             "collection",
+            "collection_memberships",
             "region",
             "subregion",
             "height_m",

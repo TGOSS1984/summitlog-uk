@@ -1,7 +1,5 @@
-from rest_framework import filters
 from django_filters.rest_framework import DjangoFilterBackend
-
-from rest_framework import generics
+from rest_framework import filters, generics
 
 from .models import Mountain, MountainCollection, Region, SubRegion
 from .serializers import (
@@ -28,11 +26,15 @@ class SubRegionListView(generics.ListAPIView):
 
 
 class MountainListView(generics.ListAPIView):
-    queryset = Mountain.objects.select_related(
-        "collection",
-        "region",
-        "subregion",
-    ).all()
+    queryset = (
+        Mountain.objects.select_related(
+            "collection",
+            "region",
+            "subregion",
+        )
+        .prefetch_related("collection_memberships__collection")
+        .all()
+    )
     serializer_class = MountainSerializer
     filter_backends = [
         DjangoFilterBackend,
@@ -60,10 +62,14 @@ class MountainListView(generics.ListAPIView):
 
 
 class MountainDetailView(generics.RetrieveAPIView):
-    queryset = Mountain.objects.select_related(
-        "collection",
-        "region",
-        "subregion",
-    ).all()
+    queryset = (
+        Mountain.objects.select_related(
+            "collection",
+            "region",
+            "subregion",
+        )
+        .prefetch_related("collection_memberships__collection")
+        .all()
+    )
     serializer_class = MountainSerializer
     lookup_field = "slug"
