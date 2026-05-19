@@ -898,3 +898,63 @@ flex:1;
     height: 520px;
   }
 }
+
+.summit-marker {
+  border-radius: 999px;
+}
+
+.summit-marker span {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.summit-marker--completed span {
+  background: var(--color-teal);
+}
+
+.summit-marker--planned span {
+  background: var(--color-accent);
+}
+
+.summit-marker--not_started span {
+  background: #8b9493;
+}
+
+.map-legend {
+  display: grid;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border-dark);
+}
+
+.map-legend p {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--color-text-soft);
+  font-weight: 700;
+}
+
+.legend-dot {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  border-radius: 999px;
+}
+
+.legend-dot--completed {
+  background: var(--color-teal);
+}
+
+.legend-dot--planned {
+  background: var(--color-accent);
+}
+
+.legend-dot--not-started {
+  background: #8b9493;
+}
