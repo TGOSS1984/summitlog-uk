@@ -98,3 +98,25 @@ class Mountain(models.Model):
 
     def __str__(self):
         return self.name
+    
+class MountainCollectionMembership(models.Model):
+    mountain = models.ForeignKey(
+        Mountain,
+        on_delete=models.CASCADE,
+        related_name="collection_memberships",
+    )
+
+    collection = models.ForeignKey(
+        MountainCollection,
+        on_delete=models.CASCADE,
+        related_name="mountain_memberships",
+    )
+
+    rank_in_collection = models.PositiveIntegerField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ["mountain", "collection"]
+        ordering = ["collection__name", "rank_in_collection", "mountain__name"]
+
+    def __str__(self):
+        return f"{self.mountain.name} - {self.collection.name}"

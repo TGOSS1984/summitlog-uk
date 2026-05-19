@@ -1,6 +1,12 @@
 from django.contrib import admin
 
-from .models import Mountain, MountainCollection, Region, SubRegion
+from .models import (
+    Mountain,
+    MountainCollection,
+    MountainCollectionMembership,
+    Region,
+    SubRegion,
+)
 
 
 @admin.register(MountainCollection)
@@ -38,3 +44,9 @@ class MountainAdmin(admin.ModelAdmin):
     list_filter = ("collection", "region", "subregion")
     search_fields = ("name", "collection__name", "region__name")
     prepopulated_fields = {"slug": ("name",)}
+
+@admin.register(MountainCollectionMembership)
+class MountainCollectionMembershipAdmin(admin.ModelAdmin):
+    list_display = ("mountain", "collection", "rank_in_collection")
+    list_filter = ("collection",)
+    search_fields = ("mountain__name", "collection__name")
