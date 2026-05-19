@@ -119,3 +119,24 @@ export async function logoutUser() {
     },
   });
 }
+
+export async function updateProgressLogWithImage(logId, formData) {
+  const csrfToken = await getCsrfToken();
+
+  const response = await fetch(`${API_BASE}/progress/logs/${logId}/`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: {
+      "X-CSRFToken": csrfToken,
+    },
+    body: formData,
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(data?.detail || JSON.stringify(data) || "Upload failed.");
+  }
+
+  return data;
+}

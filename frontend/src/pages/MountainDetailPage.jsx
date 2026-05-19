@@ -5,6 +5,7 @@ import {
   getMountain,
   getProgressLogs,
   updateProgressLog,
+  updateProgressLogWithImage,
 } from "../lib/api";
 
 const initialForm = {
@@ -14,6 +15,7 @@ const initialForm = {
   hike_distance_km: "",
   hike_duration_hours: "",
   notes: "",
+  uploaded_image: "",
 };
 
 function MountainDetailPage() {
@@ -24,6 +26,7 @@ function MountainDetailPage() {
   const [form, setForm] = useState(initialForm);
   const [status, setStatus] = useState("loading");
   const [saveStatus, setSaveStatus] = useState("idle");
+  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     async function loadMountain() {
@@ -46,6 +49,7 @@ function MountainDetailPage() {
               hike_distance_km: existingLog.hike_distance_km || "",
               hike_duration_hours: existingLog.hike_duration_hours || "",
               notes: existingLog.notes || "",
+              uploaded_image: existingLog.uploaded_image || "",
             });
           }
         } catch (error) {
@@ -71,6 +75,10 @@ function MountainDetailPage() {
     }));
   }
 
+  function handleImageChange(event) {
+    setSelectedImage(event.target.files[0] || null);
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -90,6 +98,21 @@ function MountainDetailPage() {
         : await createProgressLog(payload);
 
       setLogId(savedLog.id);
+      if (selectedImage) {
+        const imageFormData = new FormData();
+        imageFormData.append("uploaded_image", selectedImage);
+
+        const imageLog = await updateProgressLogWithImage(
+          savedLog.id,
+          imageFormData
+        );
+
+        setLogId(imageLog.id);
+        setForm((currentForm) => ({
+          ...currentForm,
+          uploaded_image: imageLog.uploaded_image || "",
+        }));
+      }
       setSaveStatus("saved");
     } catch (error) {
       console.error(error);
@@ -215,6 +238,23 @@ function MountainDetailPage() {
                 placeholder="Weather, route condition, memories, who you walked with..."
               />
             </label>
+
+            <label>
+              Route image
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+              />
+            </label>
+
+            {form.uploaded_image && (
+              <img
+                className="tracking-form__preview"
+                src={form.uploaded_image}
+                alt={`${mountain.name} route upload`}
+              />
+            )}
 
             <button type="submit">
               {saveStatus === "saving" ? "Saving..." : "Save mountain log"}
