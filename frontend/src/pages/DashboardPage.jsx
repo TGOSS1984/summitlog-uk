@@ -168,6 +168,56 @@ function DashboardPage() {
 
     const elevationPercent = Math.min(Math.round((totalHeight / 10000) * 100), 100);
 
+    const achievements = [
+      {
+        title: "First Summit",
+        description: "Complete your first mountain log.",
+        target: 1,
+        current: completedLogs.length,
+      },
+      {
+        title: "Wainwright Starter",
+        description: "Complete 5 Wainwrights.",
+        target: 5,
+        current:
+          collectionStats.find(
+            (item) => item.slug === "wainwrights"
+          )?.completed || 0,
+      },
+      {
+        title: "Mountain Regular",
+        description: "Complete 10 mountains.",
+        target: 10,
+        current: completedLogs.length,
+      },
+      {
+        title: "Distance Walker",
+        description: "Log 50km of routes.",
+        target: 50,
+        current: totalDistance,
+      },
+      {
+        title: "High Climber",
+        description: "Reach 5000m total elevation.",
+        target: 5000,
+        current: totalHeight,
+      },
+    ];
+
+    const achievedBadges = achievements.filter(
+      (achievement) =>
+        achievement.current >= achievement.target
+    );
+
+    const achievementPercent =
+      achievements.length > 0
+        ? Math.round(
+            (achievedBadges.length /
+              achievements.length) *
+              100
+          )
+        : 0;
+
     return {
       completed: completedLogs.length,
       planned: plannedLogs.length,
@@ -181,6 +231,9 @@ function DashboardPage() {
       nextObjective,
       photoLogs,
       elevationPercent,
+      achievements,
+      achievedBadges,
+      achievementPercent,
     };
   }, [collections, logs, mountains]);
 
@@ -387,7 +440,131 @@ function DashboardPage() {
                   </div>
                 </article>
               </div>
+              <div className="dashboard-achievement-panel">
 
+                <div className="dashboard-achievement-summary">
+
+                  <div>
+                    <p className="section-kicker">
+                      Achievements
+                    </p>
+
+                    <h2>
+                      Summit achievements
+                    </h2>
+                  </div>
+
+                  <div className="dashboard-achievement-score">
+
+                    <strong>
+                      {stats.achievedBadges.length}
+                      {" / "}
+                      {stats.achievements.length}
+                    </strong>
+
+                    <span>
+                      achieved
+                    </span>
+
+                  </div>
+
+                  <div className="progress-track">
+                    <span
+                      style={{
+                        width:
+                          `${stats.achievementPercent}%`,
+                      }}
+                    />
+                  </div>
+
+                  <p>
+                    {
+                      stats.achievements.length -
+                      stats.achievedBadges.length
+                    }
+                    {" "}
+                    achievements remaining
+                  </p>
+
+                </div>
+
+                <div className="dashboard-achievement-list">
+
+                  {stats.achievements.map(
+                    (achievement) => {
+
+                      const achieved =
+                        achievement.current >=
+                        achievement.target;
+
+                      const percent =
+                        Math.min(
+                          Math.round(
+                            (
+                              achievement.current /
+                              achievement.target
+                            ) * 100
+                          ),
+                          100
+                        );
+
+                      return (
+
+                        <article
+                          key={achievement.title}
+                          className={
+                            achieved
+                              ? "dashboard-achievement-item achieved"
+                              : "dashboard-achievement-item"
+                          }
+                        >
+
+                          <div>
+
+                            <h3>
+                              {achievement.title}
+                            </h3>
+
+                            <p>
+                              {achievement.description}
+                            </p>
+
+                            <div className="progress-track">
+
+                              <span
+                                style={{
+                                  width:
+                                    `${percent}%`,
+                                }}
+                              />
+
+                            </div>
+
+                            <small>
+                              {Math.round(
+                                achievement.current
+                              )}
+                              {" / "}
+                              {achievement.target}
+                            </small>
+
+                          </div>
+
+                          <strong>
+                            {achieved
+                              ? "✓"
+                              : "○"}
+                          </strong>
+
+                        </article>
+
+                      );
+                    }
+                  )}
+
+                </div>
+
+              </div>
               <div className="collection-progress-panel">
                 <div>
                   <p className="section-kicker">Collection progress</p>
