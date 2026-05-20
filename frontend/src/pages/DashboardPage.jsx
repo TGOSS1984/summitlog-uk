@@ -218,6 +218,35 @@ function DashboardPage() {
           )
         : 0;
 
+    const regionStats = [
+      "Lake District",
+      "Scotland",
+      "Wales",
+      "England",
+    ].map((regionName) => {
+      const regionMountains = mountains.filter(
+        (mountain) => mountain.region?.name === regionName
+      );
+
+      const completed = regionMountains.filter((mountain) =>
+        completedMountainIds.has(mountain.id)
+      ).length;
+
+      const planned = regionMountains.filter((mountain) =>
+        plannedLogs.some((log) => log.mountain === mountain.id)
+      ).length;
+
+      const total = regionMountains.length;
+
+      return {
+        name: regionName,
+        completed,
+        planned,
+        total,
+        percent: total ? Math.round((completed / total) * 100) : 0,
+      };
+    });
+
     return {
       completed: completedLogs.length,
       planned: plannedLogs.length,
@@ -234,6 +263,7 @@ function DashboardPage() {
       achievements,
       achievedBadges,
       achievementPercent,
+      regionStats,
     };
   }, [collections, logs, mountains]);
 
@@ -565,6 +595,40 @@ function DashboardPage() {
                 </div>
 
               </div>
+
+              <div className="dashboard-region-panel">
+                <div>
+                  <p className="section-kicker">UK progress</p>
+                  <h2>Region completion</h2>
+                  <p>
+                    See how your completed and planned summits are building across each
+                    mountain area.
+                  </p>
+                </div>
+
+                <div className="dashboard-region-grid">
+                  {stats.regionStats.map((region) => (
+                    <article className="dashboard-region-card" key={region.name}>
+                      <div>
+                        <p className="section-kicker">{region.name}</p>
+                        <h3>
+                          {region.completed} / {region.total}
+                        </h3>
+                        <span>
+                          {region.planned} planned
+                        </span>
+                      </div>
+
+                      <strong>{region.percent}%</strong>
+
+                      <div className="progress-track">
+                        <span style={{ width: `${region.percent}%` }} />
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+
               <div className="collection-progress-panel">
                 <div>
                   <p className="section-kicker">Collection progress</p>
