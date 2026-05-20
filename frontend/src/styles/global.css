@@ -1887,3 +1887,52 @@ color:var(--color-teal);
     grid-template-columns: 1fr;
   }
 }
+
+/*Dashboard Page - Chart Grid improvements*/
+
+.dashboard-chart-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-chart-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 5px;
+  background: linear-gradient(90deg, var(--color-teal), var(--color-accent));
+}
+
+.dashboard-chart-center-value {
+  font-size: 2.4rem;
+  font-weight: 900;
+  fill: var(--color-teal-deep);
+}
+
+.dashboard-chart-center-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  fill: var(--color-text-soft);
+  text-transform: uppercase;
+}
+
+.dashboard-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.dashboard-chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-text-soft);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.dashboard-chart-legend .legend-dot {
+  width: 11px;
+  height: 11px;
+}

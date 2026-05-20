@@ -21,6 +21,13 @@ const DASHBOARD_COLLECTIONS = [
   { name: "Nuttalls", slug: "nuttalls", expectedTotal: 443 },
 ];
 
+const CHART_COLORS = {
+  completed: "var(--color-teal)",
+  planned: "var(--color-accent)",
+  remaining: "#d9dedc",
+  text: "var(--color-teal-deep)",
+};
+
 function mountainBelongsToCollection(mountain, collectionSlug) {
   return (
     mountain.collection_memberships?.some(
@@ -364,58 +371,114 @@ function DashboardPage() {
               </div>
 
               <div className="dashboard-chart-grid">
-                <article className="dashboard-chart-card">
+                <article className="dashboard-chart-card dashboard-chart-card--status">
                   <div>
                     <p className="section-kicker">Overview</p>
                     <h3>Progress status</h3>
                   </div>
 
-                  <ResponsiveContainer width="100%" height={280}>
+                  <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
                         data={stats.statusChartData}
                         dataKey="value"
                         nameKey="name"
-                        innerRadius={70}
-                        outerRadius={105}
-                        paddingAngle={4}
+                        innerRadius={72}
+                        outerRadius={108}
+                        paddingAngle={5}
+                        stroke="white"
+                        strokeWidth={4}
                       >
                         {stats.statusChartData.map((entry) => (
                           <Cell
                             key={entry.name}
-                            className={`chart-cell chart-cell--${entry.name.toLowerCase()}`}
+                            fill={
+                              entry.name === "Completed"
+                                ? CHART_COLORS.completed
+                                : entry.name === "Planned"
+                                  ? CHART_COLORS.planned
+                                  : CHART_COLORS.remaining
+                            }
                           />
                         ))}
                       </Pie>
+
                       <Tooltip />
+
+                      <text
+                        x="50%"
+                        y="47%"
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        className="dashboard-chart-center-value"
+                      >
+                        {stats.completed}
+                      </text>
+
+                      <text
+                        x="50%"
+                        y="57%"
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        className="dashboard-chart-center-label"
+                      >
+                        completed
+                      </text>
                     </PieChart>
                   </ResponsiveContainer>
+
+                  <div className="dashboard-chart-legend">
+                    <span><i className="legend-dot legend-dot--completed" />Completed</span>
+                    <span><i className="legend-dot legend-dot--planned" />Planned</span>
+                    <span><i className="legend-dot legend-dot--not-started" />Remaining</span>
+                  </div>
                 </article>
 
-                <article className="dashboard-chart-card">
+                <article className="dashboard-chart-card dashboard-chart-card--collections">
                   <div>
                     <p className="section-kicker">Collections</p>
                     <h3>Completed vs remaining</h3>
                   </div>
 
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={stats.collectionChartData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                      <YAxis allowDecimals={false} />
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={stats.collectionChartData} barCategoryGap="24%">
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="rgba(4, 57, 59, 0.12)"
+                      />
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fontSize: 11, fill: "#243b3a", fontWeight: 700 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fontSize: 11, fill: "#667573" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
                       <Tooltip />
                       <Bar
                         dataKey="completed"
                         stackId="a"
-                        className="chart-bar chart-bar--completed"
+                        fill={CHART_COLORS.completed}
+                        radius={[8, 8, 0, 0]}
                       />
                       <Bar
                         dataKey="remaining"
                         stackId="a"
-                        className="chart-bar chart-bar--remaining"
+                        fill={CHART_COLORS.remaining}
+                        radius={[8, 8, 0, 0]}
                       />
                     </BarChart>
                   </ResponsiveContainer>
+
+                  <div className="dashboard-chart-legend">
+                    <span><i className="legend-dot legend-dot--completed" />Completed</span>
+                    <span><i className="legend-dot legend-dot--not-started" />Remaining</span>
+                  </div>
                 </article>
               </div>
 
