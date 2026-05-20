@@ -1662,3 +1662,65 @@ color:var(--color-teal);
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/*Dashboard - Collection Progress*/
+
+.collection-progress-list--premium {
+  gap: 1rem;
+}
+
+.collection-progress-card--premium {
+  position: relative;
+  display: grid;
+  grid-template-columns: 54px 1fr auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.2rem;
+  overflow: hidden;
+  text-decoration: none;
+}
+
+.collection-progress-card--premium::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: var(--color-accent);
+}
+
+.collection-progress-card__icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(208, 170, 98, 0.18);
+  color: var(--color-accent);
+  font-weight: 900;
+}
+
+.collection-progress-card__main h3 {
+  margin: 0.15rem 0;
+  font-size: 1.45rem;
+  color: var(--color-teal-deep);
+}
+
+.collection-progress-card__main p:not(.section-kicker) {
+  margin-bottom: 0.8rem;
+  color: var(--color-text-soft);
+}
+
+.collection-progress-card__percent {
+  font-size: 1.35rem;
+  color: var(--color-teal-deep);
+}
+
+@media (max-width: 640px) {
+  .collection-progress-card--premium {
+    grid-template-columns: 44px 1fr;
+  }
+
+  .collection-progress-card__percent {
+    grid-column: 2;
+  }
+}

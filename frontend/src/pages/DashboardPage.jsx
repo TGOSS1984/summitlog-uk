@@ -394,27 +394,42 @@ function DashboardPage() {
                   <h2>Progress by mountain list</h2>
                 </div>
 
-                <div className="collection-progress-list">
-                  {stats.collectionStats.map((collection) => (
-                    <Link
-                      to={`/collections/${collection.slug}`}
-                      className="collection-progress-card"
-                      key={collection.id}
-                    >
-                      <div>
-                        <h3>{collection.name}</h3>
-                        <p>
-                          {collection.completed} / {collection.total} completed
-                        </p>
-                      </div>
+                <div className="collection-progress-list collection-progress-list--premium">
+                  {stats.collectionStats.map((collection) => {
+                    const remaining = Math.max(collection.total - collection.completed, 0);
 
-                      <strong>{collection.percent}%</strong>
+                    return (
+                      <Link
+                        to={`/collections/${collection.slug}`}
+                        className="collection-progress-card collection-progress-card--premium"
+                        key={collection.id}
+                      >
+                        <div className="collection-progress-card__icon">
+                          ▲
+                        </div>
 
-                      <div className="progress-track">
-                        <span style={{ width: `${collection.percent}%` }} />
-                      </div>
-                    </Link>
-                  ))}
+                        <div className="collection-progress-card__main">
+                          <p className="section-kicker">{collection.name}</p>
+
+                          <h3>
+                            {collection.completed} / {collection.total}
+                          </h3>
+
+                          <p>
+                            {remaining} remaining to complete this collection.
+                          </p>
+
+                          <div className="progress-track">
+                            <span style={{ width: `${collection.percent}%` }} />
+                          </div>
+                        </div>
+
+                        <strong className="collection-progress-card__percent">
+                          {collection.percent}%
+                        </strong>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
 
