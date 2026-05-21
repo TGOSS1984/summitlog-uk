@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getMountains } from "../lib/api";
 import { Link } from "react-router-dom";
+import { TbMountain, TbRuler, TbMapPin, TbSearch, TbFilter } from "react-icons/tb";
 
 const COLLECTION_FILTERS = [
   { label: "All collections", value: "" },
@@ -87,7 +88,10 @@ function MountainsPage() {
         <div className="container mountains-hero__grid">
           <div>
             <p className="section-kicker">Explore the lists</p>
-            <h1>Every summit, ordered and ready to track.</h1>
+            <h1 className="page-hero__h1">
+                <span className="page-hero__h1-top">Every summit,</span>
+                <span className="page-hero__h1-bottom">Ordered.</span>
+              </h1>
             <p>
               Browse Wainwrights, Munros, Welsh Nuttalls and key UK summits.
               Filter by region or collection, then build your own completion

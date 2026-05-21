@@ -303,7 +303,10 @@ function DashboardPage() {
       <section className="section section-dark dashboard-hero">
         <div className="container">
           <p className="section-kicker">Dashboard</p>
-          <h1>Your mountain record, mapped by progress.</h1>
+          <h1 className="page-hero__h1">
+                <span className="page-hero__h1-top">Your mountain record,</span>
+                <span className="page-hero__h1-bottom">Progress.</span>
+              </h1>
           <p>
             Track completed summits, planned objectives, distance logged and
             collection progress across the UK.

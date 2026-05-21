@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,900;1,9..40,400&display=swap');
+
 :root {
 
 /* ---------- backgrounds ---------- */
@@ -64,6 +66,11 @@ rgba(0,0,0,.08);
 
 --shadow-large:
 0 25px 60px rgba(0,0,0,.15);
+
+/* ---------- typography ---------- */
+
+--font-display: 'Cormorant Garamond', Georgia, serif;
+--font-body: 'DM Sans', system-ui, sans-serif;
 
 /* ---------- images ---------- */
 
