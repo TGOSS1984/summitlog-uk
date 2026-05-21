@@ -113,6 +113,16 @@ function DashboardPage() {
       .filter((mountain) => completedMountainIds.has(mountain.id))
       .reduce((total, mountain) => total + Number(mountain.height_m || 0), 0);
 
+    const totalSteps = completedLogs.reduce(
+      (total, log) => total + Number(log.steps || 0),
+      0
+    );
+
+    const totalFlightsClimbed = completedLogs.reduce(
+      (total, log) => total + Number(log.flights_climbed || 0),
+      0
+    );
+
     const collectionStats = DASHBOARD_COLLECTIONS.map((dashboardCollection) => {
       const apiCollection = collections.find(
         (collection) => collection.slug === dashboardCollection.slug
@@ -204,6 +214,18 @@ function DashboardPage() {
         current: totalDistance,
       },
       {
+        title: "Step Collector",
+        description: "Log 100,000 steps across completed routes.",
+        target: 100000,
+        current: totalSteps,
+      },
+      {
+        title: "Stairway Summit",
+        description: "Log 500 flights climbed.",
+        target: 500,
+        current: totalFlightsClimbed,
+      },
+      {
         title: "High Climber",
         description: "Reach 5000m total elevation.",
         target: 5000,
@@ -260,6 +282,8 @@ function DashboardPage() {
       totalVisible: mountains.length,
       totalDistance,
       totalHeight,
+      totalSteps,
+      totalFlightsClimbed,
       collectionStats,
       statusChartData,
       collectionChartData,
@@ -320,6 +344,17 @@ function DashboardPage() {
                   <p>Height total</p>
                   <strong>{Math.round(stats.totalHeight)}m</strong>
                   <span>summit height completed</span>
+                </article>
+                <article className="dashboard-stat-card">
+                  <p>Steps</p>
+                  <strong>{stats.totalSteps.toLocaleString()}</strong>
+                  <span>steps logged</span>
+                </article>
+
+                <article className="dashboard-stat-card">
+                  <p>Flights climbed</p>
+                  <strong>{stats.totalFlightsClimbed.toLocaleString()}</strong>
+                  <span>flights recorded</span>
                 </article>
               </div>
 
