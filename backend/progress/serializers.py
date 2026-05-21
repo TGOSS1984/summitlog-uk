@@ -19,6 +19,8 @@ class UserMountainLogSerializer(serializers.ModelSerializer):
             "route_taken",
             "hike_distance_km",
             "hike_duration_hours",
+            "steps",
+            "flights_climbed",
             "notes",
             "uploaded_image",
             "created_at",

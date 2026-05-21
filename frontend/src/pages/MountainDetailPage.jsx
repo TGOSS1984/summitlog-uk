@@ -15,6 +15,8 @@ const initialForm = {
   route_taken: "",
   hike_distance_km: "",
   hike_duration_hours: "",
+  steps: "",
+  flights_climbed: "",
   notes: "",
   uploaded_image: "",
 };
@@ -60,6 +62,8 @@ function MountainDetailPage() {
               route_taken: existingLog.route_taken || "",
               hike_distance_km: existingLog.hike_distance_km || "",
               hike_duration_hours: existingLog.hike_duration_hours || "",
+              steps: existingLog.steps || "",
+              flights_climbed: existingLog.flights_climbed || "",
               notes: existingLog.notes || "",
               uploaded_image: existingLog.uploaded_image || "",
             });
@@ -130,6 +134,8 @@ function MountainDetailPage() {
         completed_date: form.completed_date || null,
         hike_distance_km: form.hike_distance_km || null,
         hike_duration_hours: form.hike_duration_hours || null,
+        steps: form.steps || null,
+        flights_climbed: form.flights_climbed || null,
       };
 
       const savedLog = logId
@@ -265,6 +271,32 @@ function MountainDetailPage() {
                   onChange={handleChange}
                 />
               </label>
+            </div>
+
+            <div className="tracking-form__row">
+
+              <label>
+                Steps
+                <input
+                  type="number"
+                  name="steps"
+                  value={form.steps}
+                  onChange={handleChange}
+                  placeholder="e.g. 14582"
+                />
+              </label>
+
+              <label>
+                Flights climbed
+                <input
+                  type="number"
+                  name="flights_climbed"
+                  value={form.flights_climbed}
+                  onChange={handleChange}
+                  placeholder="e.g. 72"
+                />
+              </label>
+
             </div>
 
             <label>

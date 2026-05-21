@@ -54,6 +54,16 @@ class UserMountainLog(models.Model):
         null=True,
     )
 
+    steps = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+    )
+
+    flights_climbed = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+    )
+
     notes = models.TextField(
         blank=True,
     )
