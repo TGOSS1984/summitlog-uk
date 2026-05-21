@@ -37,8 +37,8 @@ const FEATURES = [
 ];
 
 const STATS = [
-  { value: "214+", label: "UK Summits" },
-  { value: "7", label: "Collections" },
+  { value: "800+", label: "UK Summits" },
+  { value: "3", label: "Collections" },
   { value: "∞", label: "Routes" },
 ];
 

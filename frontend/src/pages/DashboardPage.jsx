@@ -183,7 +183,7 @@ function DashboardPage() {
       .filter((log) => log.uploaded_image)
       .slice(0, 4);
 
-    const elevationPercent = Math.min(Math.round((totalHeight / 10000) * 100), 100);
+    const elevationPercent = Math.min(Math.round((totalHeight / 50000) * 100), 100);
 
     const achievements = [
       {
@@ -407,7 +407,7 @@ function DashboardPage() {
                     />
                   </div>
 
-                  <p>{stats.elevationPercent}% of a 10,000m milestone</p>
+                  <p>{stats.elevationPercent}% of a 50,000m milestone</p>
                 </article>
               </div>
 
