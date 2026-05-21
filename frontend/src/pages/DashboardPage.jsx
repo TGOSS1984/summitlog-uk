@@ -302,7 +302,10 @@ function DashboardPage() {
     <main className="dashboard-page">
       <section className="section section-dark dashboard-hero">
         <div className="container">
-          <p className="section-kicker">Dashboard</p>
+          <p className="section-kicker">
+              <span className="kicker-line" />
+              Dashboard
+            </p>
           <h1 className="page-hero__h1">
                 <span className="page-hero__h1-top">Your mountain record,</span>
                 <span className="page-hero__h1-bottom">Progress.</span>

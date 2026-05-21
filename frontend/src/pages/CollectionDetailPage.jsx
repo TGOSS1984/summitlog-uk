@@ -124,7 +124,10 @@ function CollectionDetailPage() {
       <section className="section section-dark collection-hero">
         <div className="container collection-hero__grid">
           <div>
-            <p className="section-kicker">Mountain collection</p>
+            <p className="section-kicker">
+              <span className="kicker-line" />
+              Mountain Collection
+            </p>
             <h1>{collection.name}</h1>
             <p>{collection.description}</p>
           </div>

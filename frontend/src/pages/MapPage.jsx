@@ -181,8 +181,14 @@ function MapPage() {
     <main>
       <section className="section section-dark map-hero">
         <div className="container">
-          <p className="section-kicker">Map</p>
-          <h1>Explore the mountains by location.</h1>
+          <p className="section-kicker">
+              <span className="kicker-line" />
+              Map
+            </p>
+          <h1 className="page-hero__h1">
+                <span className="page-hero__h1-top">Explore the mountains by</span>
+                <span className="page-hero__h1-bottom">Location.</span>
+              </h1>
           <p>
             Completed, planned and still-to-do mountains are shown directly on
             the map, giving your progress a visual sense of place.

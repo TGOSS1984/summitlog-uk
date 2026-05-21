@@ -177,7 +177,7 @@ function MountainDetailPage() {
     <main>
       <section className="section section-dark mountain-detail-hero">
         <div className="container">
-          <p className="section-kicker">{getCollectionNames(mountain)}</p>
+          <p className="section-kicker"><span className="kicker-line" />{getCollectionNames(mountain)}</p>
           <h1>{mountain.name}</h1>
           <p>{mountain.summary}</p>
         </div>
