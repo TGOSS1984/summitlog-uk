@@ -25,6 +25,13 @@ const REGION_FILTERS = [
   { label: "Wales", value: "wales" },
 ];
 
+const STATUS_FILTERS = [
+  { label: "All statuses", value: "" },
+  { label: "Completed", value: "completed" },
+  { label: "Planned", value: "planned" },
+  { label: "Not started", value: "not_started" },
+];
+
 function createMarkerIcon(status) {
   return L.divIcon({
     className: `summit-marker summit-marker--${status}`,
@@ -41,7 +48,6 @@ function getCollectionNames(mountain) {
       .filter(Boolean)
       .join(" / ");
   }
-
   return mountain.collection?.name || "Unlisted";
 }
 
@@ -50,16 +56,13 @@ function getCollectionRank(mountain, collectionSlug) {
     const selectedMembership = mountain.collection_memberships?.find(
       (membership) => membership.collection?.slug === collectionSlug
     );
-
     if (selectedMembership?.rank_in_collection) {
       return selectedMembership.rank_in_collection;
     }
   }
-
   const firstRank = mountain.collection_memberships
     ?.map((membership) => membership.rank_in_collection)
     .find((rank) => rank !== null && rank !== undefined);
-
   return firstRank || mountain.rank_in_collection || "—";
 }
 
@@ -103,6 +106,7 @@ function MapPage() {
     collection_memberships__collection__slug: "",
     region__slug: "",
   });
+  const [statusFilter, setStatusFilter] = useState("");
   const [status, setStatus] = useState("loading");
 
   useEffect(() => {
@@ -139,7 +143,6 @@ function MapPage() {
 
   function handleChange(event) {
     const { name, value } = event.target;
-
     setFilters((currentFilters) => ({
       ...currentFilters,
       [name]: value,
@@ -153,27 +156,31 @@ function MapPage() {
     }, {});
   }, [logs]);
 
+  // All mountains with coordinates
   const mappableMountains = useMemo(() => {
     return mountains.filter(
       (mountain) => mountain.latitude && mountain.longitude
     );
   }, [mountains]);
 
+  // Frontend status filter applied on top
+  const visibleMountains = useMemo(() => {
+    if (!statusFilter) return mappableMountains;
+    return mappableMountains.filter((mountain) => {
+      const mountainStatus = logStatusByMountainId[mountain.id] || "not_started";
+      return mountainStatus === statusFilter;
+    });
+  }, [mappableMountains, logStatusByMountainId, statusFilter]);
+
   const mapStats = useMemo(() => {
     return mappableMountains.reduce(
       (totals, mountain) => {
         const mountainStatus =
           logStatusByMountainId[mountain.id] || "not_started";
-
         totals[mountainStatus] += 1;
-
         return totals;
       },
-      {
-        completed: 0,
-        planned: 0,
-        not_started: 0,
-      }
+      { completed: 0, planned: 0, not_started: 0 }
     );
   }, [logStatusByMountainId, mappableMountains]);
 
@@ -182,13 +189,13 @@ function MapPage() {
       <section className="section section-dark map-hero">
         <div className="container">
           <p className="section-kicker">
-              <span className="kicker-line" />
-              Map
-            </p>
+            <span className="kicker-line" />
+            Map
+          </p>
           <h1 className="page-hero__h1">
-                <span className="page-hero__h1-top">Explore the mountains by</span>
-                <span className="page-hero__h1-bottom">Location.</span>
-              </h1>
+            <span className="page-hero__h1-top">Explore the mountains by</span>
+            <span className="page-hero__h1-bottom">Location.</span>
+          </h1>
           <p>
             Completed, planned and still-to-do mountains are shown directly on
             the map, giving your progress a visual sense of place.
@@ -228,6 +235,18 @@ function MapPage() {
                   </option>
                 ))}
               </select>
+
+              {/* Frontend-only status filter */}
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                {STATUS_FILTERS.map((s) => (
+                  <option key={s.value} value={s.value}>
+                    {s.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -243,14 +262,14 @@ function MapPage() {
                   scrollWheelZoom={false}
                   className="summit-map"
                 >
-                  <MapBounds mountains={mappableMountains} />
+                  <MapBounds mountains={visibleMountains} />
 
                   <TileLayer
                     attribution='&copy; OpenStreetMap contributors'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
 
-                  {mappableMountains.map((mountain) => {
+                  {visibleMountains.map((mountain) => {
                     const mountainStatus =
                       logStatusByMountainId[mountain.id] || "not_started";
 
@@ -266,7 +285,6 @@ function MapPage() {
                         <Popup>
                           <div className="map-popup">
                             <strong>{mountain.name}</strong>
-
                             <span>{getCollectionNames(mountain)}</span>
                             <span>{mountain.region?.name}</span>
                             <span>
@@ -281,7 +299,6 @@ function MapPage() {
                               Prominence: {mountain.prominence_m || "—"}m
                             </span>
                             <span>Status: {getStatusLabel(mountainStatus)}</span>
-
                             <Link to={`/mountains/${mountain.slug}`}>
                               View mountain
                             </Link>
@@ -296,8 +313,12 @@ function MapPage() {
 
             <aside className="map-summary-card">
               <p className="section-kicker">Visible pins</p>
-              <strong>{mappableMountains.length}</strong>
-              <span>mountains with coordinates</span>
+              <strong>{visibleMountains.length}</strong>
+              <span>
+                {statusFilter
+                  ? STATUS_FILTERS.find((s) => s.value === statusFilter)?.label.toLowerCase()
+                  : "mountains with coordinates"}
+              </span>
 
               <div className="map-legend">
                 <p>
