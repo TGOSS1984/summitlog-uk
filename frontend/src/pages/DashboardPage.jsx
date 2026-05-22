@@ -1,19 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Line,
-  LineChart,
+  Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
+  ResponsiveContainer, Tooltip, XAxis, YAxis, Line, LineChart,
 } from "recharts";
+import {
+  TbMountain, TbRoute, TbRuler, TbStairs, TbWalk,
+  TbTrophy, TbFlag, TbMap2, TbStar, TbFlame,
+  TbCheck, TbCircle, TbBolt, TbTargetArrow,
+} from "react-icons/tb";
 
 import { getCollections, getMountains, getProgressLogs } from "../lib/api";
 
@@ -30,40 +25,143 @@ const CHART_COLORS = {
   text: "var(--color-teal-deep)",
 };
 
+// Stat card icon map
+const STAT_ICONS = {
+  "Completed":       { icon: TbMountain,    color: "var(--color-teal-deep)" },
+  "Planned":         { icon: TbFlag,         color: "var(--color-accent)" },
+  "Distance":        { icon: TbRoute,        color: "var(--color-teal)" },
+  "Height total":    { icon: TbRuler,        color: "var(--color-accent)" },
+  "Steps":           { icon: TbWalk,         color: "var(--color-teal)" },
+  "Flights climbed": { icon: TbStairs,       color: "var(--color-teal-deep)" },
+};
+
+// Achievement icon map
+const ACHIEVEMENT_ICONS = {
+  "First Summit":       TbMountain,
+  "Wainwright Starter": TbFlag,
+  "Mountain Regular":   TbTrophy,
+  "Distance Walker":    TbRoute,
+  "Step Collector":     TbWalk,
+  "Stairway Summit":    TbStairs,
+  "High Climber":       TbTargetArrow,
+};
+
+// Count-up hook
+function useCountUp(target, duration = 1200, trigger = true) {
+  const [value, setValue] = useState(0);
+  const rafRef = useRef(null);
+
+  useEffect(() => {
+    if (!trigger || target === 0) { setValue(target); return; }
+    const start = performance.now();
+    function tick(now) {
+      const progress = Math.min((now - start) / duration, 1);
+      // ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(eased * target));
+      if (progress < 1) rafRef.current = requestAnimationFrame(tick);
+    }
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [target, duration, trigger]);
+
+  return value;
+}
+
+// Animated stat card
+function StatCard({ label, rawValue, sub, loaded }) {
+  const meta = STAT_ICONS[label] || { icon: TbStar, color: "var(--color-teal)" };
+  const Icon = meta.icon;
+
+  // Parse numeric part for count-up
+  const numericTarget = parseFloat(String(rawValue).replace(/[^0-9.]/g, "")) || 0;
+  const suffix = String(rawValue).replace(/[0-9.,]/g, "").trim();
+  const counted = useCountUp(numericTarget, 1400, loaded);
+  const display = numericTarget > 0
+    ? (Number.isInteger(numericTarget) ? counted.toLocaleString() : counted.toFixed(1)) + (suffix ? suffix : "")
+    : rawValue;
+
+  return (
+    <article className="dashboard-stat-card">
+      <div className="dashboard-stat-card__icon" style={{ color: meta.color }}>
+        <Icon size={22} strokeWidth={1.5} />
+      </div>
+      <p>{label}</p>
+      <strong>{display}</strong>
+      <span>{sub}</span>
+    </article>
+  );
+}
+
 function mountainBelongsToCollection(mountain, collectionSlug) {
   return (
     mountain.collection_memberships?.some(
-      (membership) => membership.collection?.slug === collectionSlug
+      (m) => m.collection?.slug === collectionSlug
     ) || mountain.collection?.slug === collectionSlug
   );
 }
 
 function getMountainCollectionNames(mountain) {
   if (mountain.collection_memberships?.length) {
-    return mountain.collection_memberships
-      .map((membership) => membership.collection?.name)
-      .filter(Boolean)
-      .join(" / ");
+    return mountain.collection_memberships.map((m) => m.collection?.name).filter(Boolean).join(" / ");
   }
-
   return mountain.collection?.name || "Unlisted";
 }
 
 function getLogCollectionNames(log) {
-  if (log.mountain_detail) {
-    return getMountainCollectionNames(log.mountain_detail);
-  }
-
-  return "Unlisted";
+  return log.mountain_detail ? getMountainCollectionNames(log.mountain_detail) : "Unlisted";
 }
 
 function formatDate(dateValue) {
   if (!dateValue) return "No date";
-  return new Date(dateValue).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return new Date(dateValue).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+// SVG mountain ridge elevation visual
+function ElevationRidge({ percent }) {
+  const h = 120;
+  const w = 280;
+  const fillH = Math.round(h * (percent / 100));
+
+  // Fixed ridge outline points
+  const ridge = `M0,${h} L0,${h * 0.7} L28,${h * 0.62} L50,${h * 0.48} L66,${h * 0.52} L82,${h * 0.38} L96,${h * 0.42} L112,${h * 0.22} L124,${h * 0.28} L136,${h * 0.14} L148,${h * 0.20} L158,${h * 0.12} L170,${h * 0.18} L184,${h * 0.26} L198,${h * 0.20} L216,${h * 0.32} L232,${h * 0.26} L250,${h * 0.38} L268,${h * 0.34} L280,${h * 0.40} L${w},${h * 0.44} L${w},${h} Z`;
+
+  // Clip to fill height
+  const clipId = "elev-clip";
+
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="elevation-ridge-svg" aria-hidden="true">
+      <defs>
+        <clipPath id={clipId}>
+          <rect x="0" y={h - fillH} width={w} height={fillH} />
+        </clipPath>
+      </defs>
+      {/* Ghost outline */}
+      <path d={ridge} fill="rgba(4,57,59,0.18)" />
+      {/* Filled portion */}
+      <path d={ridge} fill="url(#elev-grad)" clipPath={`url(#${clipId})`} />
+      {/* Gradient def */}
+      <defs>
+        <linearGradient id="elev-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="var(--color-accent)" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="var(--color-teal)" stopOpacity="0.7" />
+        </linearGradient>
+      </defs>
+      {/* Tide line */}
+      <line x1="0" y1={h - fillH} x2={w} y2={h - fillH}
+        stroke="rgba(208,170,98,0.6)" strokeWidth="1" strokeDasharray="4 3" />
+      {/* Percent label */}
+      <text x={w - 4} y={h - fillH - 6}
+        textAnchor="end"
+        fontFamily="DM Sans, sans-serif"
+        fontSize="9"
+        fontWeight="700"
+        fill="rgba(208,170,98,0.85)"
+        letterSpacing="0.06em">
+        {percent}%
+      </text>
+    </svg>
+  );
 }
 
 function DashboardPage() {
@@ -71,19 +169,19 @@ function DashboardPage() {
   const [collections, setCollections] = useState([]);
   const [logs, setLogs] = useState([]);
   const [status, setStatus] = useState("loading");
+  const loaded = status === "success";
+  const [showAllLogs, setShowAllLogs] = useState(false);
+  const [showAllProgress, setShowAllProgress] = useState(false);
+
+  const MAX_VISIBLE = 5;
 
   useEffect(() => {
     async function loadDashboard() {
       try {
         const [mountainData, collectionData, logData] = await Promise.all([
-          getMountains(),
-          getCollections(),
-          getProgressLogs(),
+          getMountains(), getCollections(), getProgressLogs(),
         ]);
-
-        setMountains(
-          Array.isArray(mountainData) ? mountainData : mountainData.results || []
-        );
+        setMountains(Array.isArray(mountainData) ? mountainData : mountainData.results || []);
         setCollections(Array.isArray(collectionData) ? collectionData : []);
         setLogs(Array.isArray(logData) ? logData : logData.results || []);
         setStatus("success");
@@ -92,233 +190,91 @@ function DashboardPage() {
         setStatus("error");
       }
     }
-
     loadDashboard();
   }, []);
 
   const stats = useMemo(() => {
     const completedLogs = logs.filter((log) => log.status === "completed");
     const plannedLogs = logs.filter((log) => log.status === "planned");
-
-    const completedMountainIds = new Set(
-      completedLogs.map((log) => log.mountain)
-    );
-
+    const completedMountainIds = new Set(completedLogs.map((log) => log.mountain));
     const loggedMountainIds = new Set(logs.map((log) => log.mountain));
 
-    const totalDistance = completedLogs.reduce(
-      (total, log) => total + Number(log.hike_distance_km || 0),
-      0
-    );
+    const totalDistance = completedLogs.reduce((t, l) => t + Number(l.hike_distance_km || 0), 0);
+    const totalHeight = mountains.filter((m) => completedMountainIds.has(m.id))
+      .reduce((t, m) => t + Number(m.height_m || 0), 0);
+    const totalSteps = completedLogs.reduce((t, l) => t + Number(l.steps || 0), 0);
+    const totalFlightsClimbed = completedLogs.reduce((t, l) => t + Number(l.flights_climbed || 0), 0);
 
-    const totalHeight = mountains
-      .filter((mountain) => completedMountainIds.has(mountain.id))
-      .reduce((total, mountain) => total + Number(mountain.height_m || 0), 0);
-
-    const totalSteps = completedLogs.reduce(
-      (total, log) => total + Number(log.steps || 0),
-      0
-    );
-
-    const totalFlightsClimbed = completedLogs.reduce(
-      (total, log) => total + Number(log.flights_climbed || 0),
-      0
-    );
-
-    const collectionStats = DASHBOARD_COLLECTIONS.map((dashboardCollection) => {
-      const apiCollection = collections.find(
-        (collection) => collection.slug === dashboardCollection.slug
-      );
-
-      const collectionMountains = mountains.filter((mountain) =>
-        mountainBelongsToCollection(mountain, dashboardCollection.slug)
-      );
-
-      const completedCount = collectionMountains.filter((mountain) =>
-        completedMountainIds.has(mountain.id)
-      ).length;
-
-      const totalCount =
-        apiCollection?.expected_total ||
-        dashboardCollection.expectedTotal ||
-        collectionMountains.length ||
-        0;
-
+    const collectionStats = DASHBOARD_COLLECTIONS.map((dc) => {
+      const apiCol = collections.find((c) => c.slug === dc.slug);
+      const colMountains = mountains.filter((m) => mountainBelongsToCollection(m, dc.slug));
+      const completedCount = colMountains.filter((m) => completedMountainIds.has(m.id)).length;
+      const totalCount = apiCol?.expected_total || dc.expectedTotal || colMountains.length || 0;
       return {
-        id: apiCollection?.id || dashboardCollection.slug,
-        name: dashboardCollection.name,
-        slug: dashboardCollection.slug,
-        completed: completedCount,
-        total: totalCount,
-        percent: totalCount
-          ? Math.round((completedCount / totalCount) * 100)
-          : 0,
+        id: apiCol?.id || dc.slug,
+        name: dc.name, slug: dc.slug,
+        completed: completedCount, total: totalCount,
+        percent: totalCount ? Math.round((completedCount / totalCount) * 100) : 0,
       };
     });
 
     const statusChartData = [
       { name: "Completed", value: completedLogs.length },
       { name: "Planned", value: plannedLogs.length },
-      {
-        name: "Remaining",
-        value: Math.max(mountains.length - loggedMountainIds.size, 0),
-      },
+      { name: "Remaining", value: Math.max(mountains.length - loggedMountainIds.size, 0) },
     ];
 
-    const collectionChartData = collectionStats.map((collection) => ({
-      name: collection.name,
-      completed: collection.completed,
-      remaining: Math.max(collection.total - collection.completed, 0),
+    const collectionChartData = collectionStats.map((c) => ({
+      name: c.name, completed: c.completed,
+      remaining: Math.max(c.total - c.completed, 0),
     }));
 
-    const monthlyCompletionData = completedLogs
-      .filter((log) => log.completed_date)
-      .reduce((months, log) => {
-        const date = new Date(log.completed_date);
-        const monthKey = date.toLocaleDateString("en-GB", {
-          month: "short",
-          year: "numeric",
-        });
-
-        months[monthKey] = (months[monthKey] || 0) + 1;
-
+    const monthlyCompletionData = completedLogs.filter((l) => l.completed_date)
+      .reduce((months, l) => {
+        const key = new Date(l.completed_date).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+        months[key] = (months[key] || 0) + 1;
         return months;
       }, {});
 
-    const completionTimelineData = Object.entries(monthlyCompletionData).map(
-      ([month, completed]) => ({
-        month,
-        completed,
-      })
-    );
+    const completionTimelineData = Object.entries(monthlyCompletionData)
+      .map(([month, completed]) => ({ month, completed }));
 
     const recentLogs = [...logs]
-      .sort(
-        (a, b) =>
-          new Date(b.completed_date || b.updated_at || b.created_at) -
-          new Date(a.completed_date || a.updated_at || a.created_at)
-      )
+      .sort((a, b) => new Date(b.completed_date || b.updated_at || b.created_at) - new Date(a.completed_date || a.updated_at || a.created_at))
       .slice(0, 4);
 
     const nextObjective = plannedLogs[0] || null;
-
-    const photoLogs = logs
-      .filter((log) => log.uploaded_image)
-      .slice(0, 4);
-
+    const photoLogs = logs.filter((l) => l.uploaded_image).slice(0, 4);
     const elevationPercent = Math.min(Math.round((totalHeight / 50000) * 100), 100);
 
     const achievements = [
-      {
-        title: "First Summit",
-        description: "Complete your first mountain log.",
-        target: 1,
-        current: completedLogs.length,
-      },
-      {
-        title: "Wainwright Starter",
-        description: "Complete 5 Wainwrights.",
-        target: 5,
-        current:
-          collectionStats.find(
-            (item) => item.slug === "wainwrights"
-          )?.completed || 0,
-      },
-      {
-        title: "Mountain Regular",
-        description: "Complete 10 mountains.",
-        target: 10,
-        current: completedLogs.length,
-      },
-      {
-        title: "Distance Walker",
-        description: "Log 50km of routes.",
-        target: 50,
-        current: totalDistance,
-      },
-      {
-        title: "Step Collector",
-        description: "Log 100,000 steps across completed routes.",
-        target: 100000,
-        current: totalSteps,
-      },
-      {
-        title: "Stairway Summit",
-        description: "Log 500 flights climbed.",
-        target: 500,
-        current: totalFlightsClimbed,
-      },
-      {
-        title: "High Climber",
-        description: "Reach 5000m total elevation.",
-        target: 5000,
-        current: totalHeight,
-      },
+      { title: "First Summit", description: "Complete your first mountain log.", target: 1, current: completedLogs.length },
+      { title: "Wainwright Starter", description: "Complete 5 Wainwrights.", target: 5, current: collectionStats.find((i) => i.slug === "wainwrights")?.completed || 0 },
+      { title: "Mountain Regular", description: "Complete 10 mountains.", target: 10, current: completedLogs.length },
+      { title: "Distance Walker", description: "Log 50km of routes.", target: 50, current: totalDistance },
+      { title: "Step Collector", description: "Log 100,000 steps across completed routes.", target: 100000, current: totalSteps },
+      { title: "Stairway Summit", description: "Log 500 flights climbed.", target: 500, current: totalFlightsClimbed },
+      { title: "High Climber", description: "Reach 5000m total elevation.", target: 5000, current: totalHeight },
     ];
 
-    const achievedBadges = achievements.filter(
-      (achievement) =>
-        achievement.current >= achievement.target
-    );
+    const achievedBadges = achievements.filter((a) => a.current >= a.target);
+    const achievementPercent = achievements.length > 0
+      ? Math.round((achievedBadges.length / achievements.length) * 100) : 0;
 
-    const achievementPercent =
-      achievements.length > 0
-        ? Math.round(
-            (achievedBadges.length /
-              achievements.length) *
-              100
-          )
-        : 0;
-
-    const regionStats = [
-      "Lake District",
-      "Scotland",
-      "Wales",
-      "England",
-    ].map((regionName) => {
-      const regionMountains = mountains.filter(
-        (mountain) => mountain.region?.name === regionName
-      );
-
-      const completed = regionMountains.filter((mountain) =>
-        completedMountainIds.has(mountain.id)
-      ).length;
-
-      const planned = regionMountains.filter((mountain) =>
-        plannedLogs.some((log) => log.mountain === mountain.id)
-      ).length;
-
+    const regionStats = ["Lake District", "Scotland", "Wales", "England"].map((regionName) => {
+      const regionMountains = mountains.filter((m) => m.region?.name === regionName);
+      const completed = regionMountains.filter((m) => completedMountainIds.has(m.id)).length;
+      const planned = regionMountains.filter((m) => plannedLogs.some((l) => l.mountain === m.id)).length;
       const total = regionMountains.length;
-
-      return {
-        name: regionName,
-        completed,
-        planned,
-        total,
-        percent: total ? Math.round((completed / total) * 100) : 0,
-      };
+      return { name: regionName, completed, planned, total, percent: total ? Math.round((completed / total) * 100) : 0 };
     });
 
     return {
-      completed: completedLogs.length,
-      planned: plannedLogs.length,
-      totalVisible: mountains.length,
-      totalDistance,
-      totalHeight,
-      totalSteps,
-      totalFlightsClimbed,
-      collectionStats,
-      statusChartData,
-      collectionChartData,
-      recentLogs,
-      nextObjective,
-      photoLogs,
-      elevationPercent,
-      achievements,
-      achievedBadges,
-      achievementPercent,
-      regionStats,
-      completionTimelineData,
+      completed: completedLogs.length, planned: plannedLogs.length,
+      totalVisible: mountains.length, totalDistance, totalHeight, totalSteps, totalFlightsClimbed,
+      collectionStats, statusChartData, collectionChartData, recentLogs, nextObjective,
+      photoLogs, elevationPercent, achievements, achievedBadges, achievementPercent,
+      regionStats, completionTimelineData,
     };
   }, [collections, logs, mountains]);
 
@@ -326,90 +282,44 @@ function DashboardPage() {
     <main className="dashboard-page">
       <section className="section section-dark dashboard-hero">
         <div className="container">
-          <p className="section-kicker">
-              <span className="kicker-line" />
-              Dashboard
-            </p>
+          <p className="section-kicker"><span className="kicker-line" />Dashboard</p>
           <h1 className="page-hero__h1">
-                <span className="page-hero__h1-top">Your mountain record,</span>
-                <span className="page-hero__h1-bottom">Progress.</span>
-              </h1>
-          <p>
-            Track completed summits, planned objectives, distance logged and
-            collection progress across the UK.
-          </p>
+            <span className="page-hero__h1-top">Your mountain record,</span>
+            <span className="page-hero__h1-bottom">Progress.</span>
+          </h1>
+          <p>Track completed summits, planned objectives, distance logged and collection progress across the UK.</p>
         </div>
       </section>
 
       <section className="section section-light">
         <div className="container">
           {status === "loading" && <p>Loading dashboard...</p>}
-
-          {status === "error" && (
-            <p>Please log in to view your dashboard progress.</p>
-          )}
+          {status === "error" && <p>Please log in to view your dashboard progress.</p>}
 
           {status === "success" && (
             <>
+              {/* ── STAT CARDS with count-up + icons ── */}
               <div className="dashboard-stat-grid">
-                <article className="dashboard-stat-card">
-                  <p>Completed</p>
-                  <strong>{stats.completed}</strong>
-                  <span>summits logged</span>
-                </article>
-
-                <article className="dashboard-stat-card">
-                  <p>Planned</p>
-                  <strong>{stats.planned}</strong>
-                  <span>future objectives</span>
-                </article>
-
-                <article className="dashboard-stat-card">
-                  <p>Distance</p>
-                  <strong>{stats.totalDistance.toFixed(1)}km</strong>
-                  <span>personally logged</span>
-                </article>
-
-                <article className="dashboard-stat-card">
-                  <p>Height total</p>
-                  <strong>{Math.round(stats.totalHeight)}m</strong>
-                  <span>summit height completed</span>
-                </article>
-                <article className="dashboard-stat-card">
-                  <p>Steps</p>
-                  <strong>{stats.totalSteps.toLocaleString()}</strong>
-                  <span>steps logged</span>
-                </article>
-
-                <article className="dashboard-stat-card">
-                  <p>Flights climbed</p>
-                  <strong>{stats.totalFlightsClimbed.toLocaleString()}</strong>
-                  <span>flights recorded</span>
-                </article>
+                <StatCard label="Completed"       rawValue={stats.completed}                   sub="summits logged"       loaded={loaded} />
+                <StatCard label="Planned"         rawValue={stats.planned}                     sub="future objectives"    loaded={loaded} />
+                <StatCard label="Distance"        rawValue={`${stats.totalDistance.toFixed(1)}km`} sub="personally logged" loaded={loaded} />
+                <StatCard label="Height total"    rawValue={`${Math.round(stats.totalHeight)}m`}   sub="summit height completed" loaded={loaded} />
+                <StatCard label="Steps"           rawValue={stats.totalSteps}                  sub="steps logged"         loaded={loaded} />
+                <StatCard label="Flights climbed" rawValue={stats.totalFlightsClimbed}         sub="flights recorded"     loaded={loaded} />
               </div>
 
               <div className="dashboard-journey-grid">
                 <article className="dashboard-journey-card dashboard-next-card">
                   <p className="section-kicker">Next objective</p>
-
                   {stats.nextObjective ? (
                     <>
                       <h3>{stats.nextObjective.mountain_detail?.name}</h3>
-                      <p>
-                        {getLogCollectionNames(stats.nextObjective)} /{" "}
-                        {stats.nextObjective.mountain_detail?.region?.name}
-                      </p>
+                      <p>{getLogCollectionNames(stats.nextObjective)} / {stats.nextObjective.mountain_detail?.region?.name}</p>
                       <div className="dashboard-journey-meta">
-                        <span>
-                          {stats.nextObjective.mountain_detail?.height_m}m
-                        </span>
-                        <span>
-                          {stats.nextObjective.route_taken || "Route not set"}
-                        </span>
+                        <span>{stats.nextObjective.mountain_detail?.height_m}m</span>
+                        <span>{stats.nextObjective.route_taken || "Route not set"}</span>
                       </div>
-                      <Link to={`/mountains/${stats.nextObjective.mountain_detail?.slug}`}>
-                        Open mountain
-                      </Link>
+                      <Link to={`/mountains/${stats.nextObjective.mountain_detail?.slug}`}>Open mountain</Link>
                     </>
                   ) : (
                     <>
@@ -420,78 +330,35 @@ function DashboardPage() {
                   )}
                 </article>
 
+                {/* ── IMPROVED ELEVATION CARD ── */}
                 <article className="dashboard-journey-card dashboard-elevation-card">
                   <p className="section-kicker">Elevation climbed</p>
-                  <h3>{Math.round(stats.totalHeight)}m</h3>
-
-                  <div className="elevation-mountain">
-                    <div
-                      className="elevation-mountain__fill"
-                      style={{ height: `${stats.elevationPercent}%` }}
-                    />
-                  </div>
-
+                  <h3>{Math.round(stats.totalHeight).toLocaleString()}m</h3>
+                  <ElevationRidge percent={stats.elevationPercent} />
                   <p>{stats.elevationPercent}% of a 50,000m milestone</p>
                 </article>
               </div>
 
               <div className="dashboard-chart-grid">
                 <article className="dashboard-chart-card dashboard-chart-card--status">
-                  <div>
-                    <p className="section-kicker">Overview</p>
-                    <h3>Progress status</h3>
-                  </div>
-
+                  <div><p className="section-kicker">Overview</p><h3>Progress status</h3></div>
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
-                      <Pie
-                        data={stats.statusChartData}
-                        dataKey="value"
-                        nameKey="name"
-                        innerRadius={72}
-                        outerRadius={108}
-                        paddingAngle={5}
-                        stroke="white"
-                        strokeWidth={4}
-                      >
+                      <Pie data={stats.statusChartData} dataKey="value" nameKey="name"
+                        innerRadius={72} outerRadius={108} paddingAngle={5} stroke="white" strokeWidth={4}>
                         {stats.statusChartData.map((entry) => (
-                          <Cell
-                            key={entry.name}
-                            fill={
-                              entry.name === "Completed"
-                                ? CHART_COLORS.completed
-                                : entry.name === "Planned"
-                                  ? CHART_COLORS.planned
-                                  : CHART_COLORS.remaining
-                            }
-                          />
+                          <Cell key={entry.name} fill={
+                            entry.name === "Completed" ? CHART_COLORS.completed
+                              : entry.name === "Planned" ? CHART_COLORS.planned
+                              : CHART_COLORS.remaining
+                          } />
                         ))}
                       </Pie>
-
                       <Tooltip />
-
-                      <text
-                        x="50%"
-                        y="47%"
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        className="dashboard-chart-center-value"
-                      >
-                        {stats.completed}
-                      </text>
-
-                      <text
-                        x="50%"
-                        y="57%"
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        className="dashboard-chart-center-label"
-                      >
-                        completed
-                      </text>
+                      <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" className="dashboard-chart-center-value">{stats.completed}</text>
+                      <text x="50%" y="57%" textAnchor="middle" dominantBaseline="middle" className="dashboard-chart-center-label">completed</text>
                     </PieChart>
                   </ResponsiveContainer>
-
                   <div className="dashboard-chart-legend">
                     <span><i className="legend-dot legend-dot--completed" />Completed</span>
                     <span><i className="legend-dot legend-dot--planned" />Planned</span>
@@ -500,85 +367,32 @@ function DashboardPage() {
                 </article>
 
                 <article className="dashboard-chart-card dashboard-chart-card--collections">
-                  <div>
-                    <p className="section-kicker">Collections</p>
-                    <h3>Completed vs remaining</h3>
-                  </div>
-
+                  <div><p className="section-kicker">Collections</p><h3>Completed vs remaining</h3></div>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={stats.collectionChartData} barCategoryGap="24%">
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke="rgba(4, 57, 59, 0.12)"
-                      />
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fontSize: 11, fill: "#243b3a", fontWeight: 700 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        allowDecimals={false}
-                        tick={{ fontSize: 11, fill: "#667573" }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(4,57,59,0.12)" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#243b3a", fontWeight: 700 }} axisLine={false} tickLine={false} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#667573" }} axisLine={false} tickLine={false} />
                       <Tooltip />
-                      <Bar
-                        dataKey="completed"
-                        stackId="a"
-                        fill={CHART_COLORS.completed}
-                        radius={[8, 8, 0, 0]}
-                      />
-                      <Bar
-                        dataKey="remaining"
-                        stackId="a"
-                        fill={CHART_COLORS.remaining}
-                        radius={[8, 8, 0, 0]}
-                      />
+                      <Bar dataKey="completed" stackId="a" fill={CHART_COLORS.completed} radius={[8, 8, 0, 0]} />
+                      <Bar dataKey="remaining" stackId="a" fill={CHART_COLORS.remaining} radius={[8, 8, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
-
                   <div className="dashboard-chart-legend">
                     <span><i className="legend-dot legend-dot--completed" />Completed</span>
                     <span><i className="legend-dot legend-dot--not-started" />Remaining</span>
                   </div>
                 </article>
-                <article className="dashboard-chart-card dashboard-chart-card--timeline">
-                  <div>
-                    <p className="section-kicker">Timeline</p>
-                    <h3>Mountains completed over time</h3>
-                  </div>
 
+                <article className="dashboard-chart-card dashboard-chart-card--timeline">
+                  <div><p className="section-kicker">Timeline</p><h3>Mountains completed over time</h3></div>
                   <ResponsiveContainer width="100%" height={300}>
                     <LineChart data={stats.completionTimelineData}>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        vertical={false}
-                        stroke="rgba(4, 57, 59, 0.12)"
-                      />
-                      <XAxis
-                        dataKey="month"
-                        tick={{ fontSize: 11, fill: "#243b3a", fontWeight: 700 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        allowDecimals={false}
-                        tick={{ fontSize: 11, fill: "#667573" }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(4,57,59,0.12)" />
+                      <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#243b3a", fontWeight: 700 }} axisLine={false} tickLine={false} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#667573" }} axisLine={false} tickLine={false} />
                       <Tooltip />
-                      <Line
-                        type="monotone"
-                        dataKey="completed"
-                        stroke={CHART_COLORS.completed}
-                        strokeWidth={3}
-                        dot={{ r: 5 }}
-                        activeDot={{ r: 7 }}
-                      />
+                      <Line type="monotone" dataKey="completed" stroke={CHART_COLORS.completed} strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 7 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </article>
@@ -588,204 +402,95 @@ function DashboardPage() {
                 <article className="dashboard-story-card">
                   <p className="section-kicker">Recent activity</p>
                   <h3>Latest mountain logs</h3>
-
                   <div className="dashboard-timeline">
-                    {stats.recentLogs.length === 0 && (
-                      <p>No recent activity yet.</p>
-                    )}
-
-                    {stats.recentLogs.map((log) => (
-                      <Link
-                        to={`/mountains/${log.mountain_detail?.slug}`}
-                        className="dashboard-timeline-item"
-                        key={log.id}
-                      >
+                    {stats.recentLogs.length === 0 && <p>No recent activity yet.</p>}
+                    {stats.recentLogs.slice(0, showAllLogs ? undefined : MAX_VISIBLE).map((log) => (
+                      <Link to={`/mountains/${log.mountain_detail?.slug}`} className="dashboard-timeline-item" key={log.id}>
                         <span>{log.status === "completed" ? "✓" : "○"}</span>
                         <div>
                           <strong>{log.mountain_detail?.name}</strong>
-                          <small>
-                            {log.status} / {formatDate(log.completed_date)}
-                          </small>
+                          <small>{log.status} / {formatDate(log.completed_date)}</small>
                         </div>
                       </Link>
                     ))}
+                    {stats.recentLogs.length > MAX_VISIBLE && (
+                      <button className="dashboard-show-more" onClick={() => setShowAllLogs(!showAllLogs)}>
+                        {showAllLogs ? "Show less" : `Show ${stats.recentLogs.length - MAX_VISIBLE} more`}
+                      </button>
+                    )}
                   </div>
                 </article>
 
                 <article className="dashboard-story-card">
                   <p className="section-kicker">Summit memories</p>
                   <h3>Recent photos</h3>
-
                   <div className="dashboard-photo-strip">
-                    {stats.photoLogs.length === 0 && (
-                      <p>No uploaded summit photos yet.</p>
-                    )}
-
+                    {stats.photoLogs.length === 0 && <p>No uploaded summit photos yet.</p>}
                     {stats.photoLogs.map((log) => (
-                      <Link
-                        to={`/mountains/${log.mountain_detail?.slug}`}
-                        key={log.id}
-                      >
-                        <img
-                          src={log.uploaded_image}
-                          alt={log.mountain_detail?.name}
-                        />
+                      <Link to={`/mountains/${log.mountain_detail?.slug}`} key={log.id}>
+                        <img src={log.uploaded_image} alt={log.mountain_detail?.name} />
                       </Link>
                     ))}
                   </div>
                 </article>
               </div>
+
+              {/* ── ACHIEVEMENTS with icons ── */}
               <div className="dashboard-achievement-panel">
-
                 <div className="dashboard-achievement-summary">
-
                   <div>
-                    <p className="section-kicker">
-                      Achievements
-                    </p>
-
-                    <h2>
-                      Summit achievements
-                    </h2>
+                    <p className="section-kicker">Achievements</p>
+                    <h2>Summit achievements</h2>
                   </div>
-
                   <div className="dashboard-achievement-score">
-
-                    <strong>
-                      {stats.achievedBadges.length}
-                      {" / "}
-                      {stats.achievements.length}
-                    </strong>
-
-                    <span>
-                      achieved
-                    </span>
-
+                    <strong>{stats.achievedBadges.length} / {stats.achievements.length}</strong>
+                    <span>achieved</span>
                   </div>
-
                   <div className="progress-track">
-                    <span
-                      style={{
-                        width:
-                          `${stats.achievementPercent}%`,
-                      }}
-                    />
+                    <span style={{ width: `${stats.achievementPercent}%` }} />
                   </div>
-
-                  <p>
-                    {
-                      stats.achievements.length -
-                      stats.achievedBadges.length
-                    }
-                    {" "}
-                    achievements remaining
-                  </p>
-
+                  <p>{stats.achievements.length - stats.achievedBadges.length} achievements remaining</p>
                 </div>
 
                 <div className="dashboard-achievement-list">
-
-                  {stats.achievements.map(
-                    (achievement) => {
-
-                      const achieved =
-                        achievement.current >=
-                        achievement.target;
-
-                      const percent =
-                        Math.min(
-                          Math.round(
-                            (
-                              achievement.current /
-                              achievement.target
-                            ) * 100
-                          ),
-                          100
-                        );
-
-                      return (
-
-                        <article
-                          key={achievement.title}
-                          className={
-                            achieved
-                              ? "dashboard-achievement-item achieved"
-                              : "dashboard-achievement-item"
-                          }
-                        >
-
-                          <div>
-
-                            <h3>
-                              {achievement.title}
-                            </h3>
-
-                            <p>
-                              {achievement.description}
-                            </p>
-
-                            <div className="progress-track">
-
-                              <span
-                                style={{
-                                  width:
-                                    `${percent}%`,
-                                }}
-                              />
-
-                            </div>
-
-                            <small>
-                              {Math.round(
-                                achievement.current
-                              )}
-                              {" / "}
-                              {achievement.target}
-                            </small>
-
+                  {stats.achievements.map((achievement) => {
+                    const achieved = achievement.current >= achievement.target;
+                    const percent = Math.min(Math.round((achievement.current / achievement.target) * 100), 100);
+                    const AchIcon = ACHIEVEMENT_ICONS[achievement.title] || TbStar;
+                    return (
+                      <article key={achievement.title} className={achieved ? "dashboard-achievement-item achieved" : "dashboard-achievement-item"}>
+                        <div>
+                          <h3>{achievement.title}</h3>
+                          <p>{achievement.description}</p>
+                          <div className="progress-track">
+                            <span style={{ width: `${percent}%` }} />
                           </div>
-
-                          <strong>
-                            {achieved
-                              ? "✓"
-                              : "○"}
-                          </strong>
-
-                        </article>
-
-                      );
-                    }
-                  )}
-
+                          <small>{Math.round(achievement.current)} / {achievement.target}</small>
+                        </div>
+                        <strong className="dashboard-achievement-badge">
+                          <AchIcon size={16} strokeWidth={achieved ? 2.5 : 1.5} />
+                        </strong>
+                      </article>
+                    );
+                  })}
                 </div>
-
               </div>
 
               <div className="dashboard-region-panel">
                 <div>
                   <p className="section-kicker">UK progress</p>
                   <h2>Region completion</h2>
-                  <p>
-                    See how your completed and planned summits are building across each
-                    mountain area.
-                  </p>
+                  <p>See how your completed and planned summits are building across each mountain area.</p>
                 </div>
-
                 <div className="dashboard-region-grid">
                   {stats.regionStats.map((region) => (
                     <article className="dashboard-region-card" key={region.name}>
                       <div>
                         <p className="section-kicker">{region.name}</p>
-                        <h3>
-                          {region.completed} / {region.total}
-                        </h3>
-                        <span>
-                          {region.planned} planned
-                        </span>
+                        <h3>{region.completed} / {region.total}</h3>
+                        <span>{region.planned} planned</span>
                       </div>
-
                       <strong>{region.percent}%</strong>
-
                       <div className="progress-track">
                         <span style={{ width: `${region.percent}%` }} />
                       </div>
@@ -799,40 +504,22 @@ function DashboardPage() {
                   <p className="section-kicker">Collection progress</p>
                   <h2>Progress by mountain list</h2>
                 </div>
-
                 <div className="collection-progress-list collection-progress-list--premium">
                   {stats.collectionStats.map((collection) => {
                     const remaining = Math.max(collection.total - collection.completed, 0);
-
                     return (
-                      <Link
-                        to={`/collections/${collection.slug}`}
-                        className="collection-progress-card collection-progress-card--premium"
-                        key={collection.id}
-                      >
-                        <div className="collection-progress-card__icon">
-                          ▲
-                        </div>
-
+                      <Link to={`/collections/${collection.slug}`}
+                        className="collection-progress-card collection-progress-card--premium" key={collection.id}>
+                        <div className="collection-progress-card__icon"><TbMountain size={20} strokeWidth={1.5} /></div>
                         <div className="collection-progress-card__main">
                           <p className="section-kicker">{collection.name}</p>
-
-                          <h3>
-                            {collection.completed} / {collection.total}
-                          </h3>
-
-                          <p>
-                            {remaining} remaining to complete this collection.
-                          </p>
-
+                          <h3>{collection.completed} / {collection.total}</h3>
+                          <p>{remaining} remaining to complete this collection.</p>
                           <div className="progress-track">
                             <span style={{ width: `${collection.percent}%` }} />
                           </div>
                         </div>
-
-                        <strong className="collection-progress-card__percent">
-                          {collection.percent}%
-                        </strong>
+                        <strong className="collection-progress-card__percent">{collection.percent}%</strong>
                       </Link>
                     );
                   })}
@@ -843,35 +530,17 @@ function DashboardPage() {
                 <div>
                   <p className="section-kicker">My progress</p>
                   <h2>Saved mountain logs</h2>
-                  <p>
-                    Review completed and planned mountains, then open each summit
-                    to update your route notes, date, distance or status.
-                  </p>
+                  <p>Review completed and planned mountains, then open each summit to update your route notes, date, distance or status.</p>
                 </div>
-
                 <div className="my-progress-list">
-                  {logs.length === 0 && (
-                    <p>
-                      No mountain logs yet. Open a mountain and save your first
-                      record.
-                    </p>
-                  )}
-
+                  {logs.length === 0 && <p>No mountain logs yet. Open a mountain and save your first record.</p>}
                   {logs.map((log) => (
-                    <Link
-                      to={`/mountains/${log.mountain_detail?.slug}`}
-                      className="my-progress-card"
-                      key={log.id}
-                    >
+                    <Link to={`/mountains/${log.mountain_detail?.slug}`} className="my-progress-card" key={log.id}>
                       <div>
                         <p className="my-progress-card__status">{log.status}</p>
                         <h3>{log.mountain_detail?.name}</h3>
-                        <p>
-                          {getLogCollectionNames(log)} /{" "}
-                          {log.mountain_detail?.region?.name}
-                        </p>
+                        <p>{getLogCollectionNames(log)} / {log.mountain_detail?.region?.name}</p>
                       </div>
-
                       <div className="my-progress-card__meta">
                         <span>{log.completed_date || "No date"}</span>
                         <span>{log.hike_distance_km || "—"}km</span>
