@@ -18,7 +18,17 @@ function Footer() {
 
         <div className="site-footer__brand">
           <div className="site-footer__logo">
-            <span className="site-footer__logo-icon"><TbMountain size={18} strokeWidth={1.5} /></span>
+            <span className="site-footer__logo-icon">
+              <svg viewBox="0 0 44 44" fill="none" width="16" height="16">
+                <polyline
+                  points="9,30 16,18 22,23 28,13 35,30"
+                  stroke="#d0aa62"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
             <span className="site-footer__logo-text">
               <span>Summit</span><em>Log</em>
               <small>UK</small>
@@ -60,4 +70,3 @@ function Footer() {
 }
 
 export default Footer;
-

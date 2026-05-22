@@ -42,7 +42,15 @@ function Navbar() {
         {/* Logo */}
         <Link to="/" className="site-logo" onClick={() => setMobileOpen(false)}>
           <span className="site-logo__emblem" aria-hidden="true">
-            <TbMountain size={22} strokeWidth={1.5} />
+            <svg viewBox="0 0 44 44" fill="none" width="20" height="20">
+              <polyline
+                points="9,30 16,18 22,23 28,13 35,30"
+                stroke="#d0aa62"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </span>
           <span className="site-logo__wordmark">
             <span className="site-logo__primary">Summit</span>
@@ -166,3 +174,4 @@ function Navbar() {
 }
 
 export default Navbar;
+

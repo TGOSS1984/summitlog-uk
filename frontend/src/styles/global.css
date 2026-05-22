@@ -116,18 +116,18 @@ var(--shadow-large);
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--color-teal), var(--color-teal-deep));
-  border: 1px solid rgba(208, 170, 98, 0.3);
-  color: var(--color-accent);
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;              /* circle */
+  background: #04393b;               /* teal fill */
+  border: 1px solid rgba(208, 170, 98, 0.35);
+  flex-shrink: 0;
   transition: transform 200ms ease, box-shadow 200ms ease;
 }
 
 .site-logo:hover .site-logo__emblem {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(208,170,98,0.25);
+  box-shadow: 0 6px 20px rgba(208, 170, 98, 0.25);
 }
 
 .site-logo__wordmark {
@@ -142,7 +142,8 @@ var(--shadow-large);
   font-size: 1.25rem;
   font-weight: 600;
   color: var(--color-text-light);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.028em;
+  text-transform: uppercase;
 }
 
 .site-logo__secondary {
@@ -151,6 +152,7 @@ var(--shadow-large);
   font-style: italic;
   color: var(--color-accent);
   letter-spacing: 0.01em;
+  text-transform: uppercase;
 }
 
 .site-logo__region {
@@ -2873,16 +2875,17 @@ h2 em {
   gap: 0.6rem;
 }
 
+/* Footer logo icon — same circle treatment */
 .site-footer__logo-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  background: linear-gradient(135deg, var(--color-teal), var(--color-teal-deep));
-  border: 1px solid rgba(208,170,98,0.25);
-  color: var(--color-accent);
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;              /* circle */
+  background: #04393b;
+  border: 1px solid rgba(208, 170, 98, 0.25);
+  flex-shrink: 0;
 }
 
 .site-footer__logo-text {
@@ -2891,6 +2894,7 @@ h2 em {
   display: flex;
   align-items: baseline;
   gap: 0;
+  text-transform: uppercase;
 }
 
 .site-footer__logo-text span {
