@@ -152,44 +152,90 @@ function HomePage() {
         </div>
       </section>
 
-      {/* ── WHAT IS SUMMITLOG ── */}
-      <section className="section section-light about-section">
-        <div className="container about-grid">
-          <div className="about-editorial">
-            <p className="section-kicker">What is SummitLog UK?</p>
-            <h2>Your personal record<br />of the <em>hills conquered.</em></h2>
-            <p>
-              SummitLog UK is built for hillwalkers, Munro-baggers and peak-seekers
-              who want more than a tick-list. Log every ascent, track collections,
-              visualise your progress on an interactive map, and build a journal of
-              your time in the mountains.
-            </p>
-            <p>
-              Whether you're working through the Wainwrights, chasing your first
-              Munro completion, or simply keeping a record of the walks that matter
-              to you — SummitLog gives you the tools to do it with depth.
-            </p>
-            <Link to="/mountains" className="about-link">
-              Browse Mountains <TbArrowRight size={16} />
-            </Link>
-          </div>
-          <div className="about-checklist">
-            {[
-              "Log summits with date, conditions & notes",
-              "Track completion across all major UK collections",
-              "Interactive map with every bagged peak plotted",
-              "Personal stats: elevation, seasons, streaks",
-              "Photo journal for each ascent",
-              "Explore regions and plan future routes",
-            ].map((item) => (
-              <div key={item} className="checklist-item">
-                <span className="checklist-item__icon"><TbCheck size={14} strokeWidth={2.5} /></span>
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
+            {/* ── REASONS — replaces WHAT IS SUMMITLOG ── */}
+      <section className="reasons">
+
+        <div className="reasons__head">
+          <p className="section-kicker reasons__kicker">
+            <span className="kicker-line" />
+            Why SummitLog
+            <span className="kicker-line" />
+          </p>
+          <h2 className="reasons__title">
+            Five reasons to track<br />
+            your UK mountains.
+          </h2>
         </div>
+
+        <div className="reasons__canvas">
+
+          {/* LEFT — 4 diamonds: large, medium (overlapping), small mid, small lower */}
+          <div className="reasons__d reasons__d--lg reasons__d--L1">
+            <img src="/images/placeholders/diamond-1.jpg" alt="Mountain ridge" />
+          </div>
+          <div className="reasons__d reasons__d--md reasons__d--L2">
+            <img src="/images/placeholders/diamond-2.jpg" alt="Summit path" />
+          </div>
+          <div className="reasons__d reasons__d--sm reasons__d--L4">
+            <img src="/images/placeholders/diamond-4.jpg" alt="Highland plateau" />
+          </div>
+          <div className="reasons__d reasons__d--sm reasons__d--L3">
+            <img src="/images/placeholders/diamond-3.jpg" alt="Ridge walk" />
+          </div>
+
+          {/* SPINE — vertical line + 5 dots at true centre */}
+          <div className="reasons__spine" aria-hidden="true">
+            <div className="reasons__spine-line" />
+            <div className="reasons__dot reasons__dot--1" />
+            <div className="reasons__dot reasons__dot--2" />
+            <div className="reasons__dot reasons__dot--3" />
+            <div className="reasons__dot reasons__dot--4" />
+            <div className="reasons__dot reasons__dot--5" />
+          </div>
+
+          {/* RIGHT — 3 diamonds: large top, medium overlapping, small lower */}
+          <div className="reasons__d reasons__d--R1">
+            <img src="/images/placeholders/diamond-5.jpg" alt="Mountain panorama" />
+          </div>
+          <div className="reasons__d reasons__d--R2">
+            <img src="/images/placeholders/diamond-2.jpg" alt="Valley view" />
+          </div>
+          <div className="reasons__d reasons__d--R3">
+            <img src="/images/placeholders/diamond-3.jpg" alt="Summit cairn" />
+          </div>
+
+          {/* TEXT BLOCKS — right of spine, aligned to each dot */}
+          <div className="reasons__text reasons__text--1">
+            <h3>Historic Peak Collections</h3>
+            <p>The Wainwrights, Munros and Corbetts are more than tick-lists — they are a lifetime of adventure through Britain's finest highland landscapes.</p>
+          </div>
+          <div className="reasons__text reasons__text--2">
+            <h3>Your Personal Summit Record</h3>
+            <p>Every peak has a story. Log date, conditions, route, photos and notes for each ascent and build a journal that lasts a lifetime.</p>
+          </div>
+          <div className="reasons__text reasons__text--3">
+            <h3>Map-Led Exploration</h3>
+            <p>An interactive map shows every summit you've bagged, every peak on your wishlist, and surfaces new routes near you.</p>
+          </div>
+          <div className="reasons__text reasons__text--4">
+            <h3>Four-Season Tracking</h3>
+            <p>From summer scrambles to winter ascents — SummitLog tracks every ascent across the seasons and charts your mountain story over time.</p>
+          </div>
+          <div className="reasons__text reasons__text--5">
+            <h3>Progress & Stats</h3>
+            <p>Charts, percentages and milestones show exactly how far you've come — and what's left to climb.</p>
+          </div>
+
+        </div>
+
+        <div className="reasons__cta-wrap">
+          <Link to="/mountains" className="reasons__cta-btn">
+            Browse Mountains →
+          </Link>
+        </div>
+
       </section>
+
 
       {/* ── FEATURES ── */}
       <section className="section features-section">
