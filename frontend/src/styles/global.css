@@ -1463,7 +1463,8 @@ color:var(--color-teal);
   background:
     radial-gradient(circle at 82% 22%, rgba(67, 150, 145, 0.34), transparent 32%),
     radial-gradient(circle at 24% 70%, rgba(208, 170, 98, 0.08), transparent 30%),
-    linear-gradient(135deg, var(--color-bg-dark), var(--color-teal-deep));
+    linear-gradient(135deg, rgba(4, 57, 59, 0.82), rgba(7, 17, 13, 0.88)),
+    url("/images/placeholders/hero.jpg") center / cover no-repeat;
 }
 
 .hero-home__overlay {
@@ -2845,7 +2846,7 @@ h2 em {
 /* ===== REASONS SECTION — appended to global.css ===== */
 
 .reasons {
-  background: var(--color-bg-dark);
+  background: var(--color-teal-deep);
   padding: var(--space-xxl) 0;
   overflow: hidden;
 }

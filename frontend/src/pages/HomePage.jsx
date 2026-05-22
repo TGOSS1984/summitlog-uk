@@ -198,10 +198,10 @@ function HomePage() {
             <img src="/images/placeholders/diamond-5.jpg" alt="Mountain panorama" />
           </div>
           <div className="reasons__d reasons__d--R2">
-            <img src="/images/placeholders/diamond-2.jpg" alt="Valley view" />
+            <img src="/images/placeholders/diamond-6.jpg" alt="Valley view" />
           </div>
           <div className="reasons__d reasons__d--R3">
-            <img src="/images/placeholders/diamond-3.jpg" alt="Summit cairn" />
+            <img src="/images/placeholders/diamond-7.jpg" alt="Summit cairn" />
           </div>
 
           {/* TEXT BLOCKS — right of spine, aligned to each dot */}
