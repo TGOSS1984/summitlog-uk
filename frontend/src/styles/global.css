@@ -3086,7 +3086,7 @@ h2 em {
   display: block;
 }
 
-.reasons__d--lg { width: 240px; height: 240px; }
+.reasons__d--lg { width: 280px; height: 280px; }
 .reasons__d--md { width: 170px; height: 170px; }
 .reasons__d--sm { width: 120px; height: 120px; }
 
@@ -3097,7 +3097,7 @@ h2 em {
 .reasons__d--L4 { left: 24%; top: 370px; }  /* small mid */
 
 /* ── RIGHT: 3 diamonds ── */
-.reasons__d--R1 { right: 6%;  top: 40px;  width: 240px; height: 240px; } /* large top-right */
+.reasons__d--R1 { right: 6%;  top: 40px;  width: 280px; height: 280px; } /* large top-right */
 .reasons__d--R2 { right: 14%; top: 190px; width: 170px; height: 170px; } /* medium overlapping R1 */
 .reasons__d--R3 { right: 6%;  top: 450px; width: 120px; height: 120px; } /* small lower-right */
 
