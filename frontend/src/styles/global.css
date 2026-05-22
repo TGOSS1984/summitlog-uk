@@ -859,6 +859,12 @@ color:var(--color-teal);
   color: var(--color-text-soft);
 }
 
+/*Additional Line chart on dashboard Page*/
+
+.dashboard-chart-card--timeline {
+  grid-column: 1 / -1;
+}
+
 .collection-progress-panel {
   display: grid;
   grid-template-columns: 0.75fr 1.25fr;

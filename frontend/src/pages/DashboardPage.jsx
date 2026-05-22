@@ -11,6 +11,8 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  Line,
+  LineChart,
 } from "recharts";
 
 import { getCollections, getMountains, getProgressLogs } from "../lib/api";
@@ -169,6 +171,27 @@ function DashboardPage() {
       remaining: Math.max(collection.total - collection.completed, 0),
     }));
 
+    const monthlyCompletionData = completedLogs
+      .filter((log) => log.completed_date)
+      .reduce((months, log) => {
+        const date = new Date(log.completed_date);
+        const monthKey = date.toLocaleDateString("en-GB", {
+          month: "short",
+          year: "numeric",
+        });
+
+        months[monthKey] = (months[monthKey] || 0) + 1;
+
+        return months;
+      }, {});
+
+    const completionTimelineData = Object.entries(monthlyCompletionData).map(
+      ([month, completed]) => ({
+        month,
+        completed,
+      })
+    );
+
     const recentLogs = [...logs]
       .sort(
         (a, b) =>
@@ -295,6 +318,7 @@ function DashboardPage() {
       achievedBadges,
       achievementPercent,
       regionStats,
+      completionTimelineData,
     };
   }, [collections, logs, mountains]);
 
@@ -520,6 +544,43 @@ function DashboardPage() {
                     <span><i className="legend-dot legend-dot--completed" />Completed</span>
                     <span><i className="legend-dot legend-dot--not-started" />Remaining</span>
                   </div>
+                </article>
+                <article className="dashboard-chart-card dashboard-chart-card--timeline">
+                  <div>
+                    <p className="section-kicker">Timeline</p>
+                    <h3>Mountains completed over time</h3>
+                  </div>
+
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={stats.completionTimelineData}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="rgba(4, 57, 59, 0.12)"
+                      />
+                      <XAxis
+                        dataKey="month"
+                        tick={{ fontSize: 11, fill: "#243b3a", fontWeight: 700 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fontSize: 11, fill: "#667573" }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip />
+                      <Line
+                        type="monotone"
+                        dataKey="completed"
+                        stroke={CHART_COLORS.completed}
+                        strokeWidth={3}
+                        dot={{ r: 5 }}
+                        activeDot={{ r: 7 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </article>
               </div>
 
