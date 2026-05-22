@@ -2,15 +2,14 @@ import { Link } from "react-router-dom";
 import {
   TbMountain,
   TbMap2,
-  TbTrophy,
-  TbRoute,
   TbChartBar,
   TbBookmark,
   TbArrowRight,
-  TbCheck,
-  TbStar,
-  TbCloudSnow,
   TbFlame,
+  TbBrandInstagram,
+  TbBrandX,
+  TbBrandFacebook,
+  TbBrandStrava,
 } from "react-icons/tb";
 
 const FEATURES = [
@@ -48,12 +47,44 @@ const COLLECTIONS = [
   { name: "Nutalls", count: 222, region: "Wales/England" },
 ];
 
+const ELEVATION_MARKS = [2000, 1750, 1500, 1250, 1000, 750, 500, 250];
+
 function HomePage() {
   return (
     <main>
+
       {/* ── HERO ── */}
       <section className="hero-home">
         <div className="hero-home__overlay" />
+
+        {/* Social sidebar — inside hero only, not fixed */}
+        <aside className="social-sidebar" aria-label="Social links">
+          <div className="social-sidebar__line" aria-hidden="true" />
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+            <TbBrandInstagram size={19} strokeWidth={2} />
+          </a>
+          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter">
+            <TbBrandX size={19} strokeWidth={2} />
+          </a>
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+            <TbBrandFacebook size={19} strokeWidth={2} />
+          </a>
+          <a href="https://strava.com" target="_blank" rel="noopener noreferrer" aria-label="Strava">
+            <TbBrandStrava size={19} strokeWidth={2} />
+          </a>
+          <div className="social-sidebar__line social-sidebar__line--bottom" aria-hidden="true" />
+        </aside>
+
+        {/* Elevation ruler — left of hero text */}
+        <div className="elev-ruler" aria-hidden="true">
+          <div className="elev-ruler__line" />
+          {ELEVATION_MARKS.map((m) => (
+            <div key={m} className="elev-ruler__mark">
+              <span className="elev-ruler__label">{m}m</span>
+              <span className="elev-ruler__tick" />
+            </div>
+          ))}
+        </div>
 
         <div className="container hero-home__grid">
 
@@ -112,7 +143,7 @@ function HomePage() {
           </aside>
 
         </div>
-        {/* Mountain silhouette transition — SVG with organic bezier ridgelines */}
+
         <div className="hero-ridge">
           <svg
             viewBox="0 0 1440 160"
@@ -121,12 +152,10 @@ function HomePage() {
             className="hero-ridge__svg"
             aria-hidden="true"
           >
-            {/* Mid-ground layer — slightly lighter, behind */}
             <path
               d="M0,110 C40,108 70,95 100,82 C130,69 148,74 170,68 C192,62 205,48 228,40 C251,32 268,44 290,50 C312,56 328,52 352,44 C376,36 390,22 418,18 C446,14 462,28 488,36 C514,44 530,46 558,42 C586,38 602,28 628,24 C654,20 672,30 698,38 C724,46 742,50 768,54 C794,58 812,52 838,46 C864,40 882,32 910,30 C938,28 958,38 984,46 C1010,54 1028,58 1056,56 C1084,54 1102,46 1128,40 C1154,34 1172,30 1200,36 C1228,42 1248,56 1278,68 C1308,80 1328,88 1360,94 C1392,100 1420,102 1440,104 L1440,160 L0,160 Z"
               fill="rgba(247,247,244,0.18)"
             />
-            {/* Foreground ridge — the main silhouette, bg-light colour */}
             <path
               d="M0,140 C30,138 52,132 78,122 C104,112 118,106 142,98 C166,90 182,84 206,76 C230,68 246,62 272,54 C298,46 316,40 342,34 C368,28 386,22 414,16 C442,10 460,8 488,12 C516,16 532,22 558,28 C584,34 602,38 630,42 C658,46 676,44 704,40 C732,36 750,28 778,22 C806,16 824,14 852,18 C880,22 896,30 922,38 C948,46 966,52 994,56 C1022,60 1040,58 1068,54 C1096,50 1114,42 1142,38 C1170,34 1188,36 1216,42 C1244,48 1262,56 1290,66 C1318,76 1338,86 1368,100 C1398,114 1422,126 1440,134 L1440,160 L0,160 Z"
               fill="var(--color-bg-light)"
@@ -152,9 +181,8 @@ function HomePage() {
         </div>
       </section>
 
-            {/* ── REASONS — replaces WHAT IS SUMMITLOG ── */}
+      {/* ── REASONS ── */}
       <section className="reasons">
-
         <div className="reasons__head">
           <p className="section-kicker reasons__kicker">
             <span className="kicker-line" />
@@ -168,8 +196,6 @@ function HomePage() {
         </div>
 
         <div className="reasons__canvas">
-
-          {/* LEFT — 4 diamonds: large, medium (overlapping), small mid, small lower */}
           <div className="reasons__d reasons__d--lg reasons__d--L1">
             <img src="/images/placeholders/diamond-1.jpg" alt="Mountain ridge" />
           </div>
@@ -183,7 +209,6 @@ function HomePage() {
             <img src="/images/placeholders/diamond-3.jpg" alt="Ridge walk" />
           </div>
 
-          {/* SPINE — vertical line + 5 dots at true centre */}
           <div className="reasons__spine" aria-hidden="true">
             <div className="reasons__spine-line" />
             <div className="reasons__dot reasons__dot--1" />
@@ -193,7 +218,6 @@ function HomePage() {
             <div className="reasons__dot reasons__dot--5" />
           </div>
 
-          {/* RIGHT — 3 diamonds: large top, medium overlapping, small lower */}
           <div className="reasons__d reasons__d--R1">
             <img src="/images/placeholders/diamond-5.jpg" alt="Mountain panorama" />
           </div>
@@ -204,7 +228,6 @@ function HomePage() {
             <img src="/images/placeholders/diamond-7.jpg" alt="Summit cairn" />
           </div>
 
-          {/* TEXT BLOCKS — right of spine, aligned to each dot */}
           <div className="reasons__text reasons__text--1">
             <h3>Historic Peak Collections</h3>
             <p>The Wainwrights, Munros and Corbetts are more than tick-lists — they are a lifetime of adventure through Britain's finest highland landscapes.</p>
@@ -225,7 +248,6 @@ function HomePage() {
             <h3>Progress & Stats</h3>
             <p>Charts, percentages and milestones show exactly how far you've come — and what's left to climb.</p>
           </div>
-
         </div>
 
         <div className="reasons__cta-wrap">
@@ -233,9 +255,7 @@ function HomePage() {
             Browse Mountains →
           </Link>
         </div>
-
       </section>
-
 
       {/* ── FEATURES ── */}
       <section className="section features-section">
@@ -309,4 +329,3 @@ function HomePage() {
 }
 
 export default HomePage;
-

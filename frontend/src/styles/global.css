@@ -494,8 +494,10 @@ h2 {
   position: relative;
   overflow: hidden;
   background:
-    radial-gradient(circle at 78% 32%, rgba(127, 181, 179, 0.2), transparent 30%),
-    linear-gradient(135deg, var(--color-bg-dark), var(--color-teal-deep));
+    radial-gradient(circle at 82% 22%, rgba(67, 150, 145, 0.34), transparent 32%),
+    radial-gradient(circle at 24% 70%, rgba(208, 170, 98, 0.08), transparent 30%),
+    linear-gradient(135deg, rgba(4, 57, 59, 0.82), rgba(7, 17, 13, 0.88)),
+    url("/images/placeholders/hero.jpg") center / cover no-repeat;
 }
 
 .mountains-hero::after {
@@ -804,8 +806,10 @@ color:var(--color-teal);
 
 .dashboard-hero {
   background:
-    radial-gradient(circle at 80% 30%, rgba(127, 181, 179, 0.22), transparent 28%),
-    linear-gradient(135deg, var(--color-bg-dark), var(--color-teal-deep));
+    radial-gradient(circle at 82% 22%, rgba(67, 150, 145, 0.34), transparent 32%),
+    radial-gradient(circle at 24% 70%, rgba(208, 170, 98, 0.08), transparent 30%),
+    linear-gradient(135deg, rgba(4, 57, 59, 0.82), rgba(7, 17, 13, 0.88)),
+    url("/images/placeholders/hero.jpg") center / cover no-repeat;
 }
 
 .dashboard-hero p:not(.section-kicker) {
@@ -1118,8 +1122,10 @@ color:var(--color-teal);
 
 .map-hero {
   background:
-    radial-gradient(circle at 80% 30%, rgba(127, 181, 179, 0.22), transparent 28%),
-    linear-gradient(135deg, var(--color-bg-dark), var(--color-teal-deep));
+    radial-gradient(circle at 82% 22%, rgba(67, 150, 145, 0.34), transparent 32%),
+    radial-gradient(circle at 24% 70%, rgba(208, 170, 98, 0.08), transparent 30%),
+    linear-gradient(135deg, rgba(4, 57, 59, 0.82), rgba(7, 17, 13, 0.88)),
+    url("/images/placeholders/hero.jpg") center / cover no-repeat;
 }
 
 .map-hero p:not(.section-kicker) {
@@ -1298,8 +1304,10 @@ color:var(--color-teal);
 
 .collection-hero {
   background:
-    radial-gradient(circle at 82% 28%, rgba(127, 181, 179, 0.22), transparent 30%),
-    linear-gradient(135deg, var(--color-bg-dark), var(--color-teal-deep));
+    radial-gradient(circle at 82% 22%, rgba(67, 150, 145, 0.34), transparent 32%),
+    radial-gradient(circle at 24% 70%, rgba(208, 170, 98, 0.08), transparent 30%),
+    linear-gradient(135deg, rgba(4, 57, 59, 0.82), rgba(7, 17, 13, 0.88)),
+    url("/images/placeholders/hero.jpg") center / cover no-repeat;
 }
 
 .collection-hero__grid {
@@ -1497,6 +1505,154 @@ color:var(--color-teal);
   font-size: inherit;
   letter-spacing: inherit;
 }
+
+/* ===== SOCIAL SIDEBAR ===== */
+/* Lives inside .hero-home, absolute positioned — disappears when hero scrolls away */
+
+.social-sidebar {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 0.85rem;
+}
+
+/* Line above icons */
+.social-sidebar__line {
+  display: block;
+  width: 1px;
+  height: 52px;
+  flex-shrink: 0;
+  background: linear-gradient(to bottom, transparent, rgba(208, 170, 98, 0.55));
+}
+
+/* Line below icons */
+.social-sidebar__line--bottom {
+  background: linear-gradient(to bottom, rgba(208, 170, 98, 0.55), transparent);
+}
+
+.social-sidebar a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  color: rgba(248, 250, 252, 0.82);
+  text-decoration: none;
+  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.social-sidebar a:hover {
+  color: var(--color-accent);
+  background: rgba(208, 170, 98, 0.12);
+  transform: scale(1.12);
+}
+
+@media (max-width: 1100px) {
+  .social-sidebar {
+    display: none;
+  }
+}
+
+/* ===== ELEVATION RULER ===== */
+/*
+  Must stay:
+  - RIGHT of the social sidebar: sidebar is ~56px wide (12px pad + 36px icon + 8px gap)
+    so ruler left edge must be >= 64px
+  - LEFT of the hero content: the container starts at (100vw - containerW) / 2
+    ruler right edge (label + tick) is ~55px wide, so ruler must end before container left edge
+    We position by left edge and give it a max-width so it can't bleed into the text
+*/
+
+.elev-ruler {
+  position: absolute;
+  /* Clamp between 64px (clears socials) and wherever fits before the container */
+  left: clamp(64px, calc((100vw - min(1200px, 90%)) / 2 - 80px), calc(50vw - 200px));
+  top: 42%;
+  transform: translateY(-50%);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 340px;
+  /* max-width prevents ruler labels bleeding into hero text on mid-width screens */
+  max-width: calc((100vw - min(1200px, 90%)) / 2 - 64px);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.elev-ruler__line {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(208, 170, 98, 0.4);
+}
+
+.elev-ruler__mark {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  position: relative;
+}
+
+.elev-ruler__label {
+  font-family: var(--font-body);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: rgba(208, 170, 98, 0.75);
+  text-align: right;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.elev-ruler__tick {
+  display: block;
+  height: 1px;
+  width: 10px;
+  background: rgba(208, 170, 98, 0.6);
+  flex-shrink: 0;
+}
+
+/* Minor ticks */
+.elev-ruler__mark::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) translateY(-8px);
+  width: 5px;
+  height: 1px;
+  background: rgba(208, 170, 98, 0.28);
+}
+
+.elev-ruler__mark::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%) translateY(8px);
+  width: 5px;
+  height: 1px;
+  background: rgba(208, 170, 98, 0.28);
+}
+
+/* Hide ruler entirely when there's not enough room for it */
+@media (max-width: 1300px) {
+  .elev-ruler {
+    display: none;
+  }
+}
+
 
 /* "Explore" — light, thin, regular weight */
 .hero-home__h1-top {
