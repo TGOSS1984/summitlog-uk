@@ -1,5 +1,14 @@
 import { Link } from "react-router-dom";
-import { TbMountain, TbMap2, TbLayoutDashboard, TbUser, TbBrandGithub } from "react-icons/tb";
+import {
+  TbMountain,
+  TbMap2,
+  TbLayoutDashboard,
+  TbUser,
+  TbBrandInstagram,
+  TbBrandX,
+  TbBrandFacebook,
+  TbBrandStrava,
+} from "react-icons/tb";
 
 function Footer() {
   const year = new Date().getFullYear();
@@ -16,6 +25,21 @@ function Footer() {
             </span>
           </div>
           <p>Track Wainwrights, Munros, Corbetts and every major UK peak collection — all in one place.</p>
+
+          <div className="site-footer__socials">
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+              <TbBrandInstagram size={18} strokeWidth={1.8} />
+            </a>
+            <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="X / Twitter">
+              <TbBrandX size={18} strokeWidth={1.8} />
+            </a>
+            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+              <TbBrandFacebook size={18} strokeWidth={1.8} />
+            </a>
+            <a href="https://strava.com" target="_blank" rel="noopener noreferrer" aria-label="Strava">
+              <TbBrandStrava size={18} strokeWidth={1.8} />
+            </a>
+          </div>
         </div>
 
         <nav className="site-footer__nav" aria-label="Footer navigation">
@@ -36,3 +60,4 @@ function Footer() {
 }
 
 export default Footer;
+

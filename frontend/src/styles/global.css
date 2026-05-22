@@ -2962,6 +2962,32 @@ h2 em {
   }
 }
 
+/* ===== FOOTER SOCIALS ===== */
+
+.site-footer__socials {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: var(--space-lg);
+}
+
+.site-footer__socials a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  color: rgba(248, 250, 252, 0.5);
+  text-decoration: none;
+  transition: color 160ms ease, background 160ms ease;
+}
+
+.site-footer__socials a:hover {
+  color: var(--color-accent);
+  background: rgba(208, 170, 98, 0.1);
+}
+
 /* ===== CONSISTENT PAGE HERO HEADINGS (all inner pages) ===== */
 
 /* Matches the homepage two-tier style: light word + bold all-caps */
