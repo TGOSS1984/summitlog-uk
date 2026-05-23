@@ -64,6 +64,61 @@ function CardHeaderSVG({ mountain, index }) {
   const id = mountain.id || index;
   const contour = getContourPath(id, tideY, w, 7);
 
+  // Build a mountain silhouette: bell-curve peak + secondary shoulder
+  // Uses seed so each mountain looks different but always mountain-shaped
+  function getMountainPath(seed, w, h) {
+    const r = (n) => ((seed * n * 1013904223 + 1664525) % 2147483647) / 2147483647;
+    // Peak position: biased toward centre (40%–65% across)
+    const peakX = Math.round(w * (0.38 + r(7) * 0.26));
+    const peakY = Math.round(h * (0.08 + r(3) * 0.18)); // top 8–26%
+    // Secondary shoulder — offset left or right
+    const shoulderSide = r(5) > 0.5 ? 1 : -1;
+    const shoulderX = Math.round(peakX + shoulderSide * w * (0.18 + r(11) * 0.14));
+    const shoulderY = Math.round(peakY + h * (0.12 + r(9) * 0.14));
+    // Foothills — wide gentle slopes to left and right edges
+    const leftFootY  = Math.round(h * (0.55 + r(13) * 0.2));
+    const rightFootY = Math.round(h * (0.55 + r(17) * 0.2));
+    // Control points for smooth curves via cubic bezier
+    // Left slope: from left edge up to peak
+    const lcp1x = Math.round(peakX * 0.25);
+    const lcp1y = leftFootY;
+    const lcp2x = Math.round(peakX * 0.65);
+    const lcp2y = Math.round(peakY + h * 0.04);
+    // Right slope: from peak down to right edge
+    const rcp1x = Math.round(peakX + (w - peakX) * 0.35);
+    const rcp1y = Math.round(peakY + h * 0.04);
+    const rcp2x = Math.round(peakX + (w - peakX) * 0.78);
+    const rcp2y = rightFootY;
+    // Shoulder bump — small quadratic bump on one side
+    const scp1x = Math.round((peakX + shoulderX) / 2);
+    const scp1y = Math.round(Math.min(peakY, shoulderY) - h * 0.03);
+
+    if (shoulderSide === -1) {
+      // Shoulder on left — insert between left foot and peak
+      const midX = Math.round((peakX + shoulderX) / 2);
+      return [
+        `M0,${h}`,
+        `L0,${leftFootY}`,
+        `C${lcp1x},${leftFootY} ${shoulderX - 20},${shoulderY + 10} ${shoulderX},${shoulderY}`,
+        `Q${scp1x},${scp1y} ${peakX},${peakY}`,
+        `C${rcp1x},${rcp1y} ${rcp2x},${rightFootY} ${w},${rightFootY}`,
+        `L${w},${h} Z`
+      ].join(" ");
+    } else {
+      // Shoulder on right
+      return [
+        `M0,${h}`,
+        `L0,${leftFootY}`,
+        `C${lcp1x},${lcp1y} ${lcp2x},${lcp2y} ${peakX},${peakY}`,
+        `Q${scp1x},${scp1y} ${shoulderX},${shoulderY}`,
+        `C${shoulderX + 20},${shoulderY + 5} ${rcp2x},${rightFootY} ${w},${rightFootY}`,
+        `L${w},${h} Z`
+      ].join(" ");
+    }
+  }
+
+  const silhouettePath = getMountainPath(id * 7 + 13, w, cardH);
+
   return (
     <svg
       viewBox={`0 0 ${w} ${cardH}`}
@@ -71,15 +126,10 @@ function CardHeaderSVG({ mountain, index }) {
       className="mountain-card__header-svg"
       aria-hidden="true"
     >
-      {/* Faint background silhouette */}
+      {/* Mountain silhouette — smooth bell-curve with shoulder */}
       <path
-        d={`M0,${cardH} L0,${Math.round(cardH * 0.6)} ${Array.from({ length: 12 }, (_, i) => {
-          const x = Math.round((i / 11) * w);
-          const seed2 = ((id * 31 + i * 17) % 100) / 100;
-          const y = Math.round(cardH * (0.25 + seed2 * 0.35));
-          return `L${x},${y}`;
-        }).join(" ")} L${w},${Math.round(cardH * 0.5)} L${w},${cardH} Z`}
-        fill="rgba(127,181,179,0.12)"
+        d={silhouettePath}
+        fill="rgba(127,181,179,0.14)"
       />
 
       {/* Gold fill below the contour line */}
