@@ -57,6 +57,13 @@ function HomePage() {
       <section className="hero-home">
         <div className="hero-home__overlay" />
 
+        <img
+          src="/images/placeholders/mountain-circle.png"
+          className="hero-home__mountain-bg"
+          aria-hidden="true"
+          alt=""
+        />
+
         {/* Social sidebar — inside hero only, not fixed */}
         <aside className="social-sidebar" aria-label="Social links">
           <div className="social-sidebar__line" aria-hidden="true" />
