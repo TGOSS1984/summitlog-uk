@@ -591,7 +591,11 @@ function DashboardPage() {
                   {stats.collectionStats.map((collection) => {
                     const remaining = Math.max(collection.total - collection.completed, 0);
                     return (
-                      <div className="collection-progress-card collection-progress-card--premium" key={collection.id}>
+                      <Link
+                        to={`/collections/${collection.slug}`}
+                        className="collection-progress-card collection-progress-card--premium"
+                        key={collection.id}
+                      >
                         <div className="collection-progress-card__icon"><TbMountain size={20} strokeWidth={1.5} /></div>
                         <div className="collection-progress-card__main">
                           <p className="section-kicker">{collection.name}</p>
@@ -600,7 +604,7 @@ function DashboardPage() {
                           <div className="progress-track"><span style={{ width: `${collection.percent}%` }} /></div>
                         </div>
                         <strong className="collection-progress-card__percent">{collection.percent}%</strong>
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>
