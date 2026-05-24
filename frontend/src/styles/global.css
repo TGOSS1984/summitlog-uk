@@ -3482,3 +3482,25 @@ h2 em {
     width: clamp(160px, 70vw, 260px);
   }
 }
+
+/*Ridge Divider*/
+
+.hero-ridge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 160px;
+  pointer-events: none;
+  z-index: 1;
+  line-height: 0;
+}
+
+.hero-ridge__svg {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}

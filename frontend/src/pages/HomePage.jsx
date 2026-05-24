@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useEffect, useRef } from "react";
 import {
   TbMountain,
   TbMap2,
@@ -11,7 +12,6 @@ import {
   TbBrandFacebook,
   TbBrandStrava,
 } from "react-icons/tb";
-
 const FEATURES = [
   {
     icon: TbMountain,
@@ -49,7 +49,50 @@ const COLLECTIONS = [
 
 const ELEVATION_MARKS = [2000, 1750, 1500, 1250, 1000, 750, 500, 250];
 
+function generateRidge() {
+  const WIDTH = 1440;
+  const HEIGHT = 160;
+  const ITERATIONS = 6;
+  const ROUGHNESS = 0.8;
+  const segments = Math.pow(2, ITERATIONS);
+
+  function displaceMap(height, displace, roughness, power) {
+    const points = [];
+    points[0] = height / 2 + Math.random() * displace * 2 - displace;
+    points[power] = height / 2 + Math.random() * displace * 2 - displace;
+    displace *= roughness;
+    for (let i = 1; i < power; i *= 2) {
+      for (let j = (power / i) / 2; j < power; j += power / i) {
+        points[j] =
+          (points[j - (power / i) / 2] + points[j + (power / i) / 2]) / 2;
+        points[j] += Math.random() * displace * 2 - displace;
+      }
+      displace *= roughness;
+    }
+    return points;
+  }
+
+  const rawPoints = displaceMap(HEIGHT, HEIGHT / 4, ROUGHNESS, segments);
+  const sep = WIDTH / (rawPoints.length - 1);
+  const points = rawPoints.map((val, i) => [i * sep, val]);
+  const first = points.shift();
+  let path = `M ${first[0]} ${first[1]}`;
+  points.forEach(([x, y]) => {
+    path += ` L ${x} ${y}`;
+  });
+  path += ` L ${WIDTH} ${HEIGHT} L 0 ${HEIGHT} Z`;
+  return path;
+}
+
 function HomePage() {
+  const ridgeRef = useRef(null);
+
+  useEffect(() => {
+    if (ridgeRef.current) {
+      ridgeRef.current.setAttribute("d", generateRidge());
+    }
+  }, []);
+
   return (
     <main>
 
@@ -153,27 +196,20 @@ function HomePage() {
 
         <div className="hero-ridge">
           <svg
-              viewBox="0 0 1440 160"
-              xmlns="http://www.w3.org/2000/svg"
-              preserveAspectRatio="none"
-              className="hero-ridge__svg"
-              aria-hidden="true"
-            >
-              <defs>
-                <linearGradient id="ridgeGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#0d3d3a" />
-                  <stop offset="100%" stopColor="#07110d" />
-                </linearGradient>
-              </defs>
-              <path
-                d="M0,110 C40,108 70,95 100,82 C130,69 148,74 170,68 C192,62 205,48 228,40 C251,32 268,44 290,50 C312,56 328,52 352,44 C376,36 390,22 418,18 C446,14 462,28 488,36 C514,44 530,46 558,42 C586,38 602,28 628,24 C654,20 672,30 698,38 C724,46 742,50 768,54 C794,58 812,52 838,46 C864,40 882,32 910,30 C938,28 958,38 984,46 C1010,54 1028,58 1056,56 C1084,54 1102,46 1128,40 C1154,34 1172,30 1200,36 C1228,42 1248,56 1278,68 C1308,80 1328,88 1360,94 C1392,100 1420,102 1440,104 L1440,160 L0,160 Z"
-                fill="rgba(247,247,244,0.18)"
-              />
-              <path
-                d="M0,140 C30,138 52,132 78,122 C104,112 118,106 142,98 C166,90 182,84 206,76 C230,68 246,62 272,54 C298,46 316,40 342,34 C368,28 386,22 414,16 C442,10 460,8 488,12 C516,16 532,22 558,28 C584,34 602,38 630,42 C658,46 676,44 704,40 C732,36 750,28 778,22 C806,16 824,14 852,18 C880,22 896,30 922,38 C948,46 966,52 994,56 C1022,60 1040,58 1068,54 C1096,50 1114,42 1142,38 C1170,34 1188,36 1216,42 C1244,48 1262,56 1290,66 C1318,76 1338,86 1368,100 C1398,114 1422,126 1440,134 L1440,160 L0,160 Z"
-                fill="url(#ridgeGradient)"
-              />
-            </svg>
+            viewBox="0 0 1440 160"
+            xmlns="http://www.w3.org/2000/svg"
+            preserveAspectRatio="none"
+            className="hero-ridge__svg"
+            aria-hidden="true"
+          >
+            <defs>
+              <linearGradient id="ridgeGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#0d3d3a" />
+                <stop offset="100%" stopColor="#07110d" />
+              </linearGradient>
+            </defs>
+            <path ref={ridgeRef} fill="url(#ridgeGradient)" d="" />
+          </svg>
         </div>
       </section>
 
