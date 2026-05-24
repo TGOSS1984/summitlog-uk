@@ -3504,3 +3504,80 @@ h2 em {
   height: 100%;
   display: block;
 }
+
+/* ===== DASHBOARD GREETING STRIP ===== */
+
+.dashboard-greeting {
+  background: linear-gradient(135deg, var(--color-teal-deep), rgba(7,17,13,0.95));
+  border-bottom: 1px solid rgba(208, 170, 98, 0.12);
+  padding: var(--space-lg) 0;
+}
+
+.dashboard-greeting__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+}
+
+.dashboard-greeting__name {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 600;
+  line-height: 1.1;
+  margin: 0;
+  max-width: none;
+  color: var(--color-text-light);
+}
+
+.dashboard-greeting__possessive {
+  color: var(--color-accent);
+}
+
+.dashboard-greeting__label {
+  color: var(--color-text-light);
+}
+
+.dashboard-greeting__demo-note {
+  margin-top: var(--space-sm) !important;
+  font-size: 0.85rem;
+  color: rgba(248, 250, 252, 0.55) !important;
+}
+
+.dashboard-greeting__demo-note a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.dashboard-greeting__icon {
+  color: rgba(208, 170, 98, 0.2);
+  flex-shrink: 0;
+}
+
+/* ===== DASHBOARD DEMO BANNER ===== */
+
+.dashboard-demo-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(208, 170, 98, 0.08);
+  border: 1px solid rgba(208, 170, 98, 0.2);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1.2rem;
+  margin-bottom: var(--space-xl);
+  color: rgba(208, 170, 98, 0.9);
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.dashboard-demo-banner a {
+  color: var(--color-accent);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .dashboard-greeting__icon {
+    display: none;
+  }
+}
