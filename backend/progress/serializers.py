@@ -15,6 +15,7 @@ class UserMountainLogSerializer(serializers.ModelSerializer):
             "mountain",
             "mountain_detail",
             "status",
+            "season",
             "completed_date",
             "route_taken",
             "hike_distance_km",

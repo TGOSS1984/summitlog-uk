@@ -12,6 +12,13 @@ class UserMountainLog(models.Model):
         ("completed", "Completed"),
     ]
 
+    SEASON_CHOICES = [
+        ("summer", "Summer"),
+        ("winter", "Winter"),
+        ("spring", "Spring"),
+        ("autumn", "Autumn"),
+    ]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -28,6 +35,12 @@ class UserMountainLog(models.Model):
         max_length=20,
         choices=STATUS_CHOICES,
         default="not_started",
+    )
+
+    season = models.CharField(
+        max_length=10,
+        choices=SEASON_CHOICES,
+        blank=True,
     )
 
     completed_date = models.DateField(
@@ -83,8 +96,8 @@ class UserMountainLog(models.Model):
     )
 
     class Meta:
-        unique_together = ["user", "mountain"]
-        ordering = ["-updated_at"]
+        ordering = ["-completed_date", "-updated_at"]
 
     def __str__(self):
-        return f"{self.user} - {self.mountain}"
+        date = self.completed_date or "no date"
+        return f"{self.user} - {self.mountain} ({date})"
