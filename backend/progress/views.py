@@ -1,4 +1,5 @@
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
 
 from .models import UserMountainLog
 from .serializers import UserMountainLogSerializer
@@ -34,4 +35,12 @@ class UserMountainLogDetailView(generics.RetrieveUpdateDestroyAPIView):
             "mountain__collection",
             "mountain__region",
             "mountain__subregion",
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        return Response(
+            {"detail": "Log deleted successfully."},
+            status=status.HTTP_200_OK,
         )

@@ -31,3 +31,24 @@ class UserMountainLogSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def validate_completed_date(self, value):
+        from django.utils import timezone
+        if value and value > timezone.now().date():
+            raise serializers.ValidationError("Completed date cannot be in the future.")
+        return value
+
+    def validate_hike_distance_km(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError("Distance cannot be negative.")
+        return value
+
+    def validate_hike_duration_hours(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError("Duration cannot be negative.")
+        return value
+
+    def validate_steps(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError("Steps cannot be negative.")
+        return value
