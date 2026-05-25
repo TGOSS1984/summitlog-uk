@@ -8,6 +8,7 @@ import {
   TbMountain, TbRoute, TbRuler, TbStairs, TbWalk,
   TbTrophy, TbFlag, TbMap2, TbStar, TbFlame,
   TbCheck, TbCircle, TbBolt, TbTargetArrow, TbUser,
+  TbCalendar, TbArrowUp, TbStepInto,
 } from "react-icons/tb";
 
 import { getCollections, getMountains, getProgressLogs, getCurrentUser } from "../lib/api";
@@ -55,7 +56,7 @@ function seededRandom(seed) {
 
 // Generate plausible-looking demo stats
 function generateDemoStats() {
-  const seed = Math.floor(Date.now() / 60000); // changes each minute
+  const seed = Math.floor(Date.now() / 60000);
   const rng = seededRandom(seed);
 
   const completed = Math.floor(rng() * 60) + 8;
@@ -116,19 +117,82 @@ function generateDemoStats() {
   ].map((r) => ({ ...r, percent: Math.round((r.completed / r.total) * 100) }));
 
   const demoLogs = [
-    { id: 1, mountain_detail: { name: "Scafell Pike", slug: "scafell-pike", region: { name: "Lake District" } }, status: "completed", completed_date: "2024-08-14", hike_distance_km: 12.4 },
-    { id: 2, mountain_detail: { name: "Helvellyn", slug: "helvellyn", region: { name: "Lake District" } },       status: "completed", completed_date: "2024-07-22", hike_distance_km: 9.8 },
-    { id: 3, mountain_detail: { name: "Ben Nevis", slug: "ben-nevis", region: { name: "Scotland" } },            status: "planned",   completed_date: null,         hike_distance_km: null },
-    { id: 4, mountain_detail: { name: "Snowdon",   slug: "snowdon",   region: { name: "Wales" } },              status: "completed", completed_date: "2024-06-10", hike_distance_km: 8.2 },
-    { id: 5, mountain_detail: { name: "Skiddaw",   slug: "skiddaw",   region: { name: "Lake District" } },      status: "completed", completed_date: "2024-05-30", hike_distance_km: 7.6 },
+    { id: 1, mountain_detail: { name: "Scafell Pike", slug: "scafell-pike", height_m: 978, region: { name: "Lake District" } }, status: "completed", completed_date: "2024-08-14", hike_distance_km: 12.4, steps: 24000, hike_duration_hours: 6.5 },
+    { id: 2, mountain_detail: { name: "Helvellyn",    slug: "helvellyn",    height_m: 950, region: { name: "Lake District" } }, status: "completed", completed_date: "2024-07-22", hike_distance_km: 9.8,  steps: 19500, hike_duration_hours: 5.2 },
+    { id: 3, mountain_detail: { name: "Ben Nevis",    slug: "ben-nevis",    height_m: 1345, region: { name: "Scotland" } },     status: "planned",   completed_date: null,         hike_distance_km: null, steps: null, hike_duration_hours: null },
+    { id: 4, mountain_detail: { name: "Snowdon",      slug: "snowdon",      height_m: 1085, region: { name: "Wales" } },        status: "completed", completed_date: "2024-06-10", hike_distance_km: 8.2,  steps: 16800, hike_duration_hours: 4.8 },
+    { id: 5, mountain_detail: { name: "Skiddaw",      slug: "skiddaw",      height_m: 931,  region: { name: "Lake District" } }, status: "completed", completed_date: "2024-05-30", hike_distance_km: 7.6,  steps: 15200, hike_duration_hours: 4.1 },
   ];
+
+  // Demo personal bests
+  const personalBests = {
+    longestHike:   { value: "12.4km", label: "Longest single hike",    mountain: "Scafell Pike",  date: "14 Aug 2024" },
+    highestPeak:   { value: "978m",   label: "Highest peak summited",   mountain: "Scafell Pike",  date: "14 Aug 2024" },
+    mostSteps:     { value: "24,000", label: "Most steps in one day",   mountain: "Scafell Pike",  date: "14 Aug 2024" },
+    longestHours:  { value: "6.5hrs", label: "Longest hike duration",   mountain: "Scafell Pike",  date: "14 Aug 2024" },
+    mostRecent:    { value: "14 Aug 2024", label: "Most recent summit", mountain: "Scafell Pike",  date: null },
+    firstSummit:   { value: "30 May 2024", label: "First summit logged", mountain: "Skiddaw",      date: null },
+  };
 
   return {
     completed, planned, totalVisible: 800, totalDistance, totalHeight, totalSteps, totalFlightsClimbed,
     collectionStats, statusChartData, collectionChartData, completionTimelineData,
     recentLogs: demoLogs, nextObjective: demoLogs.find((l) => l.status === "planned") || null,
     photoLogs: [], elevationPercent, achievements, achievedBadges, achievementPercent,
-    regionStats,
+    regionStats, personalBests,
+  };
+}
+
+// Compute personal bests from real logs + mountains
+function computePersonalBests(logs, mountains) {
+  const completedLogs = logs.filter((l) => l.status === "completed");
+
+  if (completedLogs.length === 0) return null;
+
+  // Longest hike by distance
+  const longestHikeLog = [...completedLogs]
+    .filter((l) => l.hike_distance_km)
+    .sort((a, b) => Number(b.hike_distance_km) - Number(a.hike_distance_km))[0];
+
+  // Highest peak — match log to mountain height
+  const completedWithHeight = completedLogs.map((l) => {
+    const mountain = mountains.find((m) => m.id === l.mountain);
+    return { ...l, height_m: mountain?.height_m || l.mountain_detail?.height_m || 0, mountainName: mountain?.name || l.mountain_detail?.name };
+  }).filter((l) => l.height_m > 0);
+  const highestPeakLog = [...completedWithHeight].sort((a, b) => b.height_m - a.height_m)[0];
+
+  // Most steps
+  const mostStepsLog = [...completedLogs]
+    .filter((l) => l.steps)
+    .sort((a, b) => Number(b.steps) - Number(a.steps))[0];
+
+  // Longest duration
+  const longestDurationLog = [...completedLogs]
+    .filter((l) => l.hike_duration_hours)
+    .sort((a, b) => Number(b.hike_duration_hours) - Number(a.hike_duration_hours))[0];
+
+  // Most recent summit
+  const mostRecentLog = [...completedLogs]
+    .filter((l) => l.completed_date)
+    .sort((a, b) => new Date(b.completed_date) - new Date(a.completed_date))[0];
+
+  // First summit ever
+  const firstSummitLog = [...completedLogs]
+    .filter((l) => l.completed_date)
+    .sort((a, b) => new Date(a.completed_date) - new Date(b.completed_date))[0];
+
+  function fmtDate(d) {
+    if (!d) return null;
+    return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  return {
+    longestHike:  longestHikeLog  ? { value: `${Number(longestHikeLog.hike_distance_km).toFixed(1)}km`,  label: "Longest single hike",    mountain: longestHikeLog.mountain_detail?.name  || "—", date: fmtDate(longestHikeLog.completed_date) }  : null,
+    highestPeak:  highestPeakLog  ? { value: `${highestPeakLog.height_m}m`,                              label: "Highest peak summited",   mountain: highestPeakLog.mountainName           || "—", date: fmtDate(highestPeakLog.completed_date) }  : null,
+    mostSteps:    mostStepsLog    ? { value: Number(mostStepsLog.steps).toLocaleString(),                 label: "Most steps in one day",   mountain: mostStepsLog.mountain_detail?.name    || "—", date: fmtDate(mostStepsLog.completed_date) }    : null,
+    longestHours: longestDurationLog ? { value: `${Number(longestDurationLog.hike_duration_hours)}hrs`,  label: "Longest hike duration",   mountain: longestDurationLog.mountain_detail?.name || "—", date: fmtDate(longestDurationLog.completed_date) } : null,
+    mostRecent:   mostRecentLog   ? { value: fmtDate(mostRecentLog.completed_date),                      label: "Most recent summit",      mountain: mostRecentLog.mountain_detail?.name   || "—", date: null }                                     : null,
+    firstSummit:  firstSummitLog  ? { value: fmtDate(firstSummitLog.completed_date),                     label: "First summit logged",     mountain: firstSummitLog.mountain_detail?.name  || "—", date: null }                                     : null,
   };
 }
 
@@ -168,6 +232,44 @@ function StatCard({ label, rawValue, sub, loaded }) {
       <strong>{display}</strong>
       <span>{sub}</span>
     </article>
+  );
+}
+
+const PB_META = [
+  { key: "longestHike",  icon: TbRoute,    color: "var(--color-teal)" },
+  { key: "highestPeak",  icon: TbArrowUp,  color: "var(--color-accent)" },
+  { key: "mostSteps",    icon: TbWalk,     color: "var(--color-teal)" },
+  { key: "longestHours", icon: TbStairs,   color: "var(--color-teal-deep)" },
+  { key: "mostRecent",   icon: TbCalendar, color: "var(--color-accent)" },
+  { key: "firstSummit",  icon: TbTrophy,   color: "var(--color-teal-deep)" },
+];
+
+function PersonalBests({ personalBests }) {
+  if (!personalBests) return null;
+  const items = PB_META.map((m) => ({ ...m, data: personalBests[m.key] })).filter((m) => m.data);
+  if (items.length === 0) return null;
+
+  return (
+    <div className="dashboard-pb-panel">
+      <div className="dashboard-pb-header">
+        <p className="section-kicker"><span className="kicker-line" />Personal bests</p>
+        <h2>Your summit records</h2>
+        <p>Your best logged stats across all completed ascents.</p>
+      </div>
+      <div className="dashboard-pb-grid">
+        {items.map(({ key, icon: Icon, color, data }) => (
+          <article className="dashboard-pb-card" key={key}>
+            <div className="dashboard-pb-card__icon" style={{ color }}>
+              <Icon size={20} strokeWidth={1.5} />
+            </div>
+            <p className="dashboard-pb-card__label">{data.label}</p>
+            <strong className="dashboard-pb-card__value">{data.value}</strong>
+            <p className="dashboard-pb-card__mountain">{data.mountain}</p>
+            {data.date && <span className="dashboard-pb-card__date">{data.date}</span>}
+          </article>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -218,10 +320,7 @@ function ElevationRidge({ percent }) {
   );
 }
 
-// Personal greeting banner
 function DashboardGreeting({ userName, isDemo }) {
-  const greetings = ["Your mountain story,", "Your summit record,", "Your peak journey,"];
-  const greeting = greetings[0];
   const possessive = userName ? `${userName}'s` : "Explorer's";
   return (
     <div className="dashboard-greeting">
@@ -266,14 +365,12 @@ function DashboardPage() {
   useEffect(() => {
     async function loadDashboard() {
       try {
-        // Try to get current user first
         let currentUser = null;
         try {
           const userData = await getCurrentUser();
           currentUser = userData;
           setUser(userData.user || userData);
         } catch {
-          // Not logged in — show demo mode
           setStatus("demo");
           return;
         }
@@ -294,7 +391,6 @@ function DashboardPage() {
   }, []);
 
   const stats = useMemo(() => {
-    // If demo mode, return generated stats immediately
     if (status === "demo") return generateDemoStats();
 
     const completedLogs = logs.filter((log) => log.status === "completed");
@@ -358,7 +454,10 @@ function DashboardPage() {
       return { name: regionName, completed, planned, total, percent: total ? Math.round((completed / total) * 100) : 0 };
     });
 
-    return { completed: completedLogs.length, planned: plannedLogs.length, totalVisible: mountains.length, totalDistance, totalHeight, totalSteps, totalFlightsClimbed, collectionStats, statusChartData, collectionChartData, recentLogs, nextObjective, photoLogs, elevationPercent, achievements, achievedBadges, achievementPercent, regionStats, completionTimelineData };
+    // Compute personal bests from real data
+    const personalBests = computePersonalBests(logs, mountains);
+
+    return { completed: completedLogs.length, planned: plannedLogs.length, totalVisible: mountains.length, totalDistance, totalHeight, totalSteps, totalFlightsClimbed, collectionStats, statusChartData, collectionChartData, recentLogs, nextObjective, photoLogs, elevationPercent, achievements, achievedBadges, achievementPercent, regionStats, completionTimelineData, personalBests };
   }, [collections, logs, mountains, status]);
 
   const userName = user?.username || user?.user?.username || user?.first_name || null;
@@ -376,7 +475,6 @@ function DashboardPage() {
         </div>
       </section>
 
-      {/* Personal greeting strip */}
       {(status === "success" || status === "demo") && (
         <DashboardGreeting userName={userName} isDemo={isDemo} />
       )}
@@ -402,6 +500,9 @@ function DashboardPage() {
                 <StatCard label="Steps"           rawValue={stats.totalSteps}                       sub="steps logged"             loaded={loaded} />
                 <StatCard label="Flights climbed" rawValue={stats.totalFlightsClimbed}              sub="flights recorded"         loaded={loaded} />
               </div>
+
+              {/* Personal bests — only shown when there's real data or demo */}
+              <PersonalBests personalBests={stats.personalBests} />
 
               <div className="dashboard-journey-grid">
                 <article className="dashboard-journey-card dashboard-next-card">
@@ -647,3 +748,4 @@ function DashboardPage() {
 }
 
 export default DashboardPage;
+
