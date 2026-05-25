@@ -63,99 +63,88 @@ export async function getProgressLogs() {
 
 export async function createProgressLog(payload) {
   const csrfToken = await getCsrfToken();
-
   return request("/progress/logs/", {
     method: "POST",
-    headers: {
-      "X-CSRFToken": csrfToken,
-    },
+    headers: { "X-CSRFToken": csrfToken },
     body: JSON.stringify(payload),
   });
 }
 
 export async function updateProgressLog(logId, payload) {
   const csrfToken = await getCsrfToken();
-
   return request(`/progress/logs/${logId}/`, {
     method: "PATCH",
-    headers: {
-      "X-CSRFToken": csrfToken,
-    },
+    headers: { "X-CSRFToken": csrfToken },
     body: JSON.stringify(payload),
   });
 }
 
 export async function deleteProgressLog(logId) {
   const csrfToken = await getCsrfToken();
-
   const response = await fetch(`${API_BASE}/progress/logs/${logId}/`, {
     method: "DELETE",
     credentials: "include",
-    headers: {
-      "X-CSRFToken": csrfToken,
-    },
+    headers: { "X-CSRFToken": csrfToken },
   });
-
   if (!response.ok) {
     const data = await response.json().catch(() => null);
     throw new Error(data?.detail || JSON.stringify(data) || "Delete failed.");
   }
-
   return true;
 }
 
 export async function registerUser(payload) {
   const csrfToken = await getCsrfToken();
-
   return request("/auth/register/", {
     method: "POST",
-    headers: {
-      "X-CSRFToken": csrfToken,
-    },
+    headers: { "X-CSRFToken": csrfToken },
     body: JSON.stringify(payload),
   });
 }
 
 export async function loginUser(payload) {
   const csrfToken = await getCsrfToken();
-
   return request("/auth/login/", {
     method: "POST",
-    headers: {
-      "X-CSRFToken": csrfToken,
-    },
+    headers: { "X-CSRFToken": csrfToken },
     body: JSON.stringify(payload),
   });
 }
 
 export async function logoutUser() {
   const csrfToken = await getCsrfToken();
-
   return request("/auth/logout/", {
     method: "POST",
-    headers: {
-      "X-CSRFToken": csrfToken,
-    },
+    headers: { "X-CSRFToken": csrfToken },
   });
 }
 
 export async function updateProgressLogWithImage(logId, formData) {
   const csrfToken = await getCsrfToken();
-
   const response = await fetch(`${API_BASE}/progress/logs/${logId}/`, {
     method: "PATCH",
     credentials: "include",
-    headers: {
-      "X-CSRFToken": csrfToken,
-    },
+    headers: { "X-CSRFToken": csrfToken },
     body: formData,
   });
-
   const data = await response.json().catch(() => null);
-
   if (!response.ok) {
     throw new Error(data?.detail || JSON.stringify(data) || "Upload failed.");
   }
+  return data;
+}
 
+export async function updateUserProfile(formData) {
+  const csrfToken = await getCsrfToken();
+  const response = await fetch(`${API_BASE}/auth/profile/`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: { "X-CSRFToken": csrfToken },
+    body: formData,
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(data?.detail || JSON.stringify(data) || "Update failed.");
+  }
   return data;
 }

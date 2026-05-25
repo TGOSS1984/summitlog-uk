@@ -3583,3 +3583,226 @@ h2 em {
     display: none;
   }
 }
+
+/* ===== ACCOUNT PAGE — AVATAR ===== */
+
+.account-avatar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+
+.account-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(208, 170, 98, 0.35);
+  box-shadow: 0 0 0 4px rgba(208, 170, 98, 0.08);
+}
+
+.account-avatar--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(208, 170, 98, 0.15);
+  color: var(--color-accent);
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  border: 2px solid rgba(208, 170, 98, 0.25);
+}
+
+.account-avatar-edit {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(248, 250, 252, 0.72);
+  padding: 0.35rem 0.9rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.account-avatar-edit:hover {
+  background: rgba(208, 170, 98, 0.12);
+  border-color: rgba(208, 170, 98, 0.35);
+  color: var(--color-accent);
+}
+
+.account-bio {
+  margin-top: 0.6rem;
+  color: rgba(248, 250, 252, 0.62);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.account-form textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--color-text);
+  padding: 0.95rem 1rem;
+  font: inherit;
+  resize: vertical;
+}
+
+.form-error {
+  color: #e05252;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ===== ACCOUNT PANEL — BUTTON FIXES ===== */
+
+.account-panel .tracking-form__actions {
+  margin-top: 1.5rem;
+}
+
+.account-panel .tracking-form__actions button {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+}
+
+.account-logout {
+  margin-top: 0;
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  color: rgba(248, 250, 252, 0.86) !important;
+}
+
+.account-logout:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* ===== MOUNTAIN DETAIL — ASCENT HISTORY ===== */
+
+.ascent-history {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ascent-history__label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(248, 250, 252, 0.45);
+  margin-bottom: 0.75rem;
+}
+
+.ascent-history__list {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ascent-history__item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  width: 100%;
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(248, 250, 252, 0.78);
+  padding: 0.7rem 0.9rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.ascent-history__item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.ascent-history__item.active {
+  background: rgba(208, 170, 98, 0.1);
+  border-color: rgba(208, 170, 98, 0.35);
+  color: var(--color-text-light);
+}
+
+.ascent-history__new {
+  appearance: none;
+  border: 1px dashed rgba(208, 170, 98, 0.3);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-accent);
+  padding: 0.6rem 0.9rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.ascent-history__new:hover {
+  background: rgba(208, 170, 98, 0.08);
+  border-color: rgba(208, 170, 98, 0.5);
+}
+
+/* ===== SEASON BADGE ===== */
+
+.ascent-season-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(127, 181, 179, 0.14);
+  color: var(--color-teal-soft);
+  letter-spacing: 0.04em;
+}
+
+/* ===== ASCENT STATUS INLINE ===== */
+
+.ascent-status {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+
+.ascent-status--completed {
+  background: rgba(4, 57, 59, 0.2);
+  color: var(--color-teal-soft);
+}
+
+.ascent-status--planned {
+  background: rgba(208, 170, 98, 0.18);
+  color: var(--color-accent);
+}
+
+.ascent-status--not_started {
+  background: rgba(139, 148, 147, 0.14);
+  color: rgba(248, 250, 252, 0.45);
+}
+
+/* ===== NEW ASCENT LABEL ===== */
+
+.tracking-form__new-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-accent);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(208, 170, 98, 0.2);
+}

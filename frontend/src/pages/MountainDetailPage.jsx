@@ -9,8 +9,9 @@ import {
   updateProgressLogWithImage,
 } from "../lib/api";
 
-const initialForm = {
+const emptyForm = {
   status: "not_started",
+  season: "",
   completed_date: "",
   route_taken: "",
   hike_distance_km: "",
@@ -28,19 +29,35 @@ function getCollectionNames(mountain) {
       .filter(Boolean)
       .join(" / ");
   }
-
   return mountain.collection?.name || "Unlisted";
+}
+
+function logToForm(log) {
+  return {
+    status: log.status || "not_started",
+    season: log.season || "",
+    completed_date: log.completed_date || "",
+    route_taken: log.route_taken || "",
+    hike_distance_km: log.hike_distance_km || "",
+    hike_duration_hours: log.hike_duration_hours || "",
+    steps: log.steps || "",
+    flights_climbed: log.flights_climbed || "",
+    notes: log.notes || "",
+    uploaded_image: log.uploaded_image || "",
+  };
 }
 
 function MountainDetailPage() {
   const { slug } = useParams();
 
   const [mountain, setMountain] = useState(null);
-  const [logId, setLogId] = useState(null);
-  const [form, setForm] = useState(initialForm);
-  const [status, setStatus] = useState("loading");
+  const [ascents, setAscents] = useState([]);
+  const [activeLogId, setActiveLogId] = useState(null);
+  const [form, setForm] = useState(emptyForm);
+  const [pageStatus, setPageStatus] = useState("loading");
   const [saveStatus, setSaveStatus] = useState("idle");
   const [selectedImage, setSelectedImage] = useState(null);
+  const [showNewForm, setShowNewForm] = useState(false);
 
   useEffect(() => {
     async function loadMountain() {
@@ -50,32 +67,25 @@ function MountainDetailPage() {
 
         try {
           const logs = await getProgressLogs();
-          const existingLog = logs.find(
+          const mountainLogs = logs.filter(
             (log) => log.mountain === mountainData.id
           );
+          setAscents(mountainLogs);
 
-          if (existingLog) {
-            setLogId(existingLog.id);
-            setForm({
-              status: existingLog.status || "not_started",
-              completed_date: existingLog.completed_date || "",
-              route_taken: existingLog.route_taken || "",
-              hike_distance_km: existingLog.hike_distance_km || "",
-              hike_duration_hours: existingLog.hike_duration_hours || "",
-              steps: existingLog.steps || "",
-              flights_climbed: existingLog.flights_climbed || "",
-              notes: existingLog.notes || "",
-              uploaded_image: existingLog.uploaded_image || "",
-            });
+          // Load the most recent log into the form by default
+          if (mountainLogs.length > 0) {
+            const latest = mountainLogs[0];
+            setActiveLogId(latest.id);
+            setForm(logToForm(latest));
           }
-        } catch (error) {
-          console.warn("User may not be logged in.", error);
+        } catch {
+          // User not logged in — that's fine
         }
 
-        setStatus("success");
+        setPageStatus("success");
       } catch (error) {
         console.error(error);
-        setStatus("error");
+        setPageStatus("error");
       }
     }
 
@@ -84,32 +94,47 @@ function MountainDetailPage() {
 
   function handleChange(event) {
     const { name, value } = event.target;
-
-    setForm((currentForm) => ({
-      ...currentForm,
-      [name]: value,
-    }));
+    setForm((current) => ({ ...current, [name]: value }));
   }
 
   function handleImageChange(event) {
     setSelectedImage(event.target.files[0] || null);
   }
 
+  function handleSelectAscent(log) {
+    setActiveLogId(log.id);
+    setForm(logToForm(log));
+    setSelectedImage(null);
+    setSaveStatus("idle");
+    setShowNewForm(false);
+  }
+
+  function handleNewAscent() {
+    setActiveLogId(null);
+    setForm(emptyForm);
+    setSelectedImage(null);
+    setSaveStatus("idle");
+    setShowNewForm(true);
+  }
+
   async function handleDeleteLog() {
-    if (!logId) return;
-
+    if (!activeLogId) return;
     const confirmed = window.confirm(
-      "Delete this mountain log? This cannot be undone."
+      "Delete this ascent log? This cannot be undone."
     );
-
     if (!confirmed) return;
-
     try {
-      await deleteProgressLog(logId);
-
-      setLogId(null);
-      setSelectedImage(null);
-      setForm(initialForm);
+      await deleteProgressLog(activeLogId);
+      const updated = ascents.filter((a) => a.id !== activeLogId);
+      setAscents(updated);
+      if (updated.length > 0) {
+        setActiveLogId(updated[0].id);
+        setForm(logToForm(updated[0]));
+      } else {
+        setActiveLogId(null);
+        setForm(emptyForm);
+      }
+      setShowNewForm(false);
       setSaveStatus("deleted");
     } catch (error) {
       console.error(error);
@@ -119,15 +144,10 @@ function MountainDetailPage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-
     try {
       setSaveStatus("saving");
 
-      const {
-        uploaded_image,
-        ...formWithoutImage
-      } = form;
-
+      const { uploaded_image, ...formWithoutImage } = form;
       const payload = {
         ...formWithoutImage,
         mountain: mountain.id,
@@ -138,26 +158,30 @@ function MountainDetailPage() {
         flights_climbed: form.flights_climbed || null,
       };
 
-      const savedLog = logId
-        ? await updateProgressLog(logId, payload)
+      const savedLog = activeLogId
+        ? await updateProgressLog(activeLogId, payload)
         : await createProgressLog(payload);
 
-      setLogId(savedLog.id);
+      let finalLog = savedLog;
+
       if (selectedImage) {
         const imageFormData = new FormData();
         imageFormData.append("uploaded_image", selectedImage);
-
-        const imageLog = await updateProgressLogWithImage(
-          savedLog.id,
-          imageFormData
-        );
-
-        setLogId(imageLog.id);
-        setForm((currentForm) => ({
-          ...currentForm,
-          uploaded_image: imageLog.uploaded_image || "",
-        }));
+        finalLog = await updateProgressLogWithImage(savedLog.id, imageFormData);
       }
+
+      // Update ascents list
+      setAscents((current) => {
+        const exists = current.find((a) => a.id === finalLog.id);
+        if (exists) {
+          return current.map((a) => (a.id === finalLog.id ? finalLog : a));
+        }
+        return [finalLog, ...current];
+      });
+
+      setActiveLogId(finalLog.id);
+      setForm(logToForm(finalLog));
+      setShowNewForm(false);
       setSaveStatus("saved");
     } catch (error) {
       console.error(error);
@@ -165,19 +189,24 @@ function MountainDetailPage() {
     }
   }
 
-  if (status === "loading") {
-    return <p>Loading...</p>;
-  }
+  if (pageStatus === "loading") return <p>Loading...</p>;
+  if (pageStatus === "error") return <p>Unable to load mountain.</p>;
 
-  if (status === "error") {
-    return <p>Unable to load mountain.</p>;
-  }
+  const seasonLabels = {
+    summer: "☀️ Summer",
+    winter: "❄️ Winter",
+    spring: "🌸 Spring",
+    autumn: "🍂 Autumn",
+  };
 
   return (
     <main>
       <section className="section section-dark mountain-detail-hero">
         <div className="container">
-          <p className="section-kicker"><span className="kicker-line" />{getCollectionNames(mountain)}</p>
+          <p className="section-kicker">
+            <span className="kicker-line" />
+            {getCollectionNames(mountain)}
+          </p>
           <h1>{mountain.name}</h1>
           <p>{mountain.summary}</p>
         </div>
@@ -189,17 +218,14 @@ function MountainDetailPage() {
             <h3>Height</h3>
             <strong>{mountain.height_m}m</strong>
           </div>
-
           <div className="mountain-stat-card">
             <h3>Feet</h3>
             <strong>{mountain.height_ft || "—"}</strong>
           </div>
-
           <div className="mountain-stat-card">
             <h3>Prominence</h3>
             <strong>{mountain.prominence_m || "—"}m</strong>
           </div>
-
           <div className="mountain-stat-card">
             <h3>Region</h3>
             <strong>{mountain.region?.name}</strong>
@@ -216,15 +242,68 @@ function MountainDetailPage() {
               Mark this mountain as planned or completed, then add your route,
               date, distance and notes.
             </p>
+
+            {/* Ascent history list */}
+            {ascents.length > 0 && (
+              <div className="ascent-history">
+                <p className="ascent-history__label">
+                  {ascents.length === 1
+                    ? "1 ascent logged"
+                    : `${ascents.length} ascents logged`}
+                </p>
+                <div className="ascent-history__list">
+                  {ascents.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      className={`ascent-history__item${activeLogId === a.id && !showNewForm ? " active" : ""}`}
+                      onClick={() => handleSelectAscent(a)}
+                    >
+                      <span>{a.completed_date || "No date"}</span>
+                      {a.season && (
+                        <span className="ascent-season-badge">
+                          {seasonLabels[a.season] || a.season}
+                        </span>
+                      )}
+                      <span className={`ascent-status ascent-status--${a.status}`}>
+                        {a.status.replace("_", " ")}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="ascent-history__new"
+                  onClick={handleNewAscent}
+                >
+                  + Log another ascent
+                </button>
+              </div>
+            )}
           </div>
 
           <form className="tracking-form glass-card" onSubmit={handleSubmit}>
+            {showNewForm && (
+              <p className="tracking-form__new-label">New ascent</p>
+            )}
+
             <label>
               Status
               <select name="status" value={form.status} onChange={handleChange}>
                 <option value="not_started">Not started</option>
                 <option value="planned">Planned</option>
                 <option value="completed">Completed</option>
+              </select>
+            </label>
+
+            <label>
+              Season
+              <select name="season" value={form.season} onChange={handleChange}>
+                <option value="">— Select season —</option>
+                <option value="summer">Summer</option>
+                <option value="winter">Winter</option>
+                <option value="spring">Spring</option>
+                <option value="autumn">Autumn</option>
               </select>
             </label>
 
@@ -260,7 +339,6 @@ function MountainDetailPage() {
                   onChange={handleChange}
                 />
               </label>
-
               <label>
                 Duration hours
                 <input
@@ -274,7 +352,6 @@ function MountainDetailPage() {
             </div>
 
             <div className="tracking-form__row">
-
               <label>
                 Steps
                 <input
@@ -285,7 +362,6 @@ function MountainDetailPage() {
                   placeholder="e.g. 14582"
                 />
               </label>
-
               <label>
                 Flights climbed
                 <input
@@ -296,7 +372,6 @@ function MountainDetailPage() {
                   placeholder="e.g. 72"
                 />
               </label>
-
             </div>
 
             <label>
@@ -331,12 +406,11 @@ function MountainDetailPage() {
               <button type="submit">
                 {saveStatus === "saving"
                   ? "Saving..."
-                  : logId
-                    ? "Update mountain log"
-                    : "Save mountain log"}
+                  : activeLogId
+                    ? "Update ascent"
+                    : "Save ascent"}
               </button>
-
-              {logId && (
+              {activeLogId && !showNewForm && (
                 <button
                   type="button"
                   className="tracking-form__delete"
@@ -348,7 +422,7 @@ function MountainDetailPage() {
             </div>
 
             {saveStatus === "saved" && <p>Saved successfully.</p>}
-            {saveStatus === "deleted" && <p>Mountain log deleted.</p>}
+            {saveStatus === "deleted" && <p>Ascent log deleted.</p>}
             {saveStatus === "error" && (
               <p>Unable to save. Make sure you are logged in.</p>
             )}
