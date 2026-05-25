@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "corsheaders",
     "django_filters",
+    "storages",
     "accounts",
     "mountains",
     "progress",
@@ -81,10 +82,6 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
-MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -105,3 +102,40 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
     ],
 }
+
+# -------------------------------------------------------
+# Media / file storage
+# -------------------------------------------------------
+_USE_R2 = all([
+    env("CLOUDFLARE_ACCOUNT_ID", default=""),
+    env("AWS_ACCESS_KEY_ID", default=""),
+    env("AWS_SECRET_ACCESS_KEY", default=""),
+    env("AWS_STORAGE_BUCKET_NAME", default=""),
+])
+
+if _USE_R2:
+    # Cloudflare R2 via django-storages (S3-compatible)
+    AWS_ACCESS_KEY_ID = env("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = env("AWS_SECRET_ACCESS_KEY")
+    AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME")
+    AWS_S3_ENDPOINT_URL = f"https://{env('CLOUDFLARE_ACCOUNT_ID')}.r2.cloudflarestorage.com"
+    AWS_S3_REGION_NAME = "auto"
+    AWS_DEFAULT_ACL = None
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_QUERYSTRING_AUTH = False  # Public URLs without signed params
+
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+
+    MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.{env('CLOUDFLARE_ACCOUNT_ID')}.r2.cloudflarestorage.com/"
+
+else:
+    # Local file storage (development fallback)
+    MEDIA_URL = "/media/"
+    MEDIA_ROOT = BASE_DIR / "media"
