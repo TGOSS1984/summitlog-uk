@@ -11,7 +11,9 @@ import {
   TbCalendar, TbArrowUp, TbStepInto,
 } from "react-icons/tb";
 
-import { getCollections, getMountains, getProgressLogs, getCurrentUser } from "../lib/api";
+import { getCollections, getMountains, getProgressLogs, getCurrentUser, exportLogs } from "../lib/api";
+
+
 
 const DASHBOARD_COLLECTIONS = [
   { name: "Wainwrights", slug: "wainwrights", expectedTotal: 214 },
@@ -361,6 +363,19 @@ function DashboardPage() {
   const [showAllLogs, setShowAllLogs] = useState(false);
   const [showAllProgress, setShowAllProgress] = useState(false);
   const MAX_VISIBLE = 5;
+
+  const [exporting, setExporting] = useState(null);
+
+  async function handleExport(format) {
+    try {
+      setExporting(format);
+      await exportLogs(format);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setExporting(null);
+    }
+  }
 
   useEffect(() => {
     async function loadDashboard() {
@@ -716,7 +731,19 @@ function DashboardPage() {
                   <p className="section-kicker">My progress</p>
                   <h2>Saved mountain logs</h2>
                   <p>Review completed and planned mountains, then open each summit to update your route notes, date, distance or status.</p>
+                  {!isDemo && (
+                  <div className="dashboard-export-bar">
+                    <p>Download your completed summits:</p>
+                    <button onClick={() => handleExport("csv")} disabled={exporting === "csv"}>
+                      {exporting === "csv" ? "Exporting..." : "Export CSV"}
+                    </button>
+                    <button onClick={() => handleExport("gpx")} disabled={exporting === "gpx"}>
+                      {exporting === "gpx" ? "Exporting..." : "Export GPX"}
+                    </button>
+                  </div>
+                )}
                 </div>
+                
                 <div className="my-progress-list">
                   {stats.recentLogs.length === 0 && <p>No mountain logs yet.</p>}
                   {stats.recentLogs.slice(0, showAllProgress ? undefined : MAX_VISIBLE).map((log) => (
@@ -738,7 +765,9 @@ function DashboardPage() {
                     </button>
                   )}
                 </div>
+                
               </div>
+              
             </>
           )}
         </div>

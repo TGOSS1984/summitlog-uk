@@ -1,5 +1,4 @@
-const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 
 async function request(endpoint, options = {}) {
   const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -147,4 +146,29 @@ export async function updateUserProfile(formData) {
     throw new Error(data?.detail || JSON.stringify(data) || "Update failed.");
   }
   return data;
+}
+
+// export addition
+
+export async function exportLogs(format = "csv") {
+  const url = `${API_BASE}/progress/export/?format=${format}`;
+  const response = await fetch(url, {
+    credentials: "include",
+    headers: {
+      "Accept": format === "gpx" ? "application/gpx+xml" : "text/csv",
+    },
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.detail || "Export failed.");
+  }
+  const blob = await response.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = format === "gpx" ? "summitlog-completed.gpx" : "summitlog-completed.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(blobUrl);
 }

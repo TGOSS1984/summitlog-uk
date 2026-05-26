@@ -12,6 +12,7 @@ function AccountPage() {
   const [user, setUser] = useState(null);
   const [stats, setStats] = useState({ completed: 0, planned: 0 });
   const [mode, setMode] = useState("login");
+  const [authError, setAuthError] = useState(null);
   const [editingProfile, setEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState({ bio: "" });
   const [avatarPreview, setAvatarPreview] = useState(null);
@@ -59,15 +60,18 @@ function AccountPage() {
 
   function handleChange(event) {
     const { name, value } = event.target;
+    setAuthError(null);
     setForm((current) => ({ ...current, [name]: value }));
   }
 
   function resetForm() {
     setForm({ username: "", email: "", password: "" });
+    setAuthError(null);
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
+    setAuthError(null);
     try {
       if (mode === "login") {
         await loginUser({ username: form.username, password: form.password });
@@ -77,7 +81,7 @@ function AccountPage() {
       await loadUser();
       resetForm();
     } catch (error) {
-      console.error(error);
+      setAuthError(error.message || "Something went wrong. Please try again.");
     }
   }
 
@@ -140,7 +144,6 @@ function AccountPage() {
           <aside className="glass-card account-panel">
             {user ? (
               <>
-                {/* Avatar */}
                 <div className="account-avatar-wrap">
                   {avatarSrc ? (
                     <img
@@ -256,14 +259,14 @@ function AccountPage() {
                   <button
                     type="button"
                     className={mode === "login" ? "account-tab active" : "account-tab"}
-                    onClick={() => setMode("login")}
+                    onClick={() => { setMode("login"); setAuthError(null); }}
                   >
                     Login
                   </button>
                   <button
                     type="button"
                     className={mode === "register" ? "account-tab active" : "account-tab"}
-                    onClick={() => setMode("register")}
+                    onClick={() => { setMode("register"); setAuthError(null); }}
                   >
                     Register
                   </button>
@@ -303,6 +306,10 @@ function AccountPage() {
                       autoComplete={mode === "login" ? "current-password" : "new-password"}
                     />
                   </label>
+
+                  {authError && (
+                    <p className="form-error">{authError}</p>
+                  )}
 
                   <button className="account-submit" type="submit">
                     {mode === "login" ? "Sign in" : "Create account"}

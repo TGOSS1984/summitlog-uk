@@ -3903,3 +3903,49 @@ h2 em {
     grid-template-columns: 1fr;
   }
 }
+
+/*Dashboard Export Styles*/
+
+.dashboard-export-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  background: #ffffff;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+}
+
+.dashboard-export-bar p {
+  color: var(--color-text-soft);
+  font-weight: 600;
+  width: 100%;
+  margin-bottom: 0.25rem;
+}
+
+.dashboard-export-bar button {
+  appearance: none;
+  border: 1px solid var(--border-dark);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-teal-deep);
+  padding: 0.5rem 1.2rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.dashboard-export-bar button:hover:not(:disabled) {
+  background: rgba(4, 57, 59, 0.06);
+  border-color: var(--color-teal);
+}
+
+.dashboard-export-bar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
