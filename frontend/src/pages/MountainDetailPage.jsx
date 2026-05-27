@@ -47,6 +47,117 @@ function logToForm(log) {
   };
 }
 
+// WMO weather code descriptions
+function weatherDescription(code) {
+  const codes = {
+    0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+    45: "Foggy", 48: "Icy fog",
+    51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle",
+    61: "Light rain", 63: "Rain", 65: "Heavy rain",
+    71: "Light snow", 73: "Snow", 75: "Heavy snow",
+    77: "Snow grains",
+    80: "Light showers", 81: "Showers", 82: "Heavy showers",
+    85: "Snow showers", 86: "Heavy snow showers",
+    95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Heavy thunderstorm",
+  };
+  return codes[code] ?? "Unknown";
+}
+
+function weatherEmoji(code) {
+  if (code === 0 || code === 1) return "☀️";
+  if (code === 2 || code === 3) return "⛅";
+  if (code === 45 || code === 48) return "🌫️";
+  if (code >= 51 && code <= 67) return "🌧️";
+  if (code >= 71 && code <= 77) return "🌨️";
+  if (code >= 80 && code <= 82) return "🌦️";
+  if (code >= 85 && code <= 86) return "❄️";
+  if (code >= 95) return "⛈️";
+  return "🌤️";
+}
+
+function WeatherWidget({ latitude, longitude, mountainName }) {
+  const [weather, setWeather] = useState(null);
+  const [weatherStatus, setWeatherStatus] = useState("loading");
+
+  useEffect(() => {
+    if (!latitude || !longitude) {
+      setWeatherStatus("unavailable");
+      return;
+    }
+
+    async function fetchWeather() {
+      try {
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max,temperature_2m_min,windspeed_10m_max,precipitation_sum&timezone=Europe%2FLondon&forecast_days=4`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        const days = data.daily.time.slice(0, 4).map((date, i) => ({
+          date,
+          code: data.daily.weathercode[i],
+          maxTemp: Math.round(data.daily.temperature_2m_max[i]),
+          minTemp: Math.round(data.daily.temperature_2m_min[i]),
+          wind: Math.round(data.daily.windspeed_10m_max[i]),
+          rain: data.daily.precipitation_sum[i],
+        }));
+
+        setWeather(days);
+        setWeatherStatus("success");
+      } catch {
+        setWeatherStatus("error");
+      }
+    }
+
+    fetchWeather();
+  }, [latitude, longitude]);
+
+  function formatDay(dateStr, index) {
+    if (index === 0) return "Today";
+    if (index === 1) return "Tomorrow";
+    return new Date(dateStr).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  }
+
+  if (weatherStatus === "unavailable") return null;
+
+  return (
+    <div className="weather-widget">
+      <p className="section-kicker">
+        <span className="kicker-line" />
+        Mountain forecast
+      </p>
+      <h3>Weather at {mountainName}</h3>
+      <p className="weather-widget__sub">4-day forecast via Open-Meteo</p>
+
+      {weatherStatus === "loading" && (
+        <p className="weather-widget__loading">Loading forecast...</p>
+      )}
+
+      {weatherStatus === "error" && (
+        <p className="weather-widget__loading">Forecast unavailable.</p>
+      )}
+
+      {weatherStatus === "success" && weather && (
+        <div className="weather-days">
+          {weather.map((day, i) => (
+            <div key={day.date} className="weather-day">
+              <p className="weather-day__label">{formatDay(day.date, i)}</p>
+              <span className="weather-day__icon">{weatherEmoji(day.code)}</span>
+              <p className="weather-day__desc">{weatherDescription(day.code)}</p>
+              <p className="weather-day__temp">
+                <strong>{day.maxTemp}°</strong>
+                <span>{day.minTemp}°</span>
+              </p>
+              <div className="weather-day__details">
+                <span>💨 {day.wind} km/h</span>
+                <span>🌧 {day.rain}mm</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MountainDetailPage() {
   const { slug } = useParams();
 
@@ -72,7 +183,6 @@ function MountainDetailPage() {
           );
           setAscents(mountainLogs);
 
-          // Load the most recent log into the form by default
           if (mountainLogs.length > 0) {
             const latest = mountainLogs[0];
             setActiveLogId(latest.id);
@@ -170,7 +280,6 @@ function MountainDetailPage() {
         finalLog = await updateProgressLogWithImage(savedLog.id, imageFormData);
       }
 
-      // Update ascents list
       setAscents((current) => {
         const exists = current.find((a) => a.id === finalLog.id);
         if (exists) {
@@ -233,6 +342,19 @@ function MountainDetailPage() {
         </div>
       </section>
 
+      {/* Weather widget */}
+      {mountain.latitude && mountain.longitude && (
+        <section className="section section-light" style={{ paddingTop: 0 }}>
+          <div className="container">
+            <WeatherWidget
+              latitude={mountain.latitude}
+              longitude={mountain.longitude}
+              mountainName={mountain.name}
+            />
+          </div>
+        </section>
+      )}
+
       <section className="section section-dark">
         <div className="container tracking-panel">
           <div>
@@ -243,7 +365,6 @@ function MountainDetailPage() {
               date, distance and notes.
             </p>
 
-            {/* Ascent history list */}
             {ascents.length > 0 && (
               <div className="ascent-history">
                 <p className="ascent-history__label">
@@ -434,3 +555,4 @@ function MountainDetailPage() {
 }
 
 export default MountainDetailPage;
+
