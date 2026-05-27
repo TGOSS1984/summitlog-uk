@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import {
   TbMountain,
@@ -11,6 +11,7 @@ import {
   TbCompass,
   TbFlag,
   TbTrophy,
+  TbBook,
 } from "react-icons/tb";
 
 function Navbar() {
@@ -113,6 +114,17 @@ function Navbar() {
                     <small>Wainwrights, Munros & more</small>
                   </span>
                 </NavLink>
+                <NavLink
+                  to="/journal"
+                  className="dropdown-item"
+                  onClick={() => setExploreOpen(false)}
+                >
+                  <span className="dropdown-item__icon"><TbBook size={18} strokeWidth={1.5} /></span>
+                  <span>
+                    <strong>Journal</strong>
+                    <small>Your mountain diary</small>
+                  </span>
+                </NavLink>
               </div>
             )}
           </div>
@@ -162,6 +174,10 @@ function Navbar() {
               <TbLayoutDashboard size={18} strokeWidth={1.5} />
               Dashboard
             </NavLink>
+            <NavLink to="/journal" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
+              <TbBook size={18} strokeWidth={1.5} />
+              Journal
+            </NavLink>
             <NavLink to="/account" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
               <TbUser size={18} strokeWidth={1.5} />
               Account
@@ -174,4 +190,3 @@ function Navbar() {
 }
 
 export default Navbar;
-
