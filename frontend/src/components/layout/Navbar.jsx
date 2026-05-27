@@ -12,6 +12,7 @@ import {
   TbFlag,
   TbTrophy,
   TbBook,
+  TbPhoto,
 } from "react-icons/tb";
 
 function Navbar() {
@@ -125,6 +126,13 @@ function Navbar() {
                     <small>Your mountain diary</small>
                   </span>
                 </NavLink>
+                <NavLink to="/gallery" className="dropdown-item" onClick={() => setExploreOpen(false)}>
+                  <span className="dropdown-item__icon"><TbPhoto size={18} strokeWidth={1.5} /></span>
+                  <span>
+                    <strong>Gallery</strong>
+                    <small>Your summit photos</small>
+                  </span>
+                </NavLink>
               </div>
             )}
           </div>
@@ -178,10 +186,15 @@ function Navbar() {
               <TbBook size={18} strokeWidth={1.5} />
               Journal
             </NavLink>
+            <NavLink to="/gallery" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
+              <TbPhoto size={18} strokeWidth={1.5} />
+              Gallery
+            </NavLink>
             <NavLink to="/account" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
               <TbUser size={18} strokeWidth={1.5} />
               Account
             </NavLink>
+            
           </nav>
         </div>
       )}

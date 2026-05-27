@@ -4221,3 +4221,204 @@ h2 em {
     width: 100%;
   }
 }
+
+/* ===== GALLERY PAGE ===== */
+
+.gallery-hero {
+  background:
+    radial-gradient(circle at 82% 22%, rgba(67, 150, 145, 0.34), transparent 32%),
+    radial-gradient(circle at 24% 70%, rgba(208, 170, 98, 0.08), transparent 30%),
+    linear-gradient(135deg, rgba(4, 57, 59, 0.82), rgba(7, 17, 13, 0.88)),
+    url("/images/placeholders/hero.jpg") center / cover no-repeat;
+}
+
+.gallery-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-xl);
+  flex-wrap: wrap;
+}
+
+.gallery-count {
+  font-weight: 700;
+  color: var(--color-text-soft);
+}
+
+.gallery-filters {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.gallery-filters input,
+.gallery-filters select {
+  min-height: 44px;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  padding: 0 0.9rem;
+  font: inherit;
+  color: var(--color-text);
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+}
+
+.gallery-item {
+  position: relative;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: var(--color-bg-dark);
+}
+
+.gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 300ms ease;
+}
+
+.gallery-item:hover img {
+  transform: scale(1.05);
+}
+
+.gallery-item__overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: var(--space-md);
+  background: linear-gradient(to top, rgba(7,17,13,0.85), transparent);
+  color: var(--color-text-light);
+  opacity: 0;
+  transition: opacity 200ms ease;
+  text-align: left;
+}
+
+.gallery-item:hover .gallery-item__overlay {
+  opacity: 1;
+}
+
+.gallery-item__overlay strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.gallery-item__overlay span {
+  font-size: 0.78rem;
+  color: rgba(248,250,252,0.7);
+}
+
+/* Lightbox */
+
+.gallery-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+}
+
+.gallery-lightbox__content {
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.gallery-lightbox__content img {
+  width: 100%;
+  max-height: 75vh;
+  object-fit: contain;
+  border-radius: var(--radius-lg);
+}
+
+.gallery-lightbox__caption {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  color: rgba(248,250,252,0.8);
+  font-size: 0.88rem;
+}
+
+.gallery-lightbox__caption a {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  text-decoration: none;
+}
+
+.gallery-lightbox__close {
+  position: absolute;
+  top: var(--space-lg);
+  right: var(--space-lg);
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 160ms ease;
+}
+
+.gallery-lightbox__close:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.gallery-lightbox__prev,
+.gallery-lightbox__next {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: white;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  font-size: 1.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 160ms ease;
+}
+
+.gallery-lightbox__prev { left: var(--space-lg); }
+.gallery-lightbox__next { right: var(--space-lg); }
+
+.gallery-lightbox__prev:hover,
+.gallery-lightbox__next:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+@media (max-width: 720px) {
+  .gallery-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .gallery-grid {
+    grid-template-columns: 1fr;
+  }
+}
