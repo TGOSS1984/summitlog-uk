@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { getMountains } from "../lib/api";
 import { Link } from "react-router-dom";
-import { TbMountain, TbRuler, TbMapPin, TbSearch, TbFilter } from "react-icons/tb";
+import { TbMountain } from "react-icons/tb";
 
-const MAX_HEIGHT = 1345; // Ben Nevis — used to scale all tide lines
+const MAX_HEIGHT = 1345;
 
 const COLLECTION_FILTERS = [
   { label: "All collections", value: "" },
@@ -20,7 +20,6 @@ const REGION_FILTERS = [
   { label: "Wales", value: "wales" },
 ];
 
-// Map region slug → CSS class suffix
 function getRegionClass(regionSlug) {
   if (!regionSlug) return "default";
   if (regionSlug.includes("scotland")) return "scotland";
@@ -39,8 +38,6 @@ function getCollectionNames(mountain) {
   return mountain.collection?.name || "Unlisted";
 }
 
-// Generate a deterministic but unique-looking contour path per mountain
-// Uses mountain id as a seed so the same mountain always gets the same shape
 function getContourPath(id, tideY, width = 300, amplitude = 6) {
   const seed = (id || 1) * 9301 + 49297;
   const offsets = Array.from({ length: 8 }, (_, i) => {
@@ -52,115 +49,70 @@ function getContourPath(id, tideY, width = 300, amplitude = 6) {
   return points.join(" ");
 }
 
-// Build the full SVG content for the card header
 function CardHeaderSVG({ mountain, index }) {
   const height = Number(mountain.height_m) || 0;
-  // tide level: percentage of card height (card is 190px tall)
-  // higher mountain = line sits higher (lower y value)
-  const tidePercent = 0.2 + (height / MAX_HEIGHT) * 0.6; // range 20%–80%
+  const tidePercent = 0.2 + (height / MAX_HEIGHT) * 0.6;
   const cardH = 190;
   const tideY = Math.round(cardH * (1 - tidePercent));
   const w = 300;
   const id = mountain.id || index;
   const contour = getContourPath(id, tideY, w, 7);
 
-  // Build a mountain silhouette: bell-curve peak + secondary shoulder
-  // Uses seed so each mountain looks different but always mountain-shaped
   function getMountainPath(seed, w, h) {
     const r = (n) => ((seed * n * 1013904223 + 1664525) % 2147483647) / 2147483647;
-    // Peak position: biased toward centre (40%–65% across)
     const peakX = Math.round(w * (0.38 + r(7) * 0.26));
-    const peakY = Math.round(h * (0.08 + r(3) * 0.18)); // top 8–26%
-    // Secondary shoulder — offset left or right
+    const peakY = Math.round(h * (0.08 + r(3) * 0.18));
     const shoulderSide = r(5) > 0.5 ? 1 : -1;
     const shoulderX = Math.round(peakX + shoulderSide * w * (0.18 + r(11) * 0.14));
     const shoulderY = Math.round(peakY + h * (0.12 + r(9) * 0.14));
-    // Foothills — wide gentle slopes to left and right edges
-    const leftFootY  = Math.round(h * (0.55 + r(13) * 0.2));
+    const leftFootY = Math.round(h * (0.55 + r(13) * 0.2));
     const rightFootY = Math.round(h * (0.55 + r(17) * 0.2));
-    // Control points for smooth curves via cubic bezier
-    // Left slope: from left edge up to peak
     const lcp1x = Math.round(peakX * 0.25);
     const lcp1y = leftFootY;
     const lcp2x = Math.round(peakX * 0.65);
     const lcp2y = Math.round(peakY + h * 0.04);
-    // Right slope: from peak down to right edge
     const rcp1x = Math.round(peakX + (w - peakX) * 0.35);
     const rcp1y = Math.round(peakY + h * 0.04);
     const rcp2x = Math.round(peakX + (w - peakX) * 0.78);
-    const rcp2y = rightFootY;
-    // Shoulder bump — small quadratic bump on one side
     const scp1x = Math.round((peakX + shoulderX) / 2);
     const scp1y = Math.round(Math.min(peakY, shoulderY) - h * 0.03);
-
     if (shoulderSide === -1) {
-      // Shoulder on left — insert between left foot and peak
-      const midX = Math.round((peakX + shoulderX) / 2);
-      return [
-        `M0,${h}`,
-        `L0,${leftFootY}`,
-        `C${lcp1x},${leftFootY} ${shoulderX - 20},${shoulderY + 10} ${shoulderX},${shoulderY}`,
-        `Q${scp1x},${scp1y} ${peakX},${peakY}`,
-        `C${rcp1x},${rcp1y} ${rcp2x},${rightFootY} ${w},${rightFootY}`,
-        `L${w},${h} Z`
-      ].join(" ");
+      return [`M0,${h}`, `L0,${leftFootY}`, `C${lcp1x},${leftFootY} ${shoulderX - 20},${shoulderY + 10} ${shoulderX},${shoulderY}`, `Q${scp1x},${scp1y} ${peakX},${peakY}`, `C${rcp1x},${rcp1y} ${rcp2x},${rightFootY} ${w},${rightFootY}`, `L${w},${h} Z`].join(" ");
     } else {
-      // Shoulder on right
-      return [
-        `M0,${h}`,
-        `L0,${leftFootY}`,
-        `C${lcp1x},${lcp1y} ${lcp2x},${lcp2y} ${peakX},${peakY}`,
-        `Q${scp1x},${scp1y} ${shoulderX},${shoulderY}`,
-        `C${shoulderX + 20},${shoulderY + 5} ${rcp2x},${rightFootY} ${w},${rightFootY}`,
-        `L${w},${h} Z`
-      ].join(" ");
+      return [`M0,${h}`, `L0,${leftFootY}`, `C${lcp1x},${lcp1y} ${lcp2x},${lcp2y} ${peakX},${peakY}`, `Q${scp1x},${scp1y} ${shoulderX},${shoulderY}`, `C${shoulderX + 20},${shoulderY + 5} ${rcp2x},${rightFootY} ${w},${rightFootY}`, `L${w},${h} Z`].join(" ");
     }
   }
 
   const silhouettePath = getMountainPath(id * 7 + 13, w, cardH);
 
   return (
-    <svg
-      viewBox={`0 0 ${w} ${cardH}`}
-      preserveAspectRatio="none"
-      className="mountain-card__header-svg"
-      aria-hidden="true"
-    >
-      {/* Mountain silhouette — smooth bell-curve with shoulder */}
-      <path
-        d={silhouettePath}
-        fill="rgba(127,181,179,0.14)"
-      />
-
-      {/* Gold fill below the contour line */}
-      <path
-        d={`${contour} L${w},${cardH} L0,${cardH} Z`}
-        fill="rgba(208,170,98,0.13)"
-      />
-
-      {/* The contour tide line itself */}
-      <path
-        d={contour}
-        fill="none"
-        stroke="rgba(208,170,98,0.7)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-
-      {/* Elevation label */}
-      <text
-        x="10"
-        y={tideY - 6}
-        fontFamily="DM Sans, sans-serif"
-        fontSize="9"
-        fontWeight="700"
-        fill="rgba(208,170,98,0.85)"
-        letterSpacing="0.08em"
-      >
-        {height}m
-      </text>
+    <svg viewBox={`0 0 ${w} ${cardH}`} preserveAspectRatio="none" className="mountain-card__header-svg" aria-hidden="true">
+      <path d={silhouettePath} fill="rgba(127,181,179,0.14)" />
+      <path d={`${contour} L${w},${cardH} L0,${cardH} Z`} fill="rgba(208,170,98,0.13)" />
+      <path d={contour} fill="none" stroke="rgba(208,170,98,0.7)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <text x="10" y={tideY - 6} fontFamily="DM Sans, sans-serif" fontSize="9" fontWeight="700" fill="rgba(208,170,98,0.85)" letterSpacing="0.08em">{height}m</text>
     </svg>
+  );
+}
+
+function MountainCardSkeleton() {
+  return (
+    <div className="mountain-card skeleton-mountain-card">
+      <div className="skeleton-card-image" />
+      <div className="mountain-card__body">
+        <div>
+          <div className="skeleton-line skeleton-line--short" />
+          <div className="skeleton-line skeleton-line--title" />
+          <div className="skeleton-line" />
+          <div className="skeleton-line skeleton-line--short" />
+        </div>
+        <div className="mountain-card__stats">
+          <div className="skeleton-pill" />
+          <div className="skeleton-pill" />
+          <div className="skeleton-pill" />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -194,17 +146,16 @@ function MountainsPage() {
 
   const summary = useMemo(() => {
     const total = mountains.length;
-    const highest = mountains.reduce((currentHighest, mountain) => {
-      const height = Number(mountain.height_m || 0);
-      return height > currentHighest ? height : currentHighest;
-    }, 0);
+    const highest = mountains.reduce((h, m) => Math.max(h, Number(m.height_m || 0)), 0);
     return { total, highest };
   }, [mountains]);
 
   function handleChange(event) {
     const { name, value } = event.target;
-    setFilters((currentFilters) => ({ ...currentFilters, [name]: value }));
+    setFilters((current) => ({ ...current, [name]: value }));
   }
+
+  const hasActiveFilters = filters.search || filters.collection_memberships__collection__slug || filters.region__slug;
 
   return (
     <main className="page mountains-page">
@@ -216,17 +167,12 @@ function MountainsPage() {
               <span className="page-hero__h1-top">Every summit,</span>
               <span className="page-hero__h1-bottom">Ordered.</span>
             </h1>
-            <p>
-              Browse Wainwrights, Munros, Welsh Nuttalls and key UK summits.
-              Filter by region or collection, then build your own completion
-              record as the tracker develops.
-            </p>
+            <p>Browse Wainwrights, Munros, Welsh Nuttalls and key UK summits. Filter by region or collection, then build your own completion record.</p>
           </div>
-
           <aside className="glass-card mountains-hero__panel">
             <p>Total visible mountains</p>
-            <strong>{summary.total}</strong>
-            <span>Highest visible: {summary.highest || 0}m</span>
+            <strong>{status === "loading" ? "—" : summary.total}</strong>
+            <span>Highest visible: {status === "loading" ? "—" : `${summary.highest || 0}m`}</span>
           </aside>
         </div>
       </section>
@@ -238,42 +184,15 @@ function MountainsPage() {
               <p className="section-kicker">Mountain database</p>
               <h2>Explore mountains</h2>
             </div>
-
             <div className="mountains-filters">
-              <input
-                type="search"
-                name="search"
-                value={filters.search}
-                onChange={handleChange}
-                placeholder="Search mountain"
-              />
-              <select
-                name="collection_memberships__collection__slug"
-                value={filters.collection_memberships__collection__slug}
-                onChange={handleChange}
-              >
-                {COLLECTION_FILTERS.map((collection) => (
-                  <option key={collection.label} value={collection.value}>
-                    {collection.label}
-                  </option>
-                ))}
+              <input type="search" name="search" value={filters.search} onChange={handleChange} placeholder="Search mountain" />
+              <select name="collection_memberships__collection__slug" value={filters.collection_memberships__collection__slug} onChange={handleChange}>
+                {COLLECTION_FILTERS.map((c) => <option key={c.label} value={c.value}>{c.label}</option>)}
               </select>
-              <select
-                name="region__slug"
-                value={filters.region__slug}
-                onChange={handleChange}
-              >
-                {REGION_FILTERS.map((region) => (
-                  <option key={region.label} value={region.value}>
-                    {region.label}
-                  </option>
-                ))}
+              <select name="region__slug" value={filters.region__slug} onChange={handleChange}>
+                {REGION_FILTERS.map((r) => <option key={r.label} value={r.value}>{r.label}</option>)}
               </select>
-              <select
-                name="ordering"
-                value={filters.ordering}
-                onChange={handleChange}
-              >
+              <select name="ordering" value={filters.ordering} onChange={handleChange}>
                 <option value="-height_m">Highest first</option>
                 <option value="height_m">Lowest first</option>
                 <option value="name">A-Z</option>
@@ -281,35 +200,49 @@ function MountainsPage() {
             </div>
           </div>
 
-          {status === "loading" && <p>Loading mountains...</p>}
           {status === "error" && (
-            <p>Unable to load mountains. Check the Django server is running.</p>
+            <div className="page-error">
+              <TbMountain size={48} strokeWidth={1} />
+              <h2>Could not load mountains</h2>
+              <p>Check the Django server is running and try refreshing.</p>
+            </div>
           )}
 
-          {status === "success" && (
+          {status === "loading" && (
+            <div className="mountain-card-grid">
+              {Array.from({ length: 9 }).map((_, i) => <MountainCardSkeleton key={i} />)}
+            </div>
+          )}
+
+          {status === "success" && mountains.length === 0 && (
+            <div className="page-empty">
+              <TbMountain size={48} strokeWidth={1} />
+              <h2>No mountains found</h2>
+              <p>{hasActiveFilters ? "Try adjusting your filters." : "No mountains in the database yet."}</p>
+              {hasActiveFilters && (
+                <button className="button-secondary" onClick={() => setFilters({ search: "", collection_memberships__collection__slug: "", region__slug: "", ordering: "-height_m" })}>
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
+
+          {status === "success" && mountains.length > 0 && (
             <div className="mountain-card-grid">
               {mountains.map((mountain, index) => {
                 const regionClass = getRegionClass(mountain.region?.slug);
                 return (
-                  <Link
-                    to={`/mountains/${mountain.slug}`}
-                    className={`mountain-card mountain-card--${regionClass}`}
-                    key={mountain.id}
-                  >
+                  <Link to={`/mountains/${mountain.slug}`} className={`mountain-card mountain-card--${regionClass}`} key={mountain.id}>
                     <div className="mountain-card__image">
                       <CardHeaderSVG mountain={mountain} index={index} />
                       <span>{index + 1}</span>
                     </div>
-
                     <div className="mountain-card__body">
                       <div>
-                        <p className="mountain-card__meta">
-                          {getCollectionNames(mountain)} / {mountain.region?.name}
-                        </p>
+                        <p className="mountain-card__meta">{getCollectionNames(mountain)} / {mountain.region?.name}</p>
                         <h3>{mountain.name}</h3>
                         <p>{mountain.summary}</p>
                       </div>
-
                       <div className="mountain-card__stats">
                         <span>{mountain.height_m}m</span>
                         <span>{mountain.height_ft || "—"}ft</span>

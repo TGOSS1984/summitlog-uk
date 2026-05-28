@@ -11,6 +11,7 @@ import CollectionDetailPage from "./pages/CollectionDetailPage";
 import RegionDetailPage from "./pages/RegionDetailPage";
 import JournalPage from "./pages/JournalPage";
 import GalleryPage from "./pages/GalleryPage";
+import NotFoundPage from "./pages/NotFoundPage";
 
 const router = createBrowserRouter([
   {
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
       { path: "regions/:slug", element: <RegionDetailPage /> },
       { path: "journal", element: <JournalPage /> },
       { path: "gallery", element: <GalleryPage /> },
+      { path: "*", element: <NotFoundPage /> },
     ],
   },
 ]);
