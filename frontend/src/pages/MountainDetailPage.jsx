@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import {
   createProgressLog,
   deleteProgressLog,
+  getCurrentUser,
   getMountain,
   getProgressLogs,
   updateProgressLog,
@@ -140,6 +141,20 @@ function WeatherWidget({ latitude, longitude, mountainName }) {
   );
 }
 
+function LoginPrompt({ mountainName }) {
+  return (
+    <div className="tracking-login-prompt glass-card">
+      <p className="section-kicker"><span className="kicker-line" />Track this summit</p>
+      <h3>Sign in to log {mountainName}</h3>
+      <p>Create a free account to track your ascents, log routes, distances and notes for every mountain.</p>
+      <div className="tracking-login-prompt__actions">
+        <Link to="/account" className="button-primary">Sign in</Link>
+        <Link to="/account" className="button-secondary">Create account</Link>
+      </div>
+    </div>
+  );
+}
+
 function MountainDetailPage() {
   const { slug } = useParams();
   const { toasts, addToast, removeToast } = useToast();
@@ -153,6 +168,7 @@ function MountainDetailPage() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showNewForm, setShowNewForm] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     async function loadMountain() {
@@ -160,7 +176,12 @@ function MountainDetailPage() {
         const mountainData = await getMountain(slug);
         setMountain(mountainData);
         try {
-          const logs = await getProgressLogs();
+          // Check auth and load logs in parallel
+          const [userData, logs] = await Promise.all([
+            getCurrentUser(),
+            getProgressLogs(),
+          ]);
+          setIsLoggedIn(!!userData?.user);
           const mountainLogs = logs.filter((log) => log.mountain === mountainData.id);
           setAscents(mountainLogs);
           if (mountainLogs.length > 0) {
@@ -168,7 +189,9 @@ function MountainDetailPage() {
             setActiveLogId(latest.id);
             setForm(logToForm(latest));
           }
-        } catch { /* not logged in */ }
+        } catch {
+          setIsLoggedIn(false);
+        }
         setPageStatus("success");
       } catch (error) {
         console.error(error);
@@ -226,7 +249,6 @@ function MountainDetailPage() {
   async function handleSubmit(event) {
     event.preventDefault();
 
-    // Basic validation
     if (form.status === "completed" && !form.completed_date) {
       addToast("Please add a completed date for completed ascents.", "error");
       return;
@@ -356,7 +378,7 @@ function MountainDetailPage() {
             <h2>Track this summit</h2>
             <p>Mark this mountain as planned or completed, then add your route, date, distance and notes.</p>
 
-            {ascents.length > 0 && (
+            {isLoggedIn && ascents.length > 0 && (
               <div className="ascent-history">
                 <p className="ascent-history__label">
                   {ascents.length === 1 ? "1 ascent logged" : `${ascents.length} ascents logged`}
@@ -382,77 +404,82 @@ function MountainDetailPage() {
             )}
           </div>
 
-          <form className="tracking-form glass-card" onSubmit={handleSubmit}>
-            {showNewForm && <p className="tracking-form__new-label">New ascent</p>}
+          {/* Show login prompt for unauthenticated users, form for logged-in */}
+          {!isLoggedIn ? (
+            <LoginPrompt mountainName={mountain.name} />
+          ) : (
+            <form className="tracking-form glass-card" onSubmit={handleSubmit}>
+              {showNewForm && <p className="tracking-form__new-label">New ascent</p>}
 
-            <label>
-              Status
-              <select name="status" value={form.status} onChange={handleChange}>
-                <option value="not_started">Not started</option>
-                <option value="planned">Planned</option>
-                <option value="completed">Completed</option>
-              </select>
-            </label>
+              <label>
+                Status
+                <select name="status" value={form.status} onChange={handleChange}>
+                  <option value="not_started">Not started</option>
+                  <option value="planned">Planned</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </label>
 
-            <label>
-              Season
-              <select name="season" value={form.season} onChange={handleChange}>
-                <option value="">— Select season —</option>
-                <option value="summer">Summer</option>
-                <option value="winter">Winter</option>
-                <option value="spring">Spring</option>
-                <option value="autumn">Autumn</option>
-              </select>
-            </label>
+              <label>
+                Season
+                <select name="season" value={form.season} onChange={handleChange}>
+                  <option value="">— Select season —</option>
+                  <option value="summer">Summer</option>
+                  <option value="winter">Winter</option>
+                  <option value="spring">Spring</option>
+                  <option value="autumn">Autumn</option>
+                </select>
+              </label>
 
-            <label>
-              Completed date
-              {form.status === "completed" && !form.completed_date && (
-                <span className="field-hint field-hint--required">Required for completed ascents</span>
+              <label>
+                Completed date
+                {form.status === "completed" && !form.completed_date && (
+                  <span className="field-hint field-hint--required">Required for completed ascents</span>
+                )}
+                <input type="date" name="completed_date" value={form.completed_date} onChange={handleChange} />
+              </label>
+
+              <label>
+                Route taken
+                <input type="text" name="route_taken" value={form.route_taken} onChange={handleChange} placeholder="e.g. Corridor Route from Seathwaite" />
+              </label>
+
+              <div className="tracking-form__row">
+                <label>Distance km<input type="number" step="0.1" name="hike_distance_km" value={form.hike_distance_km} onChange={handleChange} /></label>
+                <label>Duration hours<input type="number" step="0.1" name="hike_duration_hours" value={form.hike_duration_hours} onChange={handleChange} /></label>
+              </div>
+
+              <div className="tracking-form__row">
+                <label>Steps<input type="number" name="steps" value={form.steps} onChange={handleChange} placeholder="e.g. 14582" /></label>
+                <label>Flights climbed<input type="number" name="flights_climbed" value={form.flights_climbed} onChange={handleChange} placeholder="e.g. 72" /></label>
+              </div>
+
+              <label>
+                Notes
+                <textarea name="notes" value={form.notes} onChange={handleChange} rows="5" placeholder="Weather, route condition, memories, who you walked with..." />
+              </label>
+
+              <label>
+                Route image
+                <input type="file" accept="image/*" onChange={handleImageChange} />
+              </label>
+
+              {form.uploaded_image && (
+                <img className="tracking-form__preview" src={form.uploaded_image} alt={`${mountain.name} route upload`} />
               )}
-              <input type="date" name="completed_date" value={form.completed_date} onChange={handleChange} />
-            </label>
 
-            <label>
-              Route taken
-              <input type="text" name="route_taken" value={form.route_taken} onChange={handleChange} placeholder="e.g. Corridor Route from Seathwaite" />
-            </label>
-
-            <div className="tracking-form__row">
-              <label>Distance km<input type="number" step="0.1" name="hike_distance_km" value={form.hike_distance_km} onChange={handleChange} /></label>
-              <label>Duration hours<input type="number" step="0.1" name="hike_duration_hours" value={form.hike_duration_hours} onChange={handleChange} /></label>
-            </div>
-
-            <div className="tracking-form__row">
-              <label>Steps<input type="number" name="steps" value={form.steps} onChange={handleChange} placeholder="e.g. 14582" /></label>
-              <label>Flights climbed<input type="number" name="flights_climbed" value={form.flights_climbed} onChange={handleChange} placeholder="e.g. 72" /></label>
-            </div>
-
-            <label>
-              Notes
-              <textarea name="notes" value={form.notes} onChange={handleChange} rows="5" placeholder="Weather, route condition, memories, who you walked with..." />
-            </label>
-
-            <label>
-              Route image
-              <input type="file" accept="image/*" onChange={handleImageChange} />
-            </label>
-
-            {form.uploaded_image && (
-              <img className="tracking-form__preview" src={form.uploaded_image} alt={`${mountain.name} route upload`} />
-            )}
-
-            <div className="tracking-form__actions">
-              <button type="submit" disabled={saveStatus === "saving"}>
-                {saveStatus === "saving" ? "Saving..." : activeLogId ? "Update ascent" : "Save ascent"}
-              </button>
-              {activeLogId && !showNewForm && (
-                <button type="button" className="tracking-form__delete" onClick={() => setConfirmDelete(true)}>
-                  Delete log
+              <div className="tracking-form__actions">
+                <button type="submit" disabled={saveStatus === "saving"}>
+                  {saveStatus === "saving" ? "Saving..." : activeLogId ? "Update ascent" : "Save ascent"}
                 </button>
-              )}
-            </div>
-          </form>
+                {activeLogId && !showNewForm && (
+                  <button type="button" className="tracking-form__delete" onClick={() => setConfirmDelete(true)}>
+                    Delete log
+                  </button>
+                )}
+              </div>
+            </form>
+          )}
         </div>
       </section>
     </main>

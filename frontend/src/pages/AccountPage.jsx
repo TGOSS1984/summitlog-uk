@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   getCurrentUser,
   getProgressLogs,
@@ -7,6 +8,7 @@ import {
   registerUser,
   updateUserProfile,
 } from "../lib/api";
+import { TbBook, TbPhoto, TbLayoutDashboard } from "react-icons/tb";
 
 function AccountPage() {
   const [user, setUser] = useState(null);
@@ -227,6 +229,22 @@ function AccountPage() {
                         <strong>{stats.planned}</strong>
                         <span>Planned</span>
                       </div>
+                    </div>
+
+                    {/* Quick links */}
+                    <div className="account-quick-links">
+                      <Link to="/dashboard" className="account-quick-link">
+                        <TbLayoutDashboard size={16} strokeWidth={1.8} />
+                        Dashboard
+                      </Link>
+                      <Link to="/journal" className="account-quick-link">
+                        <TbBook size={16} strokeWidth={1.8} />
+                        Journal
+                      </Link>
+                      <Link to="/gallery" className="account-quick-link">
+                        <TbPhoto size={16} strokeWidth={1.8} />
+                        Gallery
+                      </Link>
                     </div>
 
                     <div className="tracking-form__actions">

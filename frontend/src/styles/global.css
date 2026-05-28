@@ -4791,3 +4791,60 @@ h2 em {
 }
 
 .field-hint--required { color: #a32d2d; }
+
+/* ===== ACCOUNT QUICK LINKS ===== */
+
+.account-quick-links {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin: 1.2rem 0;
+}
+
+.account-quick-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 0.5rem;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(248, 250, 252, 0.78);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.account-quick-link:hover {
+  background: rgba(208, 170, 98, 0.12);
+  border-color: rgba(208, 170, 98, 0.3);
+  color: var(--color-accent);
+}
+
+/* ===== MOUNTAIN DETAIL LOGIN PROMPT ===== */
+
+.tracking-login-prompt {
+  padding: var(--space-xl);
+  display: grid;
+  gap: var(--space-md);
+  align-content: start;
+}
+
+.tracking-login-prompt h3 {
+  font-size: 1.6rem;
+  color: var(--color-text-light);
+}
+
+.tracking-login-prompt p:not(.section-kicker) {
+  color: rgba(248, 250, 252, 0.68);
+  line-height: 1.6;
+}
+
+.tracking-login-prompt__actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-top: var(--space-sm);
+}
