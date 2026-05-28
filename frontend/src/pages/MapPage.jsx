@@ -74,79 +74,58 @@ function getStatusLabel(status) {
 
 function MapBounds({ mountains }) {
   const map = useMap();
-
   useEffect(() => {
     const coordinates = mountains
-      .filter((mountain) => mountain.latitude && mountain.longitude)
-      .map((mountain) => [
-        Number(mountain.latitude),
-        Number(mountain.longitude),
-      ]);
-
+      .filter((m) => m.latitude && m.longitude)
+      .map((m) => [Number(m.latitude), Number(m.longitude)]);
     if (coordinates.length === 0) return;
-
-    if (coordinates.length === 1) {
-      map.setView(coordinates[0], 10);
-      return;
-    }
-
-    map.fitBounds(coordinates, {
-      padding: [44, 44],
-      maxZoom: 10,
-    });
+    if (coordinates.length === 1) { map.setView(coordinates[0], 10); return; }
+    map.fitBounds(coordinates, { padding: [44, 44], maxZoom: 10 });
   }, [map, mountains]);
-
   return null;
 }
 
 function MapPage() {
   const [mountains, setMountains] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [hasLogs, setHasLogs] = useState(false);
   const [filters, setFilters] = useState({
     collection_memberships__collection__slug: "",
     region__slug: "",
   });
   const [statusFilter, setStatusFilter] = useState("");
+  const [myAscentsOnly, setMyAscentsOnly] = useState(false);
   const [status, setStatus] = useState("loading");
 
   useEffect(() => {
     async function loadMapData() {
       try {
         setStatus("loading");
-
         const activeFilters = Object.fromEntries(
           Object.entries(filters).filter(([, value]) => value !== "")
         );
-
         const mountainData = await getMountains(activeFilters);
-
-        setMountains(
-          Array.isArray(mountainData) ? mountainData : mountainData.results || []
-        );
-
+        setMountains(Array.isArray(mountainData) ? mountainData : mountainData.results || []);
         try {
           const logData = await getProgressLogs();
-          setLogs(Array.isArray(logData) ? logData : logData.results || []);
-        } catch (error) {
-          console.warn("Progress logs unavailable:", error);
+          const userLogs = Array.isArray(logData) ? logData : logData.results || [];
+          setLogs(userLogs);
+          setHasLogs(userLogs.length > 0);
+        } catch {
+          setHasLogs(false);
         }
-
         setStatus("success");
       } catch (error) {
         console.error("MAP ERROR:", error);
         setStatus("error");
       }
     }
-
     loadMapData();
   }, [filters]);
 
   function handleChange(event) {
     const { name, value } = event.target;
-    setFilters((currentFilters) => ({
-      ...currentFilters,
-      [name]: value,
-    }));
+    setFilters((current) => ({ ...current, [name]: value }));
   }
 
   const logStatusByMountainId = useMemo(() => {
@@ -156,28 +135,33 @@ function MapPage() {
     }, {});
   }, [logs]);
 
-  // All mountains with coordinates
+  const loggedMountainIds = useMemo(() => {
+    return new Set(logs.map((l) => l.mountain));
+  }, [logs]);
+
   const mappableMountains = useMemo(() => {
-    return mountains.filter(
-      (mountain) => mountain.latitude && mountain.longitude
-    );
+    return mountains.filter((m) => m.latitude && m.longitude);
   }, [mountains]);
 
-  // Frontend status filter applied on top
   const visibleMountains = useMemo(() => {
-    if (!statusFilter) return mappableMountains;
-    return mappableMountains.filter((mountain) => {
-      const mountainStatus = logStatusByMountainId[mountain.id] || "not_started";
-      return mountainStatus === statusFilter;
-    });
-  }, [mappableMountains, logStatusByMountainId, statusFilter]);
+    let filtered = mappableMountains;
+    if (myAscentsOnly) {
+      filtered = filtered.filter((m) => loggedMountainIds.has(m.id));
+    }
+    if (statusFilter) {
+      filtered = filtered.filter((m) => {
+        const s = logStatusByMountainId[m.id] || "not_started";
+        return s === statusFilter;
+      });
+    }
+    return filtered;
+  }, [mappableMountains, logStatusByMountainId, loggedMountainIds, statusFilter, myAscentsOnly]);
 
   const mapStats = useMemo(() => {
     return mappableMountains.reduce(
-      (totals, mountain) => {
-        const mountainStatus =
-          logStatusByMountainId[mountain.id] || "not_started";
-        totals[mountainStatus] += 1;
+      (totals, m) => {
+        const s = logStatusByMountainId[m.id] || "not_started";
+        totals[s] += 1;
         return totals;
       },
       { completed: 0, planned: 0, not_started: 0 }
@@ -188,18 +172,12 @@ function MapPage() {
     <main>
       <section className="section section-dark map-hero">
         <div className="container">
-          <p className="section-kicker">
-            <span className="kicker-line" />
-            Map
-          </p>
+          <p className="section-kicker"><span className="kicker-line" />Map</p>
           <h1 className="page-hero__h1">
             <span className="page-hero__h1-top">Explore the mountains by</span>
             <span className="page-hero__h1-bottom">Location.</span>
           </h1>
-          <p>
-            Completed, planned and still-to-do mountains are shown directly on
-            the map, giving your progress a visual sense of place.
-          </p>
+          <p>Completed, planned and still-to-do mountains are shown directly on the map, giving your progress a visual sense of place.</p>
         </div>
       </section>
 
@@ -210,43 +188,25 @@ function MapPage() {
               <p className="section-kicker">Map filters</p>
               <h2>Filter visible pins</h2>
             </div>
-
             <div className="mountains-filters">
-              <select
-                name="collection_memberships__collection__slug"
-                value={filters.collection_memberships__collection__slug}
-                onChange={handleChange}
-              >
-                {COLLECTION_FILTERS.map((collection) => (
-                  <option key={collection.label} value={collection.value}>
-                    {collection.label}
-                  </option>
-                ))}
+              <select name="collection_memberships__collection__slug" value={filters.collection_memberships__collection__slug} onChange={handleChange}>
+                {COLLECTION_FILTERS.map((c) => <option key={c.label} value={c.value}>{c.label}</option>)}
               </select>
-
-              <select
-                name="region__slug"
-                value={filters.region__slug}
-                onChange={handleChange}
-              >
-                {REGION_FILTERS.map((region) => (
-                  <option key={region.label} value={region.value}>
-                    {region.label}
-                  </option>
-                ))}
+              <select name="region__slug" value={filters.region__slug} onChange={handleChange}>
+                {REGION_FILTERS.map((r) => <option key={r.label} value={r.value}>{r.label}</option>)}
               </select>
-
-              {/* Frontend-only status filter */}
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-              >
-                {STATUS_FILTERS.map((s) => (
-                  <option key={s.value} value={s.value}>
-                    {s.label}
-                  </option>
-                ))}
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                {STATUS_FILTERS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
+              {hasLogs && (
+                <button
+                  type="button"
+                  className={`map-ascents-toggle${myAscentsOnly ? " map-ascents-toggle--active" : ""}`}
+                  onClick={() => setMyAscentsOnly(!myAscentsOnly)}
+                >
+                  {myAscentsOnly ? "✓ My ascents only" : "My ascents only"}
+                </button>
+              )}
             </div>
           </div>
 
@@ -254,32 +214,16 @@ function MapPage() {
             <div className="map-panel">
               {status === "loading" && <p>Loading map...</p>}
               {status === "error" && <p>Unable to load mountain map.</p>}
-
               {status === "success" && (
-                <MapContainer
-                  center={[54.6, -3.1]}
-                  zoom={6}
-                  scrollWheelZoom={false}
-                  className="summit-map"
-                >
+                <MapContainer center={[54.6, -3.1]} zoom={6} scrollWheelZoom={false} className="summit-map">
                   <MapBounds mountains={visibleMountains} />
-
-                  <TileLayer
-                    attribution='&copy; OpenStreetMap contributors'
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  />
-
+                  <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   {visibleMountains.map((mountain) => {
-                    const mountainStatus =
-                      logStatusByMountainId[mountain.id] || "not_started";
-
+                    const mountainStatus = logStatusByMountainId[mountain.id] || "not_started";
                     return (
                       <Marker
                         key={mountain.id}
-                        position={[
-                          Number(mountain.latitude),
-                          Number(mountain.longitude),
-                        ]}
+                        position={[Number(mountain.latitude), Number(mountain.longitude)]}
                         icon={createMarkerIcon(mountainStatus)}
                       >
                         <Popup>
@@ -287,21 +231,11 @@ function MapPage() {
                             <strong>{mountain.name}</strong>
                             <span>{getCollectionNames(mountain)}</span>
                             <span>{mountain.region?.name}</span>
-                            <span>
-                              Rank:{" "}
-                              {getCollectionRank(
-                                mountain,
-                                filters.collection_memberships__collection__slug
-                              )}
-                            </span>
+                            <span>Rank: {getCollectionRank(mountain, filters.collection_memberships__collection__slug)}</span>
                             <span>Height: {mountain.height_m}m</span>
-                            <span>
-                              Prominence: {mountain.prominence_m || "—"}m
-                            </span>
+                            <span>Prominence: {mountain.prominence_m || "—"}m</span>
                             <span>Status: {getStatusLabel(mountainStatus)}</span>
-                            <Link to={`/mountains/${mountain.slug}`}>
-                              View mountain
-                            </Link>
+                            <Link to={`/mountains/${mountain.slug}`}>View mountain</Link>
                           </div>
                         </Popup>
                       </Marker>
@@ -315,24 +249,14 @@ function MapPage() {
               <p className="section-kicker">Visible pins</p>
               <strong>{visibleMountains.length}</strong>
               <span>
-                {statusFilter
-                  ? STATUS_FILTERS.find((s) => s.value === statusFilter)?.label.toLowerCase()
+                {myAscentsOnly ? "your logged mountains" :
+                  statusFilter ? STATUS_FILTERS.find((s) => s.value === statusFilter)?.label.toLowerCase()
                   : "mountains with coordinates"}
               </span>
-
               <div className="map-legend">
-                <p>
-                  <span className="legend-dot legend-dot--completed" />
-                  Completed: {mapStats.completed}
-                </p>
-                <p>
-                  <span className="legend-dot legend-dot--planned" />
-                  Planned: {mapStats.planned}
-                </p>
-                <p>
-                  <span className="legend-dot legend-dot--not-started" />
-                  Not started: {mapStats.not_started}
-                </p>
+                <p><span className="legend-dot legend-dot--completed" />Completed: {mapStats.completed}</p>
+                <p><span className="legend-dot legend-dot--planned" />Planned: {mapStats.planned}</p>
+                <p><span className="legend-dot legend-dot--not-started" />Not started: {mapStats.not_started}</p>
               </div>
             </aside>
           </div>
@@ -343,3 +267,4 @@ function MapPage() {
 }
 
 export default MapPage;
+

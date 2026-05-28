@@ -4848,3 +4848,30 @@ h2 em {
   flex-wrap: wrap;
   margin-top: var(--space-sm);
 }
+
+/* Map Toggle*/
+
+.map-ascents-toggle {
+  appearance: none;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  padding: 0 0.9rem;
+  min-height: 44px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-text-soft);
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.map-ascents-toggle--active {
+  background: rgba(4, 57, 59, 0.08);
+  border-color: var(--color-teal);
+  color: var(--color-teal-deep);
+}
+
+.map-ascents-toggle:hover {
+  border-color: var(--color-teal);
+  color: var(--color-teal-deep);
+}

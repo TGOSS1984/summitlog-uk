@@ -610,13 +610,17 @@ function DashboardPage() {
                   <div className="dashboard-timeline">
                     {stats.recentLogs.length === 0 && <p>No recent activity yet.</p>}
                     {stats.recentLogs.slice(0, showAllLogs ? undefined : MAX_VISIBLE).map((log) => (
-                      <div className="dashboard-timeline-item" key={log.id}>
+                      <Link
+                        to={log.mountain_detail?.slug ? `/mountains/${log.mountain_detail.slug}` : "#"}
+                        className="dashboard-timeline-item"
+                        key={log.id}
+                      >
                         <span>{log.status === "completed" ? "✓" : "○"}</span>
                         <div>
                           <strong>{log.mountain_detail?.name}</strong>
                           <small>{log.status} / {formatDate(log.completed_date)}</small>
                         </div>
-                      </div>
+                      </Link>
                     ))}
                     {stats.recentLogs.length > MAX_VISIBLE && (
                       <button className="dashboard-show-more" onClick={() => setShowAllLogs(!showAllLogs)}>
@@ -747,7 +751,11 @@ function DashboardPage() {
                 <div className="my-progress-list">
                   {stats.recentLogs.length === 0 && <p>No mountain logs yet.</p>}
                   {stats.recentLogs.slice(0, showAllProgress ? undefined : MAX_VISIBLE).map((log) => (
-                    <div className="my-progress-card" key={log.id}>
+                    <Link
+                      to={log.mountain_detail?.slug ? `/mountains/${log.mountain_detail.slug}` : "#"}
+                      className="my-progress-card"
+                      key={log.id}
+                    >
                       <div>
                         <p className="my-progress-card__status">{log.status}</p>
                         <h3>{log.mountain_detail?.name}</h3>
@@ -757,7 +765,7 @@ function DashboardPage() {
                         <span>{log.completed_date || "No date"}</span>
                         <span>{log.hike_distance_km || "—"}km</span>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                   {stats.recentLogs.length > MAX_VISIBLE && (
                     <button className="dashboard-show-more" onClick={() => setShowAllProgress(!showAllProgress)}>
