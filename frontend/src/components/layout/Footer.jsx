@@ -8,6 +8,8 @@ import {
   TbBrandX,
   TbBrandFacebook,
   TbBrandStrava,
+  TbBook,
+  TbPhoto,
 } from "react-icons/tb";
 
 function Footer() {
@@ -58,6 +60,12 @@ function Footer() {
           <Link to="/map"><TbMap2 size={14} strokeWidth={1.8} /> Map</Link>
           <Link to="/dashboard"><TbLayoutDashboard size={14} strokeWidth={1.8} /> Dashboard</Link>
           <Link to="/account"><TbUser size={14} strokeWidth={1.8} /> Account</Link>
+        </nav>
+
+        <nav className="site-footer__nav" aria-label="Personal footer navigation">
+          <p className="site-footer__nav-heading">Personal</p>
+          <Link to="/journal"><TbBook size={14} strokeWidth={1.8} /> Journal</Link>
+          <Link to="/gallery"><TbPhoto size={14} strokeWidth={1.8} /> Gallery</Link>
         </nav>
 
         <div className="site-footer__bottom-row">

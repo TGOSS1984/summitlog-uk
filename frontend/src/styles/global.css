@@ -2859,7 +2859,7 @@ h2 em {
 
 .site-footer__grid {
   display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  grid-template-columns: 1.4fr 1fr 1fr;
   gap: var(--space-xl);
 }
 
