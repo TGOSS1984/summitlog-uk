@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   TbMountain, TbCalendar, TbRoute, TbWalk,
-  TbStairs, TbFilter, TbBook,
+  TbStairs, TbBook,
 } from "react-icons/tb";
 import { getProgressLogs, getCollections } from "../lib/api";
 
@@ -33,17 +33,24 @@ const SEASON_LABELS = {
   autumn: "🍂 Autumn",
 };
 
+function JournalEntrySkeleton() {
+  return (
+    <div className="journal-entry">
+      <div className="skeleton-line skeleton-line--title" style={{ width: "50%" }} />
+      <div className="skeleton-line skeleton-line--short" />
+      <div className="skeleton-line" />
+      <div className="skeleton-line skeleton-line--short" style={{ width: "70%" }} />
+    </div>
+  );
+}
+
 function JournalEntry({ log }) {
   const mountain = log.mountain_detail;
-
   return (
     <article className="journal-entry">
       <div className="journal-entry__header">
         <div className="journal-entry__title-row">
-          <Link
-            to={`/mountains/${mountain?.slug}`}
-            className="journal-entry__name"
-          >
+          <Link to={`/mountains/${mountain?.slug}`} className="journal-entry__name">
             {mountain?.name || "Unknown mountain"}
           </Link>
           <span className={`journal-entry__status journal-entry__status--${log.status}`}>
@@ -51,58 +58,28 @@ function JournalEntry({ log }) {
           </span>
         </div>
         <div className="journal-entry__meta">
-          {mountain?.region?.name && (
-            <span className="journal-entry__region">{mountain.region.name}</span>
-          )}
-          {log.season && (
-            <span className="journal-entry__season">{SEASON_LABELS[log.season] || log.season}</span>
-          )}
-          {mountain?.height_m && (
-            <span className="journal-entry__height">{mountain.height_m}m</span>
-          )}
+          {mountain?.region?.name && <span className="journal-entry__region">{mountain.region.name}</span>}
+          {log.season && <span className="journal-entry__season">{SEASON_LABELS[log.season] || log.season}</span>}
+          {mountain?.height_m && <span className="journal-entry__height">{mountain.height_m}m</span>}
         </div>
       </div>
-
       {(log.hike_distance_km || log.hike_duration_hours || log.steps || log.flights_climbed) && (
         <div className="journal-entry__stats">
-          {log.hike_distance_km && (
-            <span><TbRoute size={14} strokeWidth={1.8} />{Number(log.hike_distance_km).toFixed(1)}km</span>
-          )}
-          {log.hike_duration_hours && (
-            <span><TbCalendar size={14} strokeWidth={1.8} />{Number(log.hike_duration_hours)}hrs</span>
-          )}
-          {log.steps && (
-            <span><TbWalk size={14} strokeWidth={1.8} />{Number(log.steps).toLocaleString()} steps</span>
-          )}
-          {log.flights_climbed && (
-            <span><TbStairs size={14} strokeWidth={1.8} />{log.flights_climbed} flights</span>
-          )}
+          {log.hike_distance_km && <span><TbRoute size={14} strokeWidth={1.8} />{Number(log.hike_distance_km).toFixed(1)}km</span>}
+          {log.hike_duration_hours && <span><TbCalendar size={14} strokeWidth={1.8} />{Number(log.hike_duration_hours)}hrs</span>}
+          {log.steps && <span><TbWalk size={14} strokeWidth={1.8} />{Number(log.steps).toLocaleString()} steps</span>}
+          {log.flights_climbed && <span><TbStairs size={14} strokeWidth={1.8} />{log.flights_climbed} flights</span>}
         </div>
       )}
-
-      {log.route_taken && (
-        <p className="journal-entry__route">
-          <TbRoute size={13} strokeWidth={1.8} />
-          {log.route_taken}
-        </p>
-      )}
-
-      {log.notes && (
-        <p className="journal-entry__notes">{log.notes}</p>
-      )}
-
-      {log.uploaded_image && (
-        <img
-          className="journal-entry__image"
-          src={log.uploaded_image}
-          alt={`${mountain?.name} summit photo`}
-        />
-      )}
+      {log.route_taken && <p className="journal-entry__route"><TbRoute size={13} strokeWidth={1.8} />{log.route_taken}</p>}
+      {log.notes && <p className="journal-entry__notes">{log.notes}</p>}
+      {log.uploaded_image && <img className="journal-entry__image" src={log.uploaded_image} alt={`${mountain?.name} summit photo`} />}
     </article>
   );
 }
 
 function JournalPage() {
+  const navigate = useNavigate();
   const [logs, setLogs] = useState([]);
   const [collections, setCollections] = useState([]);
   const [status, setStatus] = useState("loading");
@@ -119,7 +96,6 @@ function JournalPage() {
           getCollections(),
         ]);
         const allLogs = Array.isArray(logData) ? logData : logData.results || [];
-        // Sort by completed_date desc, then updated_at
         allLogs.sort((a, b) => {
           const da = a.completed_date || a.updated_at || a.created_at;
           const db = b.completed_date || b.updated_at || b.created_at;
@@ -129,11 +105,12 @@ function JournalPage() {
         setCollections(Array.isArray(colData) ? colData : []);
         setStatus("success");
       } catch {
-        setStatus("unauthenticated");
+        // Redirect unauthenticated users to account page
+        navigate("/account", { replace: true });
       }
     }
     load();
-  }, []);
+  }, [navigate]);
 
   const filtered = logs.filter((log) => {
     if (filterStatus !== "all" && log.status !== filterStatus) return false;
@@ -141,9 +118,8 @@ function JournalPage() {
     if (filterCollection !== "all") {
       const m = log.mountain_detail;
       const inCollection =
-        m?.collection_memberships?.some(
-          (mb) => String(mb.collection?.id) === filterCollection
-        ) || String(m?.collection?.id) === filterCollection;
+        m?.collection_memberships?.some((mb) => String(mb.collection?.id) === filterCollection) ||
+        String(m?.collection?.id) === filterCollection;
       if (!inCollection) return false;
     }
     if (search) {
@@ -156,7 +132,6 @@ function JournalPage() {
     return true;
   });
 
-  // Group by month
   const grouped = filtered.reduce((acc, log) => {
     const month = formatMonth(log.completed_date || log.updated_at) || "Undated";
     if (!acc[month]) acc[month] = [];
@@ -182,44 +157,32 @@ function JournalPage() {
 
       <section className="section section-light">
         <div className="container">
-          {status === "loading" && <p>Loading your journal...</p>}
-
-          {status === "unauthenticated" && (
-            <div className="journal-empty">
-              <TbBook size={48} strokeWidth={1} />
-              <h2>Your journal awaits</h2>
-              <p>Sign in to see your mountain diary.</p>
-              <Link to="/account" className="button-primary">Sign in</Link>
-            </div>
+          {status === "loading" && (
+            <>
+              <div className="journal-stats">
+                {[1,2,3].map((i) => <div key={i} className="journal-stat"><div className="skeleton-line skeleton-line--title" /><div className="skeleton-line skeleton-line--short" /></div>)}
+              </div>
+              <div className="journal-timeline">
+                <div className="journal-month">
+                  <div className="skeleton-line skeleton-line--title" style={{ width: "180px", marginBottom: "1rem" }} />
+                  <div className="journal-month__entries">
+                    {[1,2,3].map((i) => <JournalEntrySkeleton key={i} />)}
+                  </div>
+                </div>
+              </div>
+            </>
           )}
 
           {status === "success" && (
             <>
-              {/* Stats strip */}
               <div className="journal-stats">
-                <div className="journal-stat">
-                  <strong>{logs.length}</strong>
-                  <span>Total logs</span>
-                </div>
-                <div className="journal-stat">
-                  <strong>{completedCount}</strong>
-                  <span>Completed</span>
-                </div>
-                <div className="journal-stat">
-                  <strong>{plannedCount}</strong>
-                  <span>Planned</span>
-                </div>
+                <div className="journal-stat"><strong>{logs.length}</strong><span>Total logs</span></div>
+                <div className="journal-stat"><strong>{completedCount}</strong><span>Completed</span></div>
+                <div className="journal-stat"><strong>{plannedCount}</strong><span>Planned</span></div>
               </div>
 
-              {/* Filters */}
               <div className="journal-filters">
-                <input
-                  type="text"
-                  placeholder="Search mountains, notes, routes..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="journal-search"
-                />
+                <input type="text" placeholder="Search mountains, notes, routes..." value={search} onChange={(e) => setSearch(e.target.value)} className="journal-search" />
                 <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                   <option value="all">All statuses</option>
                   <option value="completed">Completed</option>
@@ -235,9 +198,7 @@ function JournalPage() {
                 </select>
                 <select value={filterCollection} onChange={(e) => setFilterCollection(e.target.value)}>
                   <option value="all">All collections</option>
-                  {collections.map((c) => (
-                    <option key={c.id} value={String(c.id)}>{c.name}</option>
-                  ))}
+                  {collections.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
                 </select>
               </div>
 
@@ -245,25 +206,20 @@ function JournalPage() {
                 <div className="journal-empty">
                   <TbMountain size={48} strokeWidth={1} />
                   <h2>No entries found</h2>
-                  <p>Try adjusting your filters or log a mountain to get started.</p>
+                  <p>{logs.length === 0 ? "Log a mountain to start your diary." : "Try adjusting your filters."}</p>
                   <Link to="/mountains" className="button-primary">Browse mountains</Link>
                 </div>
               )}
 
-              {/* Timeline grouped by month */}
               <div className="journal-timeline">
                 {Object.entries(grouped).map(([month, monthLogs]) => (
                   <div className="journal-month" key={month}>
                     <div className="journal-month__header">
                       <span className="journal-month__label">{month}</span>
-                      <span className="journal-month__count">
-                        {monthLogs.length} {monthLogs.length === 1 ? "entry" : "entries"}
-                      </span>
+                      <span className="journal-month__count">{monthLogs.length} {monthLogs.length === 1 ? "entry" : "entries"}</span>
                     </div>
                     <div className="journal-month__entries">
-                      {monthLogs.map((log) => (
-                        <JournalEntry key={log.id} log={log} />
-                      ))}
+                      {monthLogs.map((log) => <JournalEntry key={log.id} log={log} />)}
                     </div>
                   </div>
                 ))}

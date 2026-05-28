@@ -21,11 +21,23 @@ function getStatusLabel(status) {
   return "Not started";
 }
 
-// Top 3 ranks get gold, rest get teal
 function getRankStyle(rank) {
   const n = Number(rank);
   if (n >= 1 && n <= 3) return "collection-rank--gold";
   return "";
+}
+
+function RowSkeleton() {
+  return (
+    <div className="collection-mountain-row collection-row-skeleton">
+      <div className="skeleton-pill" style={{ width: 42, height: 42, borderRadius: "50%" }} />
+      <div style={{ flex: 1, display: "grid", gap: 6 }}>
+        <div className="skeleton-line skeleton-line--title" style={{ width: "45%" }} />
+        <div className="skeleton-line skeleton-line--short" style={{ width: "25%" }} />
+      </div>
+      <div className="skeleton-pill" style={{ width: 80 }} />
+    </div>
+  );
 }
 
 function CollectionDetailPage() {
@@ -47,8 +59,8 @@ function CollectionDetailPage() {
         try {
           const logData = await getProgressLogs();
           setLogs(Array.isArray(logData) ? logData : logData.results || []);
-        } catch (error) {
-          console.warn("Progress logs unavailable:", error);
+        } catch {
+          // not logged in — show collection without personal progress
         }
         setStatus("success");
       } catch (error) {
@@ -79,8 +91,57 @@ function CollectionDetailPage() {
     return { completed, planned, total, percent };
   }, [collection, logs, mountains]);
 
-  if (status === "loading") return <p>Loading collection...</p>;
-  if (status === "error" || !collection) return <p>Unable to load collection.</p>;
+  if (status === "loading") {
+    return (
+      <main>
+        <div className="skeleton-hero" />
+        <section className="section section-light">
+          <div className="container">
+            <div className="collection-overview-grid">
+              {[1, 2, 3].map((i) => <div key={i} className="skeleton-card" style={{ height: 120 }} />)}
+            </div>
+            <div className="collection-mountain-list" style={{ marginTop: "2rem" }}>
+              {Array.from({ length: 8 }).map((_, i) => <RowSkeleton key={i} />)}
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <main>
+        <section className="section section-dark">
+          <div className="container">
+            <p className="section-kicker">Error</p>
+            <h1>Unable to load collection</h1>
+            <p>Check the server is running and try again.</p>
+            <Link to="/mountains" className="button-primary" style={{ marginTop: "2rem", display: "inline-flex" }}>
+              Browse mountains
+            </Link>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
+  if (!collection) {
+    return (
+      <main>
+        <section className="section section-dark">
+          <div className="container">
+            <div className="page-empty" style={{ color: "var(--color-text-light)" }}>
+              <TbMountain size={48} strokeWidth={1} />
+              <h2 style={{ color: "var(--color-text-light)" }}>Collection not found</h2>
+              <p style={{ color: "rgba(248,250,252,0.7)" }}>This collection doesn't exist or has been removed.</p>
+              <Link to="/mountains" className="button-primary">Browse mountains</Link>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main>
@@ -94,7 +155,6 @@ function CollectionDetailPage() {
             <h1>{collection.name}</h1>
             <p>{collection.description}</p>
           </div>
-
           <aside className="glass-card collection-hero__panel">
             <p>Progress</p>
             <strong>{stats.percent}%</strong>
@@ -108,8 +168,6 @@ function CollectionDetailPage() {
 
       <section className="section section-light">
         <div className="container">
-
-          {/* ── Stat cards with icons + gradient border ── */}
           <div className="collection-overview-grid">
             <article className="collection-mini-stat">
               <div className="collection-mini-stat__icon collection-mini-stat__icon--completed">
@@ -118,7 +176,6 @@ function CollectionDetailPage() {
               <p>Completed</p>
               <strong>{stats.completed}</strong>
             </article>
-
             <article className="collection-mini-stat">
               <div className="collection-mini-stat__icon collection-mini-stat__icon--planned">
                 <TbFlag size={18} strokeWidth={1.8} />
@@ -126,7 +183,6 @@ function CollectionDetailPage() {
               <p>Planned</p>
               <strong>{stats.planned}</strong>
             </article>
-
             <article className="collection-mini-stat">
               <div className="collection-mini-stat__icon collection-mini-stat__icon--total">
                 <TbMountain size={18} strokeWidth={1.5} />
@@ -136,30 +192,34 @@ function CollectionDetailPage() {
             </article>
           </div>
 
-          {/* ── Mountain list ── */}
-          <div className="collection-mountain-list">
-            {orderedMountains.map((mountain) => {
-              const mountainStatus = getMountainLogStatus(mountain, logs);
-              const rank = getCollectionRank(mountain, slug);
-
-              return (
-                <Link
-                  to={`/mountains/${mountain.slug}`}
-                  className={`collection-mountain-row collection-mountain-row--${mountainStatus}`}
-                  key={mountain.id}
-                >
-                  <span className={`collection-rank ${getRankStyle(rank)}`}>
-                    {rank}
-                  </span>
-                  <strong>{mountain.name}</strong>
-                  <small>{mountain.height_m}m</small>
-                  <em className={`collection-status collection-status--${mountainStatus}`}>
-                    {getStatusLabel(mountainStatus)}
-                  </em>
-                </Link>
-              );
-            })}
-          </div>
+          {orderedMountains.length === 0 ? (
+            <div className="page-empty">
+              <TbMountain size={48} strokeWidth={1} />
+              <h2>No mountains in this collection</h2>
+              <p>Mountains may not have been loaded yet.</p>
+            </div>
+          ) : (
+            <div className="collection-mountain-list">
+              {orderedMountains.map((mountain) => {
+                const mountainStatus = getMountainLogStatus(mountain, logs);
+                const rank = getCollectionRank(mountain, slug);
+                return (
+                  <Link
+                    to={`/mountains/${mountain.slug}`}
+                    className={`collection-mountain-row collection-mountain-row--${mountainStatus}`}
+                    key={mountain.id}
+                  >
+                    <span className={`collection-rank ${getRankStyle(rank)}`}>{rank}</span>
+                    <strong>{mountain.name}</strong>
+                    <small>{mountain.height_m}m</small>
+                    <em className={`collection-status collection-status--${mountainStatus}`}>
+                      {getStatusLabel(mountainStatus)}
+                    </em>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
     </main>
