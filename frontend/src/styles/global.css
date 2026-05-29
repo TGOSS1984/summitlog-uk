@@ -4953,3 +4953,111 @@ a.dashboard-region-card:hover {
   opacity: 1;
   transform: translateX(0);
 }
+
+/* ===== RESPONSIVE FIXES ===== */
+
+/* Fix 1 — Hero mobile breathing room
+   On mobile the section kicker sits too close to the sticky navbar.
+   Add explicit top padding to all dark hero sections on small screens. */
+@media (max-width: 640px) {
+  .mountains-hero,
+  .dashboard-hero,
+  .mountain-detail-hero,
+  .map-hero,
+  .collection-hero,
+  .region-hero,
+  .journal-hero,
+  .gallery-hero {
+    padding-top: calc(var(--space-xxl) + var(--space-lg));
+  }
+
+  .hero-home {
+    padding-top: var(--space-xl);
+  }
+}
+
+/* Fix 2 — Map z-index bleed
+   Leaflet tiles set very high z-indexes internally. `isolation: isolate`
+   creates a new stacking context that contains Leaflet's z-indexes
+   so they can't bleed over page content when scrolling. */
+.map-panel {
+  isolation: isolate;
+  position: relative;
+  z-index: 0;
+}
+
+/* Also constrain the Leaflet container itself */
+.summit-map {
+  position: relative;
+  z-index: 0;
+}
+
+/* Fix 3 — Mountain detail stat cards on mobile
+   The 4-column grid needs to become 2-column at medium and 1-column at small.
+   The existing 800px breakpoint collapses to 1fr but looks too tall on mobile —
+   2-column at 640px is a better intermediate step. */
+@media (max-width: 800px) {
+  .mountain-detail-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .mountain-detail-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Fix 4 — Tracking panel form overflow on mobile
+   The tracking panel needs to fully collapse at 800px and the form
+   needs a min-width of 0 to prevent inputs from causing overflow. */
+@media (max-width: 800px) {
+  .tracking-panel {
+    grid-template-columns: 1fr !important;
+  }
+
+  .tracking-form__row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .tracking-form {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .tracking-form input,
+  .tracking-form select,
+  .tracking-form textarea {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Login prompt also needs to be full width */
+  .tracking-login-prompt {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* Extra: collection/region hero panels on mobile */
+@media (max-width: 640px) {
+  .collection-hero__grid,
+  .region-hero__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .map-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .mountains-filters {
+    width: 100%;
+  }
+
+  .mountains-filters select,
+  .mountains-filters input,
+  .map-ascents-toggle {
+    width: 100%;
+  }
+}
