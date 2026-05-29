@@ -496,7 +496,24 @@ function DashboardPage() {
 
       <section className="section section-light">
         <div className="container">
-          {status === "loading" && <p>Loading dashboard...</p>}
+          {status === "loading" && (
+            <>
+              <div className="dashboard-stat-grid">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="dashboard-stat-card">
+                    <div className="skeleton-line" style={{ width: 40, height: 40, borderRadius: 10, marginBottom: 12 }} />
+                    <div className="skeleton-line skeleton-line--short" />
+                    <div className="skeleton-line skeleton-line--title" />
+                    <div className="skeleton-line skeleton-line--short" style={{ width: "40%" }} />
+                  </div>
+                ))}
+              </div>
+              <div className="dashboard-journey-grid" style={{ marginTop: "var(--space-xxl)" }}>
+                <div className="dashboard-journey-card skeleton-card" style={{ minHeight: 180 }} />
+                <div className="dashboard-journey-card skeleton-card" style={{ minHeight: 180 }} />
+              </div>
+            </>
+          )}
 
           {(status === "success" || status === "demo") && (
             <>
@@ -689,7 +706,11 @@ function DashboardPage() {
                 </div>
                 <div className="dashboard-region-grid">
                   {stats.regionStats.map((region) => (
-                    <article className="dashboard-region-card" key={region.name}>
+                    <Link
+                      to={`/regions/${region.name.toLowerCase().replace(/ /g, "-")}`}
+                      className="dashboard-region-card"
+                      key={region.name}
+                    >
                       <div>
                         <p className="section-kicker">{region.name}</p>
                         <h3>{region.completed} / {region.total}</h3>
@@ -697,7 +718,7 @@ function DashboardPage() {
                       </div>
                       <strong>{region.percent}%</strong>
                       <div className="progress-track"><span style={{ width: `${region.percent}%` }} /></div>
-                    </article>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -764,6 +785,7 @@ function DashboardPage() {
                       <div className="my-progress-card__meta">
                         <span>{log.completed_date || "No date"}</span>
                         <span>{log.hike_distance_km || "—"}km</span>
+                        <span className="my-progress-card__arrow">→</span>
                       </div>
                     </Link>
                   ))}

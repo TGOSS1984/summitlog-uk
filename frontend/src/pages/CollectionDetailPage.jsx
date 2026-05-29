@@ -46,6 +46,7 @@ function CollectionDetailPage() {
   const [mountains, setMountains] = useState([]);
   const [logs, setLogs] = useState([]);
   const [status, setStatus] = useState("loading");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     async function loadCollection() {
@@ -80,6 +81,13 @@ function CollectionDetailPage() {
       return rankA - rankB;
     });
   }, [mountains, slug]);
+
+  const filteredMountains = useMemo(() => {
+    if (statusFilter === "all") return orderedMountains;
+    return orderedMountains.filter(
+      (m) => getMountainLogStatus(m, logs) === statusFilter
+    );
+  }, [orderedMountains, logs, statusFilter]);
 
   const stats = useMemo(() => {
     const completedIds = new Set(logs.filter((l) => l.status === "completed").map((l) => l.mountain));
@@ -192,15 +200,46 @@ function CollectionDetailPage() {
             </article>
           </div>
 
-          {orderedMountains.length === 0 ? (
+          {/* Status filter toolbar */}
+          <div className="collection-list-toolbar">
+            <p className="collection-list-count">
+              {statusFilter === "all"
+                ? `${orderedMountains.length} mountains`
+                : `${filteredMountains.length} of ${orderedMountains.length} mountains`}
+            </p>
+            <div className="collection-status-filters">
+              {["all", "completed", "planned", "not_started"].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className={`collection-status-filter${statusFilter === s ? " collection-status-filter--active" : ""}`}
+                  onClick={() => setStatusFilter(s)}
+                >
+                  {s === "all" ? "All" : s === "not_started" ? "Not started" : s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {filteredMountains.length === 0 ? (
             <div className="page-empty">
               <TbMountain size={48} strokeWidth={1} />
-              <h2>No mountains in this collection</h2>
-              <p>Mountains may not have been loaded yet.</p>
+              <h2>No mountains match this filter</h2>
+              <p>
+                {statusFilter === "completed" && "You haven't completed any mountains in this collection yet."}
+                {statusFilter === "planned" && "You haven't planned any mountains in this collection yet."}
+                {statusFilter === "not_started" && "All mountains in this collection have been logged."}
+                {statusFilter === "all" && "No mountains found in this collection."}
+              </p>
+              {statusFilter !== "all" && (
+                <button className="button-secondary" onClick={() => setStatusFilter("all")}>
+                  Show all mountains
+                </button>
+              )}
             </div>
           ) : (
             <div className="collection-mountain-list">
-              {orderedMountains.map((mountain) => {
+              {filteredMountains.map((mountain) => {
                 const mountainStatus = getMountainLogStatus(mountain, logs);
                 const rank = getCollectionRank(mountain, slug);
                 return (
