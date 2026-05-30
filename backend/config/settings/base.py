@@ -123,6 +123,9 @@ if _USE_R2:
     AWS_DEFAULT_ACL = None
     AWS_S3_FILE_OVERWRITE = False
     AWS_QUERYSTRING_AUTH = False  # Public URLs without signed params
+    AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN", default="")
+    if AWS_S3_CUSTOM_DOMAIN:
+        MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
 
     STORAGES = {
         "default": {
