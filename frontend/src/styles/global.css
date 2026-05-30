@@ -1966,7 +1966,7 @@ color:var(--color-teal);
 /*Collection Detail Page*/
 
 .collection-mountain-row {
-  grid-template-columns: 60px 1fr auto auto;
+  grid-template-columns: 60px 1fr auto auto auto;
 }
 
 .collection-status {
@@ -5059,5 +5059,71 @@ a.dashboard-region-card:hover {
   .mountains-filters input,
   .map-ascents-toggle {
     width: 100%;
+  }
+}
+
+/* Completion count badge — collection rows and journal entries */
+.collection-completion-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: rgba(208, 170, 98, 0.12);
+  border: 1px solid rgba(208, 170, 98, 0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-left: auto;
+}
+
+.journal-entry__repeat-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  background: rgba(208, 170, 98, 0.12);
+  border: 1px solid rgba(208, 170, 98, 0.25);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+/* Map popup completion count */
+.map-popup__completions {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+/* Collection sort dropdown */
+.collection-sort__select {
+  font-size: 0.8rem;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+/* Journal repeat summits stat */
+.journal-stat--repeat strong {
+  color: var(--color-accent);
+}
+
+/*Dashboard Page - addition*/
+/* Bottom chart row — most summited + scatter side by side */
+.dashboard-chart-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .dashboard-chart-row {
+    grid-template-columns: 1fr;
   }
 }

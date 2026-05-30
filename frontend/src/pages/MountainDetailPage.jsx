@@ -176,7 +176,6 @@ function MountainDetailPage() {
         const mountainData = await getMountain(slug);
         setMountain(mountainData);
         try {
-          // Check auth and load logs in parallel
           const [userData, logs] = await Promise.all([
             getCurrentUser(),
             getProgressLogs(),
@@ -248,12 +247,10 @@ function MountainDetailPage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-
     if (form.status === "completed" && !form.completed_date) {
       addToast("Please add a completed date for completed ascents.", "error");
       return;
     }
-
     try {
       setSaveStatus("saving");
       const { uploaded_image, ...formWithoutImage } = form;
@@ -266,24 +263,20 @@ function MountainDetailPage() {
         steps: form.steps || null,
         flights_climbed: form.flights_climbed || null,
       };
-
       const savedLog = activeLogId
         ? await updateProgressLog(activeLogId, payload)
         : await createProgressLog(payload);
-
       let finalLog = savedLog;
       if (selectedImage) {
         const imageFormData = new FormData();
         imageFormData.append("uploaded_image", selectedImage);
         finalLog = await updateProgressLogWithImage(savedLog.id, imageFormData);
       }
-
       setAscents((current) => {
         const exists = current.find((a) => a.id === finalLog.id);
         if (exists) return current.map((a) => (a.id === finalLog.id ? finalLog : a));
         return [finalLog, ...current];
       });
-
       setActiveLogId(finalLog.id);
       setForm(logToForm(finalLog));
       setShowNewForm(false);
@@ -326,6 +319,24 @@ function MountainDetailPage() {
     summer: "☀️ Summer", winter: "❄️ Winter",
     spring: "🌸 Spring", autumn: "🍂 Autumn",
   };
+
+  // Compute counts from the local ascents array
+  const completedAscents = ascents.filter((a) => a.status === "completed");
+  const completedCount = completedAscents.length;
+
+  // Ascent history label — richer when user has multiple completed ascents
+  function ascentHistoryLabel() {
+    if (ascents.length === 0) return null;
+    if (completedCount === 0) {
+      return ascents.length === 1 ? "1 ascent logged" : `${ascents.length} ascents logged`;
+    }
+    if (completedCount === 1) {
+      return ascents.length === 1
+        ? "Summited once"
+        : `${ascents.length} ascents logged — summited once`;
+    }
+    return `${ascents.length} ${ascents.length === 1 ? "ascent" : "ascents"} logged — summited ${completedCount} times`;
+  }
 
   return (
     <main>
@@ -381,7 +392,7 @@ function MountainDetailPage() {
             {isLoggedIn && ascents.length > 0 && (
               <div className="ascent-history">
                 <p className="ascent-history__label">
-                  {ascents.length === 1 ? "1 ascent logged" : `${ascents.length} ascents logged`}
+                  {ascentHistoryLabel()}
                 </p>
                 <div className="ascent-history__list">
                   {ascents.map((a) => (
@@ -404,7 +415,6 @@ function MountainDetailPage() {
             )}
           </div>
 
-          {/* Show login prompt for unauthenticated users, form for logged-in */}
           {!isLoggedIn ? (
             <LoginPrompt mountainName={mountain.name} />
           ) : (

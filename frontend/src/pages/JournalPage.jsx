@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   TbMountain, TbCalendar, TbRoute, TbWalk,
-  TbStairs, TbBook,
+  TbStairs, TbRepeat,
 } from "react-icons/tb";
 import { getProgressLogs, getCollections } from "../lib/api";
 
@@ -44,7 +44,8 @@ function JournalEntrySkeleton() {
   );
 }
 
-function JournalEntry({ log }) {
+// completionCount = total times this mountain has been completed across all logs
+function JournalEntry({ log, completionCount }) {
   const mountain = log.mountain_detail;
   return (
     <article className="journal-entry">
@@ -56,6 +57,13 @@ function JournalEntry({ log }) {
           <span className={`journal-entry__status journal-entry__status--${log.status}`}>
             {STATUS_LABELS[log.status] || log.status}
           </span>
+          {/* Repeat badge — shown when the mountain has been summited more than once */}
+          {completionCount > 1 && (
+            <span className="journal-entry__repeat-badge" title={`You've summited this mountain ${completionCount} times`}>
+              <TbRepeat size={11} strokeWidth={2} />
+              ×{completionCount}
+            </span>
+          )}
         </div>
         <div className="journal-entry__meta">
           {mountain?.region?.name && <span className="journal-entry__region">{mountain.region.name}</span>}
@@ -105,12 +113,22 @@ function JournalPage() {
         setCollections(Array.isArray(colData) ? colData : []);
         setStatus("success");
       } catch {
-        // Redirect unauthenticated users to account page
         navigate("/account", { replace: true });
       }
     }
     load();
   }, [navigate]);
+
+  // Completion count per mountain id — total completed logs per mountain
+  const completionCountById = useMemo(() => {
+    return logs.reduce((acc, log) => {
+      if (log.status === "completed") {
+        const mountainId = log.mountain;
+        acc[mountainId] = (acc[mountainId] || 0) + 1;
+      }
+      return acc;
+    }, {});
+  }, [logs]);
 
   const filtered = logs.filter((log) => {
     if (filterStatus !== "all" && log.status !== filterStatus) return false;
@@ -141,6 +159,9 @@ function JournalPage() {
 
   const completedCount = logs.filter((l) => l.status === "completed").length;
   const plannedCount = logs.filter((l) => l.status === "planned").length;
+
+  // Count how many mountains have been summited more than once
+  const repeatSummitCount = Object.values(completionCountById).filter((c) => c > 1).length;
 
   return (
     <main className="journal-page">
@@ -179,6 +200,13 @@ function JournalPage() {
                 <div className="journal-stat"><strong>{logs.length}</strong><span>Total logs</span></div>
                 <div className="journal-stat"><strong>{completedCount}</strong><span>Completed</span></div>
                 <div className="journal-stat"><strong>{plannedCount}</strong><span>Planned</span></div>
+                {/* Repeat summits stat — only shown when the user has any */}
+                {repeatSummitCount > 0 && (
+                  <div className="journal-stat journal-stat--repeat">
+                    <strong>{repeatSummitCount}</strong>
+                    <span>Repeat summits</span>
+                  </div>
+                )}
               </div>
 
               <div className="journal-filters">
@@ -219,7 +247,13 @@ function JournalPage() {
                       <span className="journal-month__count">{monthLogs.length} {monthLogs.length === 1 ? "entry" : "entries"}</span>
                     </div>
                     <div className="journal-month__entries">
-                      {monthLogs.map((log) => <JournalEntry key={log.id} log={log} />)}
+                      {monthLogs.map((log) => (
+                        <JournalEntry
+                          key={log.id}
+                          log={log}
+                          completionCount={completionCountById[log.mountain] || 0}
+                        />
+                      ))}
                     </div>
                   </div>
                 ))}

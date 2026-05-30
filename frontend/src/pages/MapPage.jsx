@@ -1,12 +1,6 @@
 import L from "leaflet";
 import { useEffect, useMemo, useState } from "react";
-import {
-  MapContainer,
-  Marker,
-  Popup,
-  TileLayer,
-  useMap,
-} from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import { Link } from "react-router-dom";
 import { getMountains, getProgressLogs } from "../lib/api";
 
@@ -135,6 +129,16 @@ function MapPage() {
     }, {});
   }, [logs]);
 
+  // Completion count per mountain — counts all completed logs for the same mountain
+  const completionCountById = useMemo(() => {
+    return logs.reduce((acc, log) => {
+      if (log.status === "completed") {
+        acc[log.mountain] = (acc[log.mountain] || 0) + 1;
+      }
+      return acc;
+    }, {});
+  }, [logs]);
+
   const loggedMountainIds = useMemo(() => {
     return new Set(logs.map((l) => l.mountain));
   }, [logs]);
@@ -220,6 +224,7 @@ function MapPage() {
                   <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                   {visibleMountains.map((mountain) => {
                     const mountainStatus = logStatusByMountainId[mountain.id] || "not_started";
+                    const completionCount = completionCountById[mountain.id] || 0;
                     return (
                       <Marker
                         key={mountain.id}
@@ -234,7 +239,14 @@ function MapPage() {
                             <span>Rank: {getCollectionRank(mountain, filters.collection_memberships__collection__slug)}</span>
                             <span>Height: {mountain.height_m}m</span>
                             <span>Prominence: {mountain.prominence_m || "—"}m</span>
-                            <span>Status: {getStatusLabel(mountainStatus)}</span>
+                            {/* Show completion count for logged-in users who have summited this mountain */}
+                            {completionCount > 0 ? (
+                              <span className="map-popup__completions">
+                                {completionCount === 1 ? "Summited once" : `Summited ${completionCount} times`}
+                              </span>
+                            ) : (
+                              <span>Status: {getStatusLabel(mountainStatus)}</span>
+                            )}
                             <Link to={`/mountains/${mountain.slug}`}>View mountain</Link>
                           </div>
                         </Popup>
@@ -267,4 +279,3 @@ function MapPage() {
 }
 
 export default MapPage;
-

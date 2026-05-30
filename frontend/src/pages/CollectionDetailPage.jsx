@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getCollections, getMountains, getProgressLogs } from "../lib/api";
-import { TbCheck, TbFlag, TbMountain } from "react-icons/tb";
+import { TbCheck, TbFlag, TbMountain, TbRepeat } from "react-icons/tb";
 
 function getCollectionRank(mountain, collectionSlug) {
   const membership = mountain.collection_memberships?.find(
@@ -47,6 +47,7 @@ function CollectionDetailPage() {
   const [logs, setLogs] = useState([]);
   const [status, setStatus] = useState("loading");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("rank");
 
   useEffect(() => {
     async function loadCollection() {
@@ -74,13 +75,37 @@ function CollectionDetailPage() {
 
   const collection = collections.find((item) => item.slug === slug);
 
+  // Completion count per mountain id (completed logs only)
+  const completionCountById = useMemo(() => {
+    return logs.reduce((acc, log) => {
+      if (log.status === "completed") {
+        acc[log.mountain] = (acc[log.mountain] || 0) + 1;
+      }
+      return acc;
+    }, {});
+  }, [logs]);
+
   const orderedMountains = useMemo(() => {
-    return [...mountains].sort((a, b) => {
+    const sorted = [...mountains];
+    if (sortOrder === "most_completed") {
+      return sorted.sort((a, b) => (completionCountById[b.id] || 0) - (completionCountById[a.id] || 0));
+    }
+    if (sortOrder === "height_desc") {
+      return sorted.sort((a, b) => Number(b.height_m || 0) - Number(a.height_m || 0));
+    }
+    if (sortOrder === "height_asc") {
+      return sorted.sort((a, b) => Number(a.height_m || 0) - Number(b.height_m || 0));
+    }
+    if (sortOrder === "name") {
+      return sorted.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    // default: rank
+    return sorted.sort((a, b) => {
       const rankA = Number(getCollectionRank(a, slug)) || 9999;
       const rankB = Number(getCollectionRank(b, slug)) || 9999;
       return rankA - rankB;
     });
-  }, [mountains, slug]);
+  }, [mountains, slug, sortOrder, completionCountById]);
 
   const filteredMountains = useMemo(() => {
     if (statusFilter === "all") return orderedMountains;
@@ -200,7 +225,7 @@ function CollectionDetailPage() {
             </article>
           </div>
 
-          {/* Status filter toolbar */}
+          {/* Toolbar — status filter + sort */}
           <div className="collection-list-toolbar">
             <p className="collection-list-count">
               {statusFilter === "all"
@@ -218,6 +243,20 @@ function CollectionDetailPage() {
                   {s === "all" ? "All" : s === "not_started" ? "Not started" : s.charAt(0).toUpperCase() + s.slice(1)}
                 </button>
               ))}
+            </div>
+            <div className="collection-sort">
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="collection-sort__select"
+                aria-label="Sort mountains by"
+              >
+                <option value="rank">Sort: Rank</option>
+                <option value="height_desc">Sort: Height (high → low)</option>
+                <option value="height_asc">Sort: Height (low → high)</option>
+                <option value="name">Sort: Name A–Z</option>
+                <option value="most_completed">Sort: Most completed</option>
+              </select>
             </div>
           </div>
 
@@ -242,6 +281,7 @@ function CollectionDetailPage() {
               {filteredMountains.map((mountain) => {
                 const mountainStatus = getMountainLogStatus(mountain, logs);
                 const rank = getCollectionRank(mountain, slug);
+                const completionCount = completionCountById[mountain.id] || 0;
                 return (
                   <Link
                     to={`/mountains/${mountain.slug}`}
@@ -251,6 +291,13 @@ function CollectionDetailPage() {
                     <span className={`collection-rank ${getRankStyle(rank)}`}>{rank}</span>
                     <strong>{mountain.name}</strong>
                     <small>{mountain.height_m}m</small>
+                    {/* Completion count badge — only shown when summit has been completed */}
+                    {completionCount > 0 && (
+                      <span className="collection-completion-count" title={`Summited ${completionCount} ${completionCount === 1 ? "time" : "times"}`}>
+                        <TbRepeat size={11} strokeWidth={2} />
+                        ×{completionCount}
+                      </span>
+                    )}
                     <em className={`collection-status collection-status--${mountainStatus}`}>
                       {getStatusLabel(mountainStatus)}
                     </em>
