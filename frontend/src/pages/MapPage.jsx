@@ -129,7 +129,6 @@ function MapPage() {
     }, {});
   }, [logs]);
 
-  // Completion count per mountain — counts all completed logs for the same mountain
   const completionCountById = useMemo(() => {
     return logs.reduce((acc, log) => {
       if (log.status === "completed") {
@@ -216,7 +215,11 @@ function MapPage() {
 
           <div className="map-layout">
             <div className="map-panel">
-              {status === "loading" && <p>Loading map...</p>}
+              {status === "loading" && (
+                <div className="map-skeleton">
+                  <div className="map-skeleton__map" />
+                </div>
+              )}
               {status === "error" && <p>Unable to load mountain map.</p>}
               {status === "success" && (
                 <MapContainer center={[54.6, -3.1]} zoom={6} scrollWheelZoom={false} className="summit-map">
@@ -239,7 +242,6 @@ function MapPage() {
                             <span>Rank: {getCollectionRank(mountain, filters.collection_memberships__collection__slug)}</span>
                             <span>Height: {mountain.height_m}m</span>
                             <span>Prominence: {mountain.prominence_m || "—"}m</span>
-                            {/* Show completion count for logged-in users who have summited this mountain */}
                             {completionCount > 0 ? (
                               <span className="map-popup__completions">
                                 {completionCount === 1 ? "Summited once" : `Summited ${completionCount} times`}
@@ -258,18 +260,33 @@ function MapPage() {
             </div>
 
             <aside className="map-summary-card">
-              <p className="section-kicker">Visible pins</p>
-              <strong>{visibleMountains.length}</strong>
-              <span>
-                {myAscentsOnly ? "your logged mountains" :
-                  statusFilter ? STATUS_FILTERS.find((s) => s.value === statusFilter)?.label.toLowerCase()
-                  : "mountains with coordinates"}
-              </span>
-              <div className="map-legend">
-                <p><span className="legend-dot legend-dot--completed" />Completed: {mapStats.completed}</p>
-                <p><span className="legend-dot legend-dot--planned" />Planned: {mapStats.planned}</p>
-                <p><span className="legend-dot legend-dot--not-started" />Not started: {mapStats.not_started}</p>
-              </div>
+              {status === "loading" ? (
+                <>
+                  <div className="skeleton-line skeleton-line--short" style={{ width: "60%", marginBottom: "var(--space-sm)" }} />
+                  <div className="skeleton-line skeleton-line--title" style={{ width: "40%", marginBottom: "var(--space-md)" }} />
+                  <div className="skeleton-line skeleton-line--short" style={{ width: "80%", marginBottom: "var(--space-lg)" }} />
+                  <div style={{ display: "grid", gap: "var(--space-sm)" }}>
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="skeleton-line skeleton-line--short" style={{ width: "90%" }} />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="section-kicker">Visible pins</p>
+                  <strong>{visibleMountains.length}</strong>
+                  <span>
+                    {myAscentsOnly ? "your logged mountains" :
+                      statusFilter ? STATUS_FILTERS.find((s) => s.value === statusFilter)?.label.toLowerCase()
+                      : "mountains with coordinates"}
+                  </span>
+                  <div className="map-legend">
+                    <p><span className="legend-dot legend-dot--completed" />Completed: {mapStats.completed}</p>
+                    <p><span className="legend-dot legend-dot--planned" />Planned: {mapStats.planned}</p>
+                    <p><span className="legend-dot legend-dot--not-started" />Not started: {mapStats.not_started}</p>
+                  </div>
+                </>
+              )}
             </aside>
           </div>
         </div>
