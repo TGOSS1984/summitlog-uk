@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis, Line, LineChart,
-  Scatter, ScatterChart,
+  Area, AreaChart, Scatter, ScatterChart, ReferenceLine,
 } from "recharts";
 import {
   TbMountain, TbRoute, TbRuler, TbStairs, TbWalk,
@@ -331,6 +331,11 @@ function MostSummitedChart({ data }) {
 // ── Height vs Distance scatter chart ────────────────────────────────────────
 function HeightVsDistanceChart({ data }) {
   if (!data || data.length === 0) return null;
+
+  const avgDistance = data.length
+    ? Math.round((data.reduce((s, d) => s + d.y, 0) / data.length) * 10) / 10
+    : 0;
+
   return (
     <article className="dashboard-chart-card dashboard-chart-card--scatter">
       <div>
@@ -384,6 +389,20 @@ function HeightVsDistanceChart({ data }) {
               );
             }}
           />
+          {/* Average distance reference line */}
+          <ReferenceLine
+            y={avgDistance}
+            stroke="var(--color-accent)"
+            strokeDasharray="5 4"
+            strokeWidth={1.5}
+            label={{
+              value: `avg ${avgDistance}km`,
+              position: "insideTopRight",
+              fontSize: 10,
+              fontWeight: 700,
+              fill: "var(--color-accent)",
+            }}
+          />
           <Scatter
             data={data}
             fill="var(--color-teal)"
@@ -395,7 +414,7 @@ function HeightVsDistanceChart({ data }) {
         </ScatterChart>
       </ResponsiveContainer>
       <p style={{ fontSize: "0.75rem", color: "var(--color-text-soft)", marginTop: "0.5rem" }}>
-        Each dot is one completed ascent. Hover for details.
+        Each dot is one completed ascent. Dashed line shows your average distance. Hover for details.
       </p>
     </article>
   );
@@ -762,13 +781,27 @@ function DashboardPage() {
                 <article className="dashboard-chart-card dashboard-chart-card--timeline">
                   <div><p className="section-kicker">Timeline</p><h3>Mountains completed over time</h3></div>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={stats.completionTimelineData}>
+                    <AreaChart data={stats.completionTimelineData}>
+                      <defs>
+                        <linearGradient id="timelineGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor="var(--color-teal)" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="var(--color-teal)" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(4,57,59,0.12)" />
                       <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#243b3a", fontWeight: 700 }} axisLine={false} tickLine={false} />
                       <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#667573" }} axisLine={false} tickLine={false} />
                       <Tooltip />
-                      <Line type="monotone" dataKey="completed" stroke={CHART_COLORS.completed} strokeWidth={3} dot={{ r: 5 }} activeDot={{ r: 7 }} />
-                    </LineChart>
+                      <Area
+                        type="monotone"
+                        dataKey="completed"
+                        stroke={CHART_COLORS.completed}
+                        strokeWidth={3}
+                        fill="url(#timelineGrad)"
+                        dot={{ r: 5, fill: "var(--color-teal)", stroke: "#fff", strokeWidth: 2 }}
+                        activeDot={{ r: 7 }}
+                      />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </article>
 
