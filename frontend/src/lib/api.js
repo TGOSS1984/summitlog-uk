@@ -14,7 +14,6 @@ async function request(endpoint, options = {}) {
 
   if (!response.ok) {
     console.error("API error:", response.status, data);
-
     throw new Error(
       data?.detail ||
         data?.non_field_errors?.join(" ") ||
@@ -26,39 +25,24 @@ async function request(endpoint, options = {}) {
   return data;
 }
 
-export function getCollections() {
-  return request("/collections/");
-}
-
-export function getRegions() {
-  return request("/regions/");
-}
-
-export function getSubRegions() {
-  return request("/subregions/");
-}
+export function getCollections() { return request("/collections/"); }
+export function getRegions() { return request("/regions/"); }
+export function getSubRegions() { return request("/subregions/"); }
 
 export function getMountains(params = {}) {
   const query = new URLSearchParams(params).toString();
   return request(`/mountains/${query ? `?${query}` : ""}`);
 }
 
-export function getMountain(slug) {
-  return request(`/mountains/${slug}/`);
-}
-
-export function getCurrentUser() {
-  return request("/auth/me/");
-}
+export function getMountain(slug) { return request(`/mountains/${slug}/`); }
+export function getCurrentUser() { return request("/auth/me/"); }
 
 export async function getCsrfToken() {
   const data = await request("/auth/csrf/");
   return data.csrfToken;
 }
 
-export async function getProgressLogs() {
-  return request("/progress/logs/");
-}
+export async function getProgressLogs() { return request("/progress/logs/"); }
 
 export async function createProgressLog(payload) {
   const csrfToken = await getCsrfToken();
@@ -127,9 +111,7 @@ export async function updateProgressLogWithImage(logId, formData) {
     body: formData,
   });
   const data = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(data?.detail || JSON.stringify(data) || "Upload failed.");
-  }
+  if (!response.ok) throw new Error(data?.detail || JSON.stringify(data) || "Upload failed.");
   return data;
 }
 
@@ -142,9 +124,7 @@ export async function updateUserProfile(formData) {
     body: formData,
   });
   const data = await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new Error(data?.detail || JSON.stringify(data) || "Update failed.");
-  }
+  if (!response.ok) throw new Error(data?.detail || JSON.stringify(data) || "Update failed.");
   return data;
 }
 
@@ -152,9 +132,7 @@ export async function exportLogs(format = "csv") {
   const url = `${API_BASE}/progress/export/?format=${format}`;
   const response = await fetch(url, {
     credentials: "include",
-    headers: {
-      "Accept": format === "gpx" ? "application/gpx+xml" : "text/csv",
-    },
+    headers: { "Accept": format === "gpx" ? "application/gpx+xml" : "text/csv" },
   });
   if (!response.ok) {
     const data = await response.json().catch(() => null);
@@ -173,33 +151,11 @@ export async function exportLogs(format = "csv") {
 
 // ── Route logging ────────────────────────────────────────────────────────────
 
-/**
- * Search mountains by name — used in the route builder to add peaks.
- * Returns up to 20 matches.
- */
 export function searchMountains(query) {
   if (!query || query.trim().length < 2) return Promise.resolve([]);
   return getMountains({ search: query.trim(), page_size: 20 });
 }
 
-/**
- * Create a multi-mountain route log.
- * The backend creates one RouteLog + one UserMountainLog per mountain.
- *
- * @param {Object} payload
- * @param {string}   payload.name              - Route name e.g. "Fairfield Horseshoe"
- * @param {string}   payload.description       - Optional notes
- * @param {string}   payload.completed_date    - ISO date string "YYYY-MM-DD"
- * @param {string}   payload.season            - "summer" | "winter" | "spring" | "autumn"
- * @param {number[]} payload.mountain_ids      - Ordered list of mountain IDs
- * @param {number}   payload.primary_mountain_id - Mountain ID that carries cumulative stats
- * @param {string}   payload.route_taken       - Route description
- * @param {number}   payload.hike_distance_km  - Total route distance
- * @param {number}   payload.hike_duration_hours
- * @param {number}   payload.steps
- * @param {number}   payload.flights_climbed
- * @param {string}   payload.notes
- */
 export async function createRouteLog(payload) {
   const csrfToken = await getCsrfToken();
   return request("/progress/routes/", {
@@ -209,9 +165,41 @@ export async function createRouteLog(payload) {
   });
 }
 
-/**
- * Get all route logs for the authenticated user.
- */
 export function getRouteLogs() {
   return request("/progress/routes/list/");
+}
+
+/** Fetch a single route log by ID (for edit form). */
+export function getRouteLog(id) {
+  return request(`/progress/routes/${id}/`);
+}
+
+/**
+ * Update route metadata + primary summit stats.
+ * Does NOT change the mountain list.
+ */
+export async function updateRouteLog(id, payload) {
+  const csrfToken = await getCsrfToken();
+  return request(`/progress/routes/${id}/`, {
+    method: "PATCH",
+    headers: { "X-CSRFToken": csrfToken },
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Delete a route and all its linked mountain logs.
+ */
+export async function deleteRouteLog(id) {
+  const csrfToken = await getCsrfToken();
+  const response = await fetch(`${API_BASE}/progress/routes/${id}/`, {
+    method: "DELETE",
+    credentials: "include",
+    headers: { "X-CSRFToken": csrfToken },
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.detail || "Delete failed.");
+  }
+  return response.json().catch(() => ({ detail: "Deleted." }));
 }
