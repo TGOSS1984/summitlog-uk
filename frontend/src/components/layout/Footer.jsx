@@ -10,6 +10,7 @@ import {
   TbBrandStrava,
   TbBook,
   TbPhoto,
+  TbRoute,
 } from "react-icons/tb";
 
 function Footer() {
@@ -66,6 +67,7 @@ function Footer() {
           <p className="site-footer__nav-heading">Personal</p>
           <Link to="/journal"><TbBook size={14} strokeWidth={1.8} /> Journal</Link>
           <Link to="/gallery"><TbPhoto size={14} strokeWidth={1.8} /> Gallery</Link>
+          <Link to="/log-route"><TbRoute size={14} strokeWidth={1.8} /> Log a route</Link>
         </nav>
 
         <div className="site-footer__bottom-row">

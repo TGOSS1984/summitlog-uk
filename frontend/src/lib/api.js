@@ -148,8 +148,6 @@ export async function updateUserProfile(formData) {
   return data;
 }
 
-// export addition
-
 export async function exportLogs(format = "csv") {
   const url = `${API_BASE}/progress/export/?format=${format}`;
   const response = await fetch(url, {
@@ -171,4 +169,49 @@ export async function exportLogs(format = "csv") {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(blobUrl);
+}
+
+// ── Route logging ────────────────────────────────────────────────────────────
+
+/**
+ * Search mountains by name — used in the route builder to add peaks.
+ * Returns up to 20 matches.
+ */
+export function searchMountains(query) {
+  if (!query || query.trim().length < 2) return Promise.resolve([]);
+  return getMountains({ search: query.trim(), page_size: 20 });
+}
+
+/**
+ * Create a multi-mountain route log.
+ * The backend creates one RouteLog + one UserMountainLog per mountain.
+ *
+ * @param {Object} payload
+ * @param {string}   payload.name              - Route name e.g. "Fairfield Horseshoe"
+ * @param {string}   payload.description       - Optional notes
+ * @param {string}   payload.completed_date    - ISO date string "YYYY-MM-DD"
+ * @param {string}   payload.season            - "summer" | "winter" | "spring" | "autumn"
+ * @param {number[]} payload.mountain_ids      - Ordered list of mountain IDs
+ * @param {number}   payload.primary_mountain_id - Mountain ID that carries cumulative stats
+ * @param {string}   payload.route_taken       - Route description
+ * @param {number}   payload.hike_distance_km  - Total route distance
+ * @param {number}   payload.hike_duration_hours
+ * @param {number}   payload.steps
+ * @param {number}   payload.flights_climbed
+ * @param {string}   payload.notes
+ */
+export async function createRouteLog(payload) {
+  const csrfToken = await getCsrfToken();
+  return request("/progress/routes/", {
+    method: "POST",
+    headers: { "X-CSRFToken": csrfToken },
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Get all route logs for the authenticated user.
+ */
+export function getRouteLogs() {
+  return request("/progress/routes/list/");
 }

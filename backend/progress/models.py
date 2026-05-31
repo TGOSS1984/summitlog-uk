@@ -1,7 +1,43 @@
+import uuid
+
 from django.conf import settings
 from django.db import models
 
 from mountains.models import Mountain
+
+
+class RouteLog(models.Model):
+    """
+    Represents a named multi-mountain route (e.g. Fairfield Horseshoe).
+    Individual UserMountainLog entries are linked back here via route_group_id.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="route_logs",
+    )
+
+    name = models.CharField(
+        max_length=255,
+        help_text="Name of the route, e.g. 'Fairfield Horseshoe'",
+    )
+
+    description = models.TextField(
+        blank=True,
+        help_text="Optional notes about the route.",
+    )
+
+    completed_date = models.DateField()
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-completed_date", "-created_at"]
+
+    def __str__(self):
+        return f"{self.user} — {self.name} ({self.completed_date})"
 
 
 class UserMountainLog(models.Model):
@@ -29,6 +65,31 @@ class UserMountainLog(models.Model):
         Mountain,
         on_delete=models.CASCADE,
         related_name="user_logs",
+    )
+
+    # Links this log back to its RouteLog when created as part of a route
+    route_group = models.ForeignKey(
+        RouteLog,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="mountain_logs",
+        help_text="Set when this log was created as part of a multi-mountain route.",
+    )
+
+    # Stable UUID so all logs from one route session share an identifier
+    # even if the RouteLog is later deleted
+    route_group_id_ref = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Shared UUID across all logs created in the same route session.",
+    )
+
+    # Flag: this is the primary summit for the route (stats stored here)
+    is_route_primary = models.BooleanField(
+        default=False,
+        help_text="True for the highest peak on a multi-mountain route (stats stored here).",
     )
 
     status = models.CharField(
@@ -87,13 +148,8 @@ class UserMountainLog(models.Model):
         null=True,
     )
 
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-    )
-
-    updated_at = models.DateTimeField(
-        auto_now=True,
-    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-completed_date", "-updated_at"]

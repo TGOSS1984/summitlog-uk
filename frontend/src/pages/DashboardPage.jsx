@@ -523,30 +523,39 @@ function DashboardPage() {
   }
 
   useEffect(() => {
-    async function loadDashboard() {
-      try {
-        let currentUser = null;
-        try {
-          const userData = await getCurrentUser();
-          currentUser = userData;
-          setUser(userData.user || userData);
-        } catch {
-          setStatus("demo");
-          return;
-        }
-        const [mountainData, collectionData, logData] = await Promise.all([
-          getMountains(), getCollections(), getProgressLogs(),
-        ]);
-        setMountains(Array.isArray(mountainData) ? mountainData : mountainData.results || []);
-        setCollections(Array.isArray(collectionData) ? collectionData : []);
-        setLogs(Array.isArray(logData) ? logData : logData.results || []);
-        setStatus("success");
-      } catch (error) {
-        console.error(error);
-        setStatus("demo");
-      }
+  async function loadDashboard() {
+    // Step 1 — check auth first; if this fails, user is not logged in → demo mode
+    let currentUser = null;
+    try {
+      const userData = await getCurrentUser();
+      currentUser = userData;
+      setUser(userData.user || userData);
+    } catch {
+      setStatus("demo");
+      return;
     }
-    loadDashboard();
+
+    // Step 2 — load data; if this fails we still show a real (empty) dashboard
+    // rather than misleading demo data, because we know the user is logged in
+    try {
+      const [mountainData, collectionData, logData] = await Promise.all([
+        getMountains(), getCollections(), getProgressLogs(),
+      ]);
+      setMountains(Array.isArray(mountainData) ? mountainData : mountainData.results || []);
+      setCollections(Array.isArray(collectionData) ? collectionData : []);
+      setLogs(Array.isArray(logData) ? logData : logData.results || []);
+      setStatus("success");
+    } catch (error) {
+      console.error(error);
+      // User is authenticated but data fetch failed (e.g. missing migration)
+      // Show real empty dashboard instead of demo
+      setLogs([]);
+      setMountains([]);
+      setCollections([]);
+      setStatus("success");
+    }
+  }
+  loadDashboard();
   }, []);
 
   const stats = useMemo(() => {

@@ -13,6 +13,7 @@ import {
   TbTrophy,
   TbBook,
   TbPhoto,
+  TbRoute,
 } from "react-icons/tb";
 
 function Navbar() {
@@ -126,11 +127,31 @@ function Navbar() {
                     <small>Your mountain diary</small>
                   </span>
                 </NavLink>
-                <NavLink to="/gallery" className="dropdown-item" onClick={() => setExploreOpen(false)}>
+                <NavLink
+                  to="/gallery"
+                  className="dropdown-item"
+                  onClick={() => setExploreOpen(false)}
+                >
                   <span className="dropdown-item__icon"><TbPhoto size={18} strokeWidth={1.5} /></span>
                   <span>
                     <strong>Gallery</strong>
                     <small>Your summit photos</small>
+                  </span>
+                </NavLink>
+
+                {/* Log a route — visually separated as a track action */}
+                <div className="dropdown-divider" />
+                <NavLink
+                  to="/log-route"
+                  className="dropdown-item dropdown-item--action"
+                  onClick={() => setExploreOpen(false)}
+                >
+                  <span className="dropdown-item__icon dropdown-item__icon--action">
+                    <TbRoute size={18} strokeWidth={1.5} />
+                  </span>
+                  <span>
+                    <strong>Log a route</strong>
+                    <small>Multi-mountain day in one go</small>
                   </span>
                 </NavLink>
               </div>
@@ -140,6 +161,17 @@ function Navbar() {
           <NavLink to="/dashboard" className="site-nav__link">
             <TbLayoutDashboard size={16} strokeWidth={1.8} />
             Dashboard
+          </NavLink>
+
+          {/* Standalone Log a route CTA — gold outlined, distinct from text links */}
+          <NavLink
+            to="/log-route"
+            className={({ isActive }) =>
+              `site-nav__log-route${isActive ? " site-nav__log-route--active" : ""}`
+            }
+          >
+            <TbRoute size={15} strokeWidth={2} />
+            Log a route
           </NavLink>
 
         </nav>
@@ -190,11 +222,19 @@ function Navbar() {
               <TbPhoto size={18} strokeWidth={1.5} />
               Gallery
             </NavLink>
+            {/* Log a route — visually highlighted in mobile drawer too */}
+            <NavLink
+              to="/log-route"
+              className="mobile-nav__link mobile-nav__link--action"
+              onClick={() => setMobileOpen(false)}
+            >
+              <TbRoute size={18} strokeWidth={1.5} />
+              Log a route
+            </NavLink>
             <NavLink to="/account" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
               <TbUser size={18} strokeWidth={1.5} />
               Account
             </NavLink>
-            
           </nav>
         </div>
       )}
