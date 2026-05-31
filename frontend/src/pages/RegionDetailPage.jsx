@@ -1,7 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getMountains, getProgressLogs, getRegions } from "../lib/api";
-import { TbCheck, TbFlag, TbMountain, TbRuler } from "react-icons/tb";
+import { TbCheck, TbFlag, TbMountain, TbRepeat } from "react-icons/tb";
+
+function getMountainLogStatus(mountain, logs) {
+  const log = logs.find((item) => item.mountain === mountain.id);
+  return log?.status || "not_started";
+}
+
+function getStatusLabel(status) {
+  if (status === "completed") return "Completed";
+  if (status === "planned") return "Planned";
+  return "Not started";
+}
 
 function RowSkeleton() {
   return (
@@ -11,6 +22,7 @@ function RowSkeleton() {
         <div className="skeleton-line skeleton-line--title" style={{ width: "45%" }} />
         <div className="skeleton-line skeleton-line--short" style={{ width: "25%" }} />
       </div>
+      <div className="skeleton-pill" style={{ width: 80 }} />
     </div>
   );
 }
@@ -21,6 +33,8 @@ function RegionDetailPage() {
   const [mountains, setMountains] = useState([]);
   const [logs, setLogs] = useState([]);
   const [status, setStatus] = useState("loading");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("height_desc");
 
   useEffect(() => {
     async function loadRegion() {
@@ -35,7 +49,7 @@ function RegionDetailPage() {
           const logData = await getProgressLogs();
           setLogs(Array.isArray(logData) ? logData : logData.results || []);
         } catch {
-          // not logged in
+          // not logged in — show region without personal progress
         }
         setStatus("success");
       } catch (error) {
@@ -48,6 +62,16 @@ function RegionDetailPage() {
 
   const region = regions.find((item) => item.slug === slug);
 
+  // Completion count per mountain id (completed logs only)
+  const completionCountById = useMemo(() => {
+    return logs.reduce((acc, log) => {
+      if (log.status === "completed") {
+        acc[log.mountain] = (acc[log.mountain] || 0) + 1;
+      }
+      return acc;
+    }, {});
+  }, [logs]);
+
   const stats = useMemo(() => {
     const completedIds = new Set(logs.filter((l) => l.status === "completed").map((l) => l.mountain));
     const plannedIds = new Set(logs.filter((l) => l.status === "planned").map((l) => l.mountain));
@@ -59,16 +83,38 @@ function RegionDetailPage() {
     return { completed, planned, total, percent, highest };
   }, [logs, mountains]);
 
+  const orderedMountains = useMemo(() => {
+    const sorted = [...mountains];
+    if (sortOrder === "most_completed") {
+      return sorted.sort((a, b) => (completionCountById[b.id] || 0) - (completionCountById[a.id] || 0));
+    }
+    if (sortOrder === "height_asc") {
+      return sorted.sort((a, b) => Number(a.height_m || 0) - Number(b.height_m || 0));
+    }
+    if (sortOrder === "name") {
+      return sorted.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    // default: height high → low
+    return sorted.sort((a, b) => Number(b.height_m || 0) - Number(a.height_m || 0));
+  }, [mountains, sortOrder, completionCountById]);
+
+  const filteredMountains = useMemo(() => {
+    if (statusFilter === "all") return orderedMountains;
+    return orderedMountains.filter(
+      (m) => getMountainLogStatus(m, logs) === statusFilter
+    );
+  }, [orderedMountains, logs, statusFilter]);
+
   if (status === "loading") {
     return (
       <main>
         <div className="skeleton-hero" />
         <section className="section section-light">
           <div className="container">
-            <div className="region-overview-grid">
+            <div className="collection-overview-grid">
               {[1, 2, 3].map((i) => <div key={i} className="skeleton-card" style={{ height: 120 }} />)}
             </div>
-            <div className="region-mountain-list" style={{ marginTop: "2rem" }}>
+            <div className="collection-mountain-list" style={{ marginTop: "2rem" }}>
               {Array.from({ length: 8 }).map((_, i) => <RowSkeleton key={i} />)}
             </div>
           </div>
@@ -116,7 +162,7 @@ function RegionDetailPage() {
       <section className="section section-dark region-hero">
         <div className="container region-hero__grid">
           <div>
-            <p className="section-kicker"><span className="kicker-line" />Region</p>
+            <p className="section-kicker"><span className="kicker-line" />Mountain Region</p>
             <h1>{region.name}</h1>
             <p>{region.description}</p>
           </div>
@@ -133,7 +179,9 @@ function RegionDetailPage() {
 
       <section className="section section-light">
         <div className="container">
-          <div className="region-overview-grid">
+
+          {/* Stat cards — aligned with collection detail */}
+          <div className="collection-overview-grid">
             <article className="collection-mini-stat">
               <div className="collection-mini-stat__icon collection-mini-stat__icon--completed">
                 <TbCheck size={18} strokeWidth={2.5} />
@@ -150,32 +198,104 @@ function RegionDetailPage() {
             </article>
             <article className="collection-mini-stat">
               <div className="collection-mini-stat__icon collection-mini-stat__icon--total">
-                <TbRuler size={18} strokeWidth={1.5} />
+                <TbMountain size={18} strokeWidth={1.5} />
               </div>
-              <p>Highest</p>
-              <strong>{stats.highest}m</strong>
+              <p>Total</p>
+              <strong>{stats.total}</strong>
             </article>
           </div>
 
-          {mountains.length === 0 ? (
+          {/* Toolbar — status filter + sort */}
+          <div className="collection-list-toolbar">
+            <p className="collection-list-count">
+              {statusFilter === "all"
+                ? `${orderedMountains.length} mountains`
+                : `${filteredMountains.length} of ${orderedMountains.length} mountains`}
+            </p>
+            <div className="collection-status-filters">
+              {["all", "completed", "planned", "not_started"].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className={`collection-status-filter${statusFilter === s ? " collection-status-filter--active" : ""}`}
+                  onClick={() => setStatusFilter(s)}
+                >
+                  {s === "all" ? "All" : s === "not_started" ? "Not started" : s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+            <div className="collection-sort">
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="collection-sort__select"
+                aria-label="Sort mountains by"
+              >
+                <option value="height_desc">Sort: Height (high → low)</option>
+                <option value="height_asc">Sort: Height (low → high)</option>
+                <option value="name">Sort: Name A–Z</option>
+                <option value="most_completed">Sort: Most completed</option>
+              </select>
+            </div>
+          </div>
+
+          {filteredMountains.length === 0 ? (
             <div className="page-empty">
               <TbMountain size={48} strokeWidth={1} />
-              <h2>No mountains in this region</h2>
-              <p>Mountains may not have been loaded yet.</p>
+              <h2>No mountains match this filter</h2>
+              <p>
+                {statusFilter === "completed" && "You haven't completed any mountains in this region yet."}
+                {statusFilter === "planned" && "You haven't planned any mountains in this region yet."}
+                {statusFilter === "not_started" && "All mountains in this region have been logged."}
+                {statusFilter === "all" && "No mountains found in this region."}
+              </p>
+              {statusFilter !== "all" && (
+                <button className="button-secondary" onClick={() => setStatusFilter("all")}>
+                  Show all mountains
+                </button>
+              )}
             </div>
           ) : (
-            <div className="region-mountain-list">
-              {mountains.map((mountain) => (
-                <Link
-                  to={`/mountains/${mountain.slug}`}
-                  className="collection-mountain-row"
-                  key={mountain.id}
-                >
-                  <span>{mountain.rank_in_collection || "—"}</span>
-                  <strong>{mountain.name}</strong>
-                  <small>{mountain.collection?.name} / {mountain.height_m}m</small>
-                </Link>
-              ))}
+            <div className="collection-mountain-list">
+              {filteredMountains.map((mountain) => {
+                const mountainStatus = getMountainLogStatus(mountain, logs);
+                const completionCount = completionCountById[mountain.id] || 0;
+                // Show collection membership as a subtle label inside the row
+                const collectionName = mountain.collection_memberships?.[0]?.collection?.name
+                  || mountain.collection?.name
+                  || null;
+                return (
+                  <Link
+                    to={`/mountains/${mountain.slug}`}
+                    className={`collection-mountain-row collection-mountain-row--${mountainStatus}`}
+                    key={mountain.id}
+                  >
+                    {/* Height badge replaces rank for regions */}
+                    <span className="region-height-badge">
+                      {mountain.height_m}
+                      <small>m</small>
+                    </span>
+                    <div className="region-mountain-info">
+                      <strong>{mountain.name}</strong>
+                      {collectionName && (
+                        <small className="region-mountain-collection">{collectionName}</small>
+                      )}
+                    </div>
+                    {completionCount > 0 && (
+                      <span
+                        className="collection-completion-count"
+                        title={`Summited ${completionCount} ${completionCount === 1 ? "time" : "times"}`}
+                      >
+                        <TbRepeat size={11} strokeWidth={2} />
+                        ×{completionCount}
+                      </span>
+                    )}
+                    <em className={`collection-status collection-status--${mountainStatus}`}>
+                      {getStatusLabel(mountainStatus)}
+                    </em>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>
@@ -185,3 +305,4 @@ function RegionDetailPage() {
 }
 
 export default RegionDetailPage;
+

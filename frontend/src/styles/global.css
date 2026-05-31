@@ -5127,3 +5127,47 @@ a.dashboard-region-card:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* Region height badge — replaces rank circle, shows height in metres */
+.region-height-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(4, 57, 59, 0.08);
+  color: var(--color-teal-deep);
+  font-size: 0.88rem;
+  font-weight: 900;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.region-height-badge small {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--color-text-soft);
+  margin-top: 1px;
+}
+
+/* Collection name sub-label on region mountain rows */
+.region-mountain-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.region-mountain-info strong {
+  display: block;
+}
+
+.region-mountain-collection {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
