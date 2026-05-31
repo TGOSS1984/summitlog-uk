@@ -24,8 +24,8 @@ A full-stack mountain tracking application for UK hillwalkers — log Wainwright
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)]()
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)]()
 
-[![Backend Tests](https://img.shields.io/badge/Backend_Tests-80_passing-brightgreen?style=for-the-badge)]()
-[![Frontend Tests](https://img.shields.io/badge/Frontend_Tests-85_passing-brightgreen?style=for-the-badge)]()
+[![Backend Tests](https://img.shields.io/badge/Backend_Tests-115_passing-brightgreen?style=for-the-badge)]()
+[![Frontend Tests](https://img.shields.io/badge/Frontend_Tests-105_passing-brightgreen?style=for-the-badge)]()
 [![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)]()
 
@@ -53,6 +53,7 @@ A full-stack mountain tracking application for UK hillwalkers — log Wainwright
 - [🗂️ Project Management](#️-project-management)
 - [🚀 Deployment](#-deployment)
 - [📌 Future Enhancements](#-future-enhancements)
+- [🙏 Credits & Acknowledgements](#-credits--acknowledgements)
 - [📬 Contact](#-contact)
 
 ---
@@ -133,6 +134,7 @@ A major focus throughout development was creating something that feels like a pr
 
 - **Track every ascent** — log status (planned, completed), season, date, route taken, distance, duration, steps and notes for every mountain
 - **Multiple ascents** — log the same mountain multiple times (summer and winter ascents, different routes)
+- **Multi-mountain route logging** — log an entire day in one go (a Fairfield Horseshoe, a Munro round, a ridge walk); all summits are ticked off individually with cumulative stats stored on the highest peak
 - **Personal bests** — automatically computed from your logs: longest hike, highest peak, most steps, first summit, most recent
 - **Collection progress** — see how far through the Wainwrights, Munros and Nuttalls you are with visual progress bars
 - **Photo uploads** — attach summit photos to each ascent, stored on Cloudflare R2
@@ -262,6 +264,18 @@ The design system uses CSS custom properties for a consistent visual language:
 - Quick links to Dashboard, Journal, Gallery when logged in
 - Completed and planned counts
 
+### Route Logging
+
+- Log an entire multi-mountain day in one form — name the route, add every summit, set the date
+- Minimum 2 mountains enforced — single summits use the mountain detail tracking form instead
+- Primary summit auto-set to the highest peak on the route; carries all cumulative stats (distance, duration, steps, flights climbed)
+- All other summits marked completed with the date only — no fabricated per-summit distances
+- Every log in a route shares a `route_group_id_ref` UUID so the relationship is preserved even if the route is later edited
+- Edit mode — update route name, date and cumulative stats at `/log-route/:id/edit`; mountain list is intentionally fixed after logging
+- Delete route — removes the `RouteLog` and all linked `UserMountainLog` entries with a confirm modal
+- Journal groups route logs together under a gold-bordered route entry showing the route name, cumulative stats and a collapsible summit list with edit and delete actions
+- "Log a route" CTA in the navbar (gold outlined pill), Explore dropdown and footer
+
 ---
 
 ## 🏗️ Tech Stack
@@ -346,6 +360,8 @@ SummitLog UK uses a decoupled architecture. The React frontend communicates enti
 
 **Client-side Status Filtering** — Collection status filtering and map status filtering happen on the frontend rather than via API query params. This avoids additional API calls and keeps the filter state snappy since the full mountain list is already loaded.
 
+**Route Log Data Model (Approach A)** — Multi-mountain routes create one `RouteLog` record plus individual `UserMountainLog` entries per summit, all linked via a `route_group` FK and a shared `route_group_id_ref` UUID. Cumulative stats (distance, duration, steps) are stored on the primary summit only rather than split evenly across summits — this is intentionally honest, avoiding fabricated per-summit distances. The benefit is that every existing page (dashboard, map, collection, journal) reads individual logs as normal and requires no changes; the route relationship is additive context rather than a parallel data source.
+
 ---
 
 ## 🔌 API Reference
@@ -384,6 +400,35 @@ SummitLog UK uses a decoupled architecture. The React frontend communicates enti
 
 **Auth scoping** — all progress log endpoints are fully user-scoped. Users can only see and modify their own logs. Attempting to access another user's log returns 404.
 
+### Route Logs
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| POST | `/api/progress/routes/` | Required | Create route log — creates `RouteLog` + one `UserMountainLog` per mountain |
+| GET | `/api/progress/routes/list/` | Required | All route logs for the authenticated user |
+| GET | `/api/progress/routes/:id/` | Required | Single route with mountains and primary summit stats |
+| PATCH | `/api/progress/routes/:id/` | Required | Update name, description, date (synced to all logs) and primary stats |
+| DELETE | `/api/progress/routes/:id/` | Required | Delete route and all linked mountain logs |
+
+**Route log payload (POST):**
+
+```json
+{
+  "name": "Fairfield Horseshoe",
+  "completed_date": "2024-08-01",
+  "season": "summer",
+  "mountain_ids": [1, 2, 3, 4],
+  "primary_mountain_id": 1,
+  "hike_distance_km": 15.2,
+  "hike_duration_hours": 7.5,
+  "steps": 28000,
+  "flights_climbed": 86,
+  "notes": "Brilliant clear day."
+}
+```
+
+**Validation rules:** minimum 2 mountains; `primary_mountain_id` must be present in `mountain_ids`; date cannot be in the future.
+
 ---
 
 ## 📂 Project Structure
@@ -410,11 +455,12 @@ summitlog-uk/
 │   │   └── urls.py
 │   │
 │   ├── progress/
-│   │   ├── models.py               # UserMountainLog
+│   │   ├── models.py               # UserMountainLog, RouteLog
 │   │   ├── serializers.py          # Log serializer with validation
-│   │   ├── views.py                # Log CRUD + Export
+│   │   ├── views.py                # Log CRUD, Route CRUD + Export
 │   │   ├── urls.py
-│   │   └── tests.py                # 45 progress tests
+│   │   ├── tests.py                # 45 progress tests
+│   │   └── tests_route_log.py      # 35 route log tests
 │   │
 │   ├── config/
 │   │   ├── settings/
@@ -452,10 +498,12 @@ summitlog-uk/
 │   │   │   ├── GalleryPage.jsx
 │   │   │   ├── CollectionDetailPage.jsx
 │   │   │   ├── RegionDetailPage.jsx
+│   │   │   ├── LogRoutePage.jsx
 │   │   │   └── NotFoundPage.jsx
 │   │   │
 │   │   ├── lib/
-│   │   │   └── api.js              # All API calls
+│   │   │   ├── api.js              # All API calls
+│   │   │   └── route_api.test.js   # 20 route API tests
 │   │   │
 │   │   ├── test/
 │   │   │   └── setup.js            # Vitest setup
@@ -641,7 +689,7 @@ cd backend
 python manage.py test progress accounts --verbosity=2
 ```
 
-#### Coverage — 80 tests
+#### Coverage — 115 tests
 
 **`progress/tests.py` — 45 tests**
 
@@ -652,6 +700,16 @@ python manage.py test progress accounts --verbosity=2
 | `LogListCreateAPITest` | Auth required, user scoping, create with all fields, future date rejected, mountain_detail in response |
 | `LogDetailAPITest` | Owner CRUD, other user gets 404, unauthenticated gets 403, delete returns detail message |
 | `ExportLogsViewTest` | CSV/GPX content-type, headers, completed-only filter, own-data scoping, content-disposition |
+
+**`progress/tests_route_log.py` — 35 tests**
+
+| Test class | Tests |
+|---|---|
+| `RouteLogCreateViewTest` | Auth required, RouteLog created, one log per mountain, all marked completed, stats on primary only, is_route_primary flag, shared UUID, date synced to all logs, response shape, min 2 mountains enforced, primary must be in list, future date rejected, missing name rejected |
+| `RouteLogDetailGetTest` | Owner retrieves, mountains included in response, primary stats present, other user gets 404, nonexistent route 404 |
+| `RouteLogDetailPatchTest` | Name update, date change synced to all linked logs, stats update on primary log, other user blocked, empty name not applied |
+| `RouteLogDetailDeleteTest` | Owner deletes, all linked UserMountainLog entries removed, response message, other user blocked, standalone logs unaffected |
+| `UserRouteLogListViewTest` | Scoped to own routes, mountains list included, auth required, empty list when no routes |
 
 **`accounts/tests.py` — 35 tests**
 
@@ -693,7 +751,7 @@ npm run test:run
 npm run test
 ```
 
-#### Coverage — 85 tests
+#### Coverage — 105 tests
 
 **`api.test.js` — 40 tests**
 
@@ -743,6 +801,14 @@ Tests every exported function in `src/lib/api.js`:
 - Unauthenticated: mountains shown without status colours
 - Error state shown when API fails
 - Not found state when slug doesn't match
+
+**`route_api.test.js` — 20 tests**
+
+- `createRouteLog`: CSRF fetched first, POST to correct URL, X-CSRFToken header, JSON body, returns created data, throws on error
+- `getRouteLog`: GET to correct URL, returns route object, throws on 404
+- `updateRouteLog`: CSRF fetched first, PATCH to correct URL, X-CSRFToken header, JSON body, throws on error
+- `deleteRouteLog`: CSRF fetched first, DELETE to correct URL, X-CSRFToken header, returns detail message, throws on error
+- `searchMountains`: search and page_size params included, returns empty array for query under 2 chars, returns empty array for blank query, returns results
 
 ---
 
@@ -979,6 +1045,21 @@ expect(grid.textContent).toContain('Completed')
 | Journal | Filters stack full width | ✅ Pass |
 | Gallery | 1-column masonry | ✅ Pass |
 
+### Route Logging
+
+| Test | Expected | Result |
+|---|---|---|
+| Navigate to /log-route | Form loads with how-it-works strip | ✅ Pass |
+| Submit with only 1 mountain | Button disabled, hint shown | ✅ Pass |
+| Submit with 2+ mountains | Route created, redirected to journal | ✅ Pass |
+| Primary auto-set to highest peak | Highest mountain pre-selected as primary | ✅ Pass |
+| Manually change primary | Stats note updates to new primary name | ✅ Pass |
+| All summits appear in journal | Route entry with gold border, summit list shown | ✅ Pass |
+| Edit route name and date | Changes saved, all mountain log dates synced | ✅ Pass |
+| Delete route | Confirm modal shown, route and all logs removed | ✅ Pass |
+| Route name appears in journal search | Search by route name returns route entry | ✅ Pass |
+| Route count shown in journal stats | "N routes logged" stat card shown | ✅ Pass |
+
 ---
 
 ## 🗂️ Project Management
@@ -1066,6 +1147,43 @@ python manage.py migrate
 - **Image optimisation** — resize and compress images before R2 upload
 - **Expanded test coverage** — add tests for `MountainDetailPage`, `DashboardPage`, `MapPage`
 - **E2E tests** — Playwright tests for critical user journeys (register → log mountain → view dashboard)
+
+---
+
+## 🙏 Credits & Acknowledgements
+
+### Data
+
+- **[DOBIH](http://www.hills-database.co.uk/)** — Database of British and Irish Hills, the source dataset for all 800+ mountain records including heights, prominence, coordinates and collection memberships. Maintained by Colin and Kel Walton.
+
+### APIs & Services
+
+- **[Open-Meteo](https://open-meteo.com/)** — Free weather forecast API used for the 4-day mountain weather panel. No API key required.
+- **[OpenStreetMap](https://www.openstreetmap.org/)** — Map tile provider used via Leaflet. © OpenStreetMap contributors.
+- **[Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/)** — S3-compatible object storage for user-uploaded summit photos.
+
+### Libraries & Frameworks
+
+- **[Django](https://www.djangoproject.com/)** & **[Django REST Framework](https://www.django-rest-framework.org/)** — Backend web framework and API layer.
+- **[React](https://react.dev/)** & **[Vite](https://vitejs.dev/)** — Frontend framework and build tooling.
+- **[React Leaflet](https://react-leaflet.js.org/)** — React wrapper for the Leaflet mapping library.
+- **[Recharts](https://recharts.org/)** — Composable chart library used for the dashboard visualisations.
+- **[Tabler Icons](https://tabler.io/icons)** — Open-source icon set used throughout the UI via `react-icons`.
+- **[gpxpy](https://github.com/tkrajina/gpxpy)** — Python library for generating GPX export files.
+- **[WhiteNoise](https://whitenoise.readthedocs.io/)** — Static file serving for the Django backend.
+- **[Vitest](https://vitest.dev/)** & **[React Testing Library](https://testing-library.com/)** — Frontend test runner and component testing utilities.
+
+### Typography
+
+- **[DM Serif Display](https://fonts.google.com/specimen/DM+Serif+Display)** — Display typeface used for page headings and the logo wordmark.
+- **[DM Sans](https://fonts.google.com/specimen/DM+Sans)** — Body typeface used throughout the UI.
+Both served via Google Fonts.
+
+### Inspiration
+
+- Visual design influenced by alpine guide publications, mountain photography books and editorial outdoor brands.
+- UX patterns influenced by Strava, AllTrails and Komoot.
+- **[SVG Generative Mountain Ridge Dividers](https://alistairshepherd.uk/writing/svg-generative-ridges/)** by [Alistair Shepherd](https://alistairshepherd.uk/) — the technique behind the procedurally generated mountain silhouettes on the mountain cards. Each card uses a seeded midpoint displacement algorithm to produce a unique but deterministic SVG ridge shape based on the mountain's ID.
 
 ---
 
