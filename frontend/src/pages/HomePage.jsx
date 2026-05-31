@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { getCurrentUser, getProgressLogs } from "../lib/api";
 import {
   TbMountain,
   TbMap2,
@@ -42,9 +43,9 @@ const STATS = [
 ];
 
 const COLLECTIONS = [
-  { name: "Wainwrights", count: 214, region: "Lake District" },
-  { name: "Munros", count: 282, region: "Scottish Highlands" },
-  { name: "Nutalls", count: 222, region: "Wales/England" },
+  { name: "Wainwrights", count: 214, region: "Lake District",       slug: "wainwrights" },
+  { name: "Munros",      count: 282, region: "Scottish Highlands",  slug: "munros" },
+  { name: "Nuttalls",    count: 443, region: "Wales & England",     slug: "nuttalls" },
 ];
 
 const ELEVATION_MARKS = [2000, 1750, 1500, 1250, 1000, 750, 500, 250];
@@ -86,6 +87,26 @@ function generateRidge() {
 
 function HomePage() {
   const ridgeRef = useRef(null);
+
+  const [dashStats, setDashStats] = useState(null); // null = not logged in / loading
+
+  useEffect(() => {
+    async function loadUserStats() {
+      try {
+        await getCurrentUser(); // throws if not logged in
+        const logData = await getProgressLogs();
+        const logs = Array.isArray(logData) ? logData : logData.results || [];
+        const completed = logs.filter((l) => l.status === "completed").length;
+        const planned = logs.filter((l) => l.status === "planned").length;
+        // Use Wainwrights (214) as the visible total — matches the hero panel context
+        const percent = Math.round((completed / 214) * 100);
+        setDashStats({ completed, planned, visible: 214, percent });
+      } catch {
+        // Not logged in or fetch failed — keep null (shows example data)
+      }
+    }
+    loadUserStats();
+  }, []);
 
   useEffect(() => {
     if (ridgeRef.current) {
@@ -150,8 +171,9 @@ function HomePage() {
             </h1>
 
             <p className="hero-home__lead">
-              Discover Wainwrights, Munros and UK mountain collections
-              through a premium, map-led tracking experience.
+              The logbook for UK summit baggers — track Wainwrights,
+              Munros and Nuttalls with routes, photos, stats and an
+              interactive map of every peak you've climbed.
             </p>
 
             <div className="hero-home__actions">
@@ -167,29 +189,34 @@ function HomePage() {
           </div>
 
           <aside className="hero-dashboard glass-card">
-            <p className="section-kicker">Progress snapshot</p>
+            <p className="section-kicker">
+              {dashStats ? "Your progress" : "Progress snapshot"}
+            </p>
             <div className="hero-dashboard__stats">
               <article>
                 <span>Completed</span>
-                <strong>43</strong>
+                <strong>{dashStats ? dashStats.completed : 43}</strong>
               </article>
               <article>
                 <span>Planned</span>
-                <strong>12</strong>
+                <strong>{dashStats ? dashStats.planned : 12}</strong>
               </article>
               <article>
                 <span>Visible</span>
-                <strong>214</strong>
+                <strong>{dashStats ? dashStats.visible : 214}</strong>
               </article>
             </div>
             <div className="hero-dashboard__chart">
               <div className="progress-ring">
                 <div className="progress-ring__inner">
-                  <strong>19%</strong>
+                  <strong>{dashStats ? `${dashStats.percent}%` : "19%"}</strong>
                   <span>completed</span>
                 </div>
               </div>
             </div>
+            {!dashStats && (
+              <p className="hero-dashboard__example-note">Example data</p>
+            )}
           </aside>
 
         </div>
@@ -341,7 +368,7 @@ function HomePage() {
           </div>
           <div className="collections-grid">
             {COLLECTIONS.map((c) => (
-              <Link key={c.name} to="/mountains" className="collection-preview-card">
+              <Link key={c.name} to={`/collections/${c.slug}`} className="collection-preview-card">
                 <span className="collection-preview-card__icon">
                   <TbMountain size={24} strokeWidth={1.2} />
                 </span>

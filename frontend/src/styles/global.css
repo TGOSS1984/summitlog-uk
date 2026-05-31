@@ -5829,3 +5829,15 @@ a.dashboard-region-card:hover {
 .journal-stat--route strong {
   color: var(--color-accent);
 }
+
+/*Hero homepage Addition - Dashboard example flag*/
+
+.hero-dashboard__example-note {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(248, 250, 252, 0.3);
+  margin-top: 0.5rem;
+}
