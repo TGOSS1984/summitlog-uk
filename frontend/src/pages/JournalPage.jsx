@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   TbMountain, TbCalendar, TbRoute, TbWalk,
-  TbStairs, TbRepeat, TbEdit, TbTrash,
+  TbStairs, TbRepeat, TbEdit, TbTrash, TbX,
 } from "react-icons/tb";
 import { getProgressLogs, getCollections, deleteRouteLog } from "../lib/api";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
@@ -72,12 +72,10 @@ function JournalEntry({ log, completionCount }) {
   );
 }
 
-// ── Route group entry — wraps all logs from the same route ───────────────────
+// ── Route group entry ────────────────────────────────────────────────────────
 
 function RouteEntry({ routeId, routeName, routeDate, logs, completionCountById, onDeleteRoute }) {
   const [expanded, setExpanded] = useState(true);
-
-  // Primary log carries the cumulative stats
   const primaryLog = logs.find((l) => l.is_route_primary) || logs[0];
 
   return (
@@ -93,7 +91,6 @@ function RouteEntry({ routeId, routeName, routeDate, logs, completionCountById, 
           <span className="journal-route-entry__count">{logs.length} summits</span>
         </div>
 
-        {/* Cumulative stats from primary log */}
         {(primaryLog?.hike_distance_km || primaryLog?.hike_duration_hours || primaryLog?.steps) && (
           <div className="journal-entry__stats" style={{ marginTop: "0.5rem" }}>
             {primaryLog.hike_distance_km && <span><TbRoute size={14} strokeWidth={1.8} />{Number(primaryLog.hike_distance_km).toFixed(1)}km total</span>}
@@ -108,34 +105,18 @@ function RouteEntry({ routeId, routeName, routeDate, logs, completionCountById, 
         {primaryLog?.notes && <p className="journal-entry__notes">{primaryLog.notes}</p>}
 
         <div className="journal-route-entry__actions">
-          <button
-            type="button"
-            className="journal-route-entry__toggle"
-            onClick={() => setExpanded(!expanded)}
-          >
+          <button type="button" className="journal-route-entry__toggle" onClick={() => setExpanded(!expanded)}>
             {expanded ? "Hide summits" : `Show ${logs.length} summits`}
           </button>
-          <Link
-            to={`/log-route/${routeId}/edit`}
-            className="journal-route-entry__action-btn journal-route-entry__action-btn--edit"
-            title="Edit route"
-          >
-            <TbEdit size={14} strokeWidth={2} />
-            Edit
+          <Link to={`/log-route/${routeId}/edit`} className="journal-route-entry__action-btn journal-route-entry__action-btn--edit">
+            <TbEdit size={14} strokeWidth={2} />Edit
           </Link>
-          <button
-            type="button"
-            className="journal-route-entry__action-btn journal-route-entry__action-btn--delete"
-            onClick={() => onDeleteRoute(routeId, routeName, logs.length)}
-            title="Delete route"
-          >
-            <TbTrash size={14} strokeWidth={2} />
-            Delete
+          <button type="button" className="journal-route-entry__action-btn journal-route-entry__action-btn--delete" onClick={() => onDeleteRoute(routeId, routeName, logs.length)}>
+            <TbTrash size={14} strokeWidth={2} />Delete
           </button>
         </div>
       </div>
 
-      {/* Individual summit list */}
       {expanded && (
         <div className="journal-route-entry__summits">
           {logs.sort((a, b) => (b.is_route_primary ? 1 : 0) - (a.is_route_primary ? 1 : 0)).map((log) => (
@@ -166,8 +147,17 @@ function JournalPage() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterSeason, setFilterSeason] = useState("all");
   const [filterCollection, setFilterCollection] = useState("all");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
   const [search, setSearch] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState(null); // { id, name, count }
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  const hasDateFilter = filterDateFrom || filterDateTo;
+
+  function clearDateFilter() {
+    setFilterDateFrom("");
+    setFilterDateTo("");
+  }
 
   useEffect(() => {
     async function load() {
@@ -197,7 +187,6 @@ function JournalPage() {
     if (!deleteTarget) return;
     try {
       await deleteRouteLog(deleteTarget.id);
-      // Remove all logs belonging to this route from state
       setLogs((prev) => prev.filter((l) => l.route_group !== deleteTarget.id));
       setDeleteTarget(null);
     } catch (err) {
@@ -215,7 +204,6 @@ function JournalPage() {
     }, {});
   }, [logs]);
 
-  // Apply filters
   const filtered = logs.filter((log) => {
     if (filterStatus !== "all" && log.status !== filterStatus) return false;
     if (filterSeason !== "all" && log.season !== filterSeason) return false;
@@ -225,6 +213,13 @@ function JournalPage() {
         m?.collection_memberships?.some((mb) => String(mb.collection?.id) === filterCollection) ||
         String(m?.collection?.id) === filterCollection;
       if (!inCollection) return false;
+    }
+    // Date range filter — uses completed_date, falls back to updated_at
+    if (filterDateFrom || filterDateTo) {
+      const logDate = log.completed_date || log.updated_at?.slice(0, 10) || null;
+      if (!logDate) return false;
+      if (filterDateFrom && logDate < filterDateFrom) return false;
+      if (filterDateTo   && logDate > filterDateTo)   return false;
     }
     if (search) {
       const q = search.toLowerCase();
@@ -237,7 +232,6 @@ function JournalPage() {
     return true;
   });
 
-  // Group by month, then within each month group route logs together
   const grouped = filtered.reduce((acc, log) => {
     const month = formatMonth(log.completed_date || log.updated_at) || "Undated";
     if (!acc[month]) acc[month] = [];
@@ -245,11 +239,9 @@ function JournalPage() {
     return acc;
   }, {});
 
-  // Within each month, group route logs by route_group id
   function groupMonthLogs(monthLogs) {
     const routeGroups = {};
     const individualLogs = [];
-
     for (const log of monthLogs) {
       if (log.route_group) {
         if (!routeGroups[log.route_group]) {
@@ -265,26 +257,13 @@ function JournalPage() {
         individualLogs.push(log);
       }
     }
-
-    // Interleave: sort route groups and individual logs by date descending
-    const routeEntries = Object.values(routeGroups).map((g) => ({
-      type: "route",
-      date: g.routeDate,
-      data: g,
-    }));
-    const individualEntries = individualLogs.map((l) => ({
-      type: "individual",
-      date: l.completed_date || l.updated_at || l.created_at,
-      data: l,
-    }));
-
-    return [...routeEntries, ...individualEntries].sort(
-      (a, b) => new Date(b.date) - new Date(a.date)
-    );
+    const routeEntries = Object.values(routeGroups).map((g) => ({ type: "route", date: g.routeDate, data: g }));
+    const individualEntries = individualLogs.map((l) => ({ type: "individual", date: l.completed_date || l.updated_at || l.created_at, data: l }));
+    return [...routeEntries, ...individualEntries].sort((a, b) => new Date(b.date) - new Date(a.date));
   }
 
   const completedCount = logs.filter((l) => l.status === "completed").length;
-  const plannedCount = logs.filter((l) => l.status === "planned").length;
+  const plannedCount   = logs.filter((l) => l.status === "planned").length;
   const repeatSummitCount = Object.values(completionCountById).filter((c) => c > 1).length;
   const routeCount = new Set(logs.filter((l) => l.route_group).map((l) => l.route_group)).size;
 
@@ -357,6 +336,7 @@ function JournalPage() {
               </div>
 
               <div className="journal-filters">
+                {/* Search */}
                 <input
                   type="text"
                   placeholder="Search mountains, notes, routes..."
@@ -364,6 +344,8 @@ function JournalPage() {
                   onChange={(e) => setSearch(e.target.value)}
                   className="journal-search"
                 />
+
+                {/* Dropdowns */}
                 <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                   <option value="all">All statuses</option>
                   <option value="completed">Completed</option>
@@ -381,13 +363,71 @@ function JournalPage() {
                   <option value="all">All collections</option>
                   {collections.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
                 </select>
+
+                {/* Date range row */}
+                <div className="journal-date-range">
+                  <label className="journal-date-range__label">
+                    <span>From</span>
+                    <input
+                      type="date"
+                      value={filterDateFrom}
+                      onChange={(e) => setFilterDateFrom(e.target.value)}
+                      max={filterDateTo || undefined}
+                      className="journal-date-input"
+                    />
+                  </label>
+                  <span className="journal-date-range__sep">—</span>
+                  <label className="journal-date-range__label">
+                    <span>To</span>
+                    <input
+                      type="date"
+                      value={filterDateTo}
+                      onChange={(e) => setFilterDateTo(e.target.value)}
+                      min={filterDateFrom || undefined}
+                      className="journal-date-input"
+                    />
+                  </label>
+                  {hasDateFilter && (
+                    <button
+                      type="button"
+                      className="journal-date-range__clear"
+                      onClick={clearDateFilter}
+                      title="Clear date filter"
+                    >
+                      <TbX size={13} strokeWidth={2.5} />
+                      Clear dates
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {/* Active date range chip — visible confirmation of what's filtered */}
+              {hasDateFilter && (
+                <div className="journal-date-active">
+                  <TbCalendar size={13} strokeWidth={2} />
+                  <span>
+                    {filterDateFrom && filterDateTo
+                      ? `${new Date(filterDateFrom).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} — ${new Date(filterDateTo).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`
+                      : filterDateFrom
+                      ? `From ${new Date(filterDateFrom).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`
+                      : `Up to ${new Date(filterDateTo).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`}
+                  </span>
+                  <span className="journal-date-active__count">
+                    {filtered.length} {filtered.length === 1 ? "entry" : "entries"}
+                  </span>
+                </div>
+              )}
 
               {filtered.length === 0 && (
                 <div className="journal-empty">
                   <TbMountain size={48} strokeWidth={1} />
                   <h2>No entries found</h2>
                   <p>{logs.length === 0 ? "Log a mountain to start your diary." : "Try adjusting your filters."}</p>
+                  {hasDateFilter && (
+                    <button className="button-secondary" onClick={clearDateFilter} style={{ marginBottom: "0.75rem" }}>
+                      Clear date filter
+                    </button>
+                  )}
                   <Link to="/mountains" className="button-primary">Browse mountains</Link>
                 </div>
               )}
