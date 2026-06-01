@@ -6098,3 +6098,84 @@ a.dashboard-region-card:hover {
 .gallery-lightbox__delete:hover {
   background: rgba(163, 45, 45, 1);
 }
+
+/* ── Tiered achievement dots ── */
+.achievement-tier-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.achievement-tier-dot {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Header row inside each achievement item */
+.dashboard-achievement-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-bottom: 0.35rem;
+}
+
+.dashboard-achievement-item__header h3 {
+  margin-bottom: 0;
+}
+
+/* Tier label badge on the small line */
+.achievement-tier-label {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  margin-left: 0.5rem;
+}
+
+.achievement-tier-label--bronze {
+  background: rgba(201, 124, 58, 0.15);
+  color: #c97c3a;
+}
+
+.achievement-tier-label--silver {
+  background: rgba(139, 148, 147, 0.15);
+  color: #5f6b69;
+}
+
+.achievement-tier-label--gold {
+  background: rgba(208, 170, 98, 0.18);
+  color: #7a5610;
+}
+
+/* "All tiers complete" message */
+.achievement-complete {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-teal-deep);
+  margin-top: 0.25rem;
+}
+
+/* Tier legend in summary panel */
+.achievement-tier-legend {
+  display: flex;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-dark);
+}
+
+.achievement-tier-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-soft);
+}
