@@ -9,7 +9,7 @@ import {
   TbMountain, TbRoute, TbRuler, TbStairs, TbWalk,
   TbTrophy, TbFlag, TbStar,
   TbTargetArrow, TbUser,
-  TbCalendar, TbArrowUp, TbRepeat, TbMap2,
+  TbCalendar, TbArrowUp, TbRepeat, TbMap2, TbChevronRight,
 } from "react-icons/tb";
 
 import { getCollections, getMountains, getProgressLogs, getRouteLogs, getCurrentUser, exportLogs } from "../lib/api";
@@ -38,14 +38,10 @@ const STAT_ICONS = {
 };
 
 // ── Tiered achievement definitions ──────────────────────────────────────────
-// Each achievement has 3 tiers (Bronze / Silver / Gold).
-// Tier colours: bronze #c97c3a, silver #8b9493, gold var(--color-accent)
 
 const TIERED_ACHIEVEMENTS = [
   {
-    id: "summits",
-    title: "Summit Bagger",
-    icon: TbMountain,
+    id: "summits", title: "Summit Bagger", icon: TbMountain,
     tiers: [
       { label: "Bronze", target: 1,  description: "Log your first completed summit" },
       { label: "Silver", target: 10, description: "Complete 10 mountains" },
@@ -53,9 +49,7 @@ const TIERED_ACHIEVEMENTS = [
     ],
   },
   {
-    id: "wainwrights",
-    title: "Wainwright Bagger",
-    icon: TbFlag,
+    id: "wainwrights", title: "Wainwright Bagger", icon: TbFlag,
     tiers: [
       { label: "Bronze", target: 5,   description: "Complete 5 Wainwrights" },
       { label: "Silver", target: 50,  description: "Complete 50 Wainwrights" },
@@ -63,9 +57,7 @@ const TIERED_ACHIEVEMENTS = [
     ],
   },
   {
-    id: "munros",
-    title: "Munro Bagger",
-    icon: TbMountain,
+    id: "munros", title: "Munro Bagger", icon: TbMountain,
     tiers: [
       { label: "Bronze", target: 5,   description: "Complete 5 Munros" },
       { label: "Silver", target: 50,  description: "Complete 50 Munros" },
@@ -73,9 +65,7 @@ const TIERED_ACHIEVEMENTS = [
     ],
   },
   {
-    id: "distance",
-    title: "Distance Walker",
-    icon: TbRoute,
+    id: "distance", title: "Distance Walker", icon: TbRoute,
     tiers: [
       { label: "Bronze", target: 10,  description: "Log 10km across all routes" },
       { label: "Silver", target: 100, description: "Log 100km across all routes" },
@@ -83,9 +73,7 @@ const TIERED_ACHIEVEMENTS = [
     ],
   },
   {
-    id: "steps",
-    title: "Step Counter",
-    icon: TbWalk,
+    id: "steps", title: "Step Counter", icon: TbWalk,
     tiers: [
       { label: "Bronze", target: 10000,  description: "Log 10,000 steps" },
       { label: "Silver", target: 100000, description: "Log 100,000 steps" },
@@ -93,9 +81,7 @@ const TIERED_ACHIEVEMENTS = [
     ],
   },
   {
-    id: "elevation",
-    title: "High Climber",
-    icon: TbArrowUp,
+    id: "elevation", title: "High Climber", icon: TbArrowUp,
     tiers: [
       { label: "Bronze", target: 1000,  description: "Reach 1,000m combined elevation" },
       { label: "Silver", target: 10000, description: "Reach 10,000m combined elevation" },
@@ -103,9 +89,7 @@ const TIERED_ACHIEVEMENTS = [
     ],
   },
   {
-    id: "routes",
-    title: "Route Logger",
-    icon: TbMap2,
+    id: "routes", title: "Route Logger", icon: TbMap2,
     tiers: [
       { label: "Bronze", target: 1,  description: "Log your first multi-mountain route" },
       { label: "Silver", target: 5,  description: "Log 5 multi-mountain routes" },
@@ -114,60 +98,78 @@ const TIERED_ACHIEVEMENTS = [
   },
 ];
 
-const TOTAL_POSSIBLE_BADGES = TIERED_ACHIEVEMENTS.length * 3; // 21
+const TOTAL_POSSIBLE_BADGES = TIERED_ACHIEVEMENTS.length * 3;
 
-/**
- * Given raw stat values, returns enriched achievement objects with:
- *   activeTierIndex  — highest tier earned (-1 = none)
- *   activeTier       — the tier object itself (or null)
- *   nextTier         — next tier to earn (or null if all complete)
- *   percent          — progress % toward next tier
- *   allComplete      — true when gold is earned
- */
 function buildTieredAchievements({ completedCount, wainwrightsCompleted, munrosCompleted, totalDistance, totalSteps, totalHeight, routeCount }) {
   const values = {
-    summits:     completedCount,
-    wainwrights: wainwrightsCompleted,
-    munros:      munrosCompleted,
-    distance:    totalDistance,
-    steps:       totalSteps,
-    elevation:   totalHeight,
-    routes:      routeCount,
+    summits: completedCount, wainwrights: wainwrightsCompleted, munros: munrosCompleted,
+    distance: totalDistance, steps: totalSteps, elevation: totalHeight, routes: routeCount,
   };
-
   return TIERED_ACHIEVEMENTS.map((ach) => {
     const current = values[ach.id] || 0;
-    // Highest tier index where current >= target
-    const activeTierIndex = ach.tiers.reduce(
-      (highest, tier, i) => (current >= tier.target ? i : highest),
-      -1
-    );
+    const activeTierIndex = ach.tiers.reduce((highest, tier, i) => (current >= tier.target ? i : highest), -1);
     const nextTierIndex = activeTierIndex < ach.tiers.length - 1 ? activeTierIndex + 1 : null;
     const nextTier = nextTierIndex !== null ? ach.tiers[nextTierIndex] : null;
-    // Base for the progress bar is the previous tier's target (or 0)
-    const prevTarget = nextTierIndex !== null && nextTierIndex > 0
-      ? ach.tiers[nextTierIndex - 1].target
-      : 0;
+    const prevTarget = nextTierIndex !== null && nextTierIndex > 0 ? ach.tiers[nextTierIndex - 1].target : 0;
     const percent = nextTier
       ? Math.min(Math.round(((current - prevTarget) / (nextTier.target - prevTarget)) * 100), 100)
       : 100;
-
     return {
-      ...ach,
-      current,
-      activeTierIndex,
+      ...ach, current, activeTierIndex,
       activeTier:   activeTierIndex >= 0 ? ach.tiers[activeTierIndex] : null,
-      nextTier,
-      nextTierIndex,
-      percent,
-      allComplete:  activeTierIndex === ach.tiers.length - 1,
+      nextTier, nextTierIndex, percent,
+      allComplete: activeTierIndex === ach.tiers.length - 1,
     };
   });
 }
 
-// ── Utility — total badges earned across all achievements ──
 function countEarnedBadges(tieredAchievements) {
   return tieredAchievements.reduce((sum, a) => sum + (a.activeTierIndex + 1), 0);
+}
+
+// ── Heatmap data builder ─────────────────────────────────────────────────────
+// Accepts an array of objects with a `completed_date` string field.
+// Returns 52 weeks of day cells + month labels for SVG rendering.
+
+function buildHeatmapData(logs) {
+  const activityByDate = {};
+  logs.forEach((log) => {
+    if (log.completed_date) {
+      activityByDate[log.completed_date] = (activityByDate[log.completed_date] || 0) + 1;
+    }
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Start on Monday 52 weeks ago
+  const startDate = new Date(today);
+  const dow = startDate.getDay(); // 0=Sun
+  const daysToLastMonday = dow === 0 ? 6 : dow - 1;
+  startDate.setDate(startDate.getDate() - daysToLastMonday - 51 * 7);
+
+  const weeks       = [];
+  const monthLabels = [];
+
+  for (let w = 0; w < 52; w++) {
+    const week = [];
+    for (let d = 0; d < 7; d++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + w * 7 + d);
+      const dateStr  = date.toISOString().slice(0, 10);
+      const isFuture = date > today;
+      week.push({ date: dateStr, count: activityByDate[dateStr] || 0, isFuture });
+      // First occurrence of each month in the Mon column
+      if (d === 0 && date.getDate() <= 7) {
+        monthLabels.push({ week: w, label: date.toLocaleString("en-GB", { month: "short" }) });
+      }
+    }
+    weeks.push(week);
+  }
+
+  const totalAscents = Object.values(activityByDate).reduce((s, v) => s + v, 0);
+  const activeDays   = Object.keys(activityByDate).length;
+  return { weeks, monthLabels, totalAscents, activeDays };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -182,7 +184,7 @@ function seededRandom(seed) {
 
 function generateDemoStats() {
   const seed = Math.floor(Date.now() / 60000);
-  const rng = seededRandom(seed);
+  const rng  = seededRandom(seed);
 
   const completed           = Math.floor(rng() * 60) + 8;
   const planned             = Math.floor(rng() * 20) + 3;
@@ -190,7 +192,6 @@ function generateDemoStats() {
   const totalHeight         = Math.floor(rng() * 30000) + 5000;
   const totalSteps          = Math.floor(rng() * 400000) + 50000;
   const totalFlightsClimbed = Math.floor(rng() * 800) + 100;
-
   const wainwrightsCompleted = Math.floor(rng() * 80) + 5;
   const munrosCompleted      = Math.floor(rng() * 60) + 3;
   const nuttallsCompleted    = Math.floor(rng() * 50) + 2;
@@ -201,37 +202,22 @@ function generateDemoStats() {
     { id: "nuttalls",    name: "Nuttalls",    slug: "nuttalls",    completed: nuttallsCompleted,    total: 443, percent: Math.round((nuttallsCompleted / 443) * 100) },
   ];
 
-  const statusChartData = [
+  const statusChartData      = [
     { name: "Completed", value: completed },
     { name: "Planned",   value: planned },
     { name: "Remaining", value: 800 - completed - planned },
   ];
-
-  const collectionChartData = collectionStats.map((c) => ({
-    name: c.name, completed: c.completed, remaining: Math.max(c.total - c.completed, 0),
-  }));
-
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const completionTimelineData = months.slice(0, 8).map((month) => ({
-    month, completed: Math.floor(rng() * 8) + 1,
-  }));
-
-  const elevationPercent = Math.min(Math.round((totalHeight / 50000) * 100), 100);
+  const collectionChartData  = collectionStats.map((c) => ({ name: c.name, completed: c.completed, remaining: Math.max(c.total - c.completed, 0) }));
+  const months               = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const completionTimelineData = months.slice(0, 8).map((month) => ({ month, completed: Math.floor(rng() * 8) + 1 }));
+  const elevationPercent     = Math.min(Math.round((totalHeight / 50000) * 100), 100);
 
   const recentRoutes = [
     { id: 1, name: "Fairfield Horseshoe",         completed_date: "2024-08-01", mountains_count: 8 },
     { id: 2, name: "Helvellyn via Striding Edge",  completed_date: "2024-07-10", mountains_count: 3 },
   ];
 
-  const achievements = buildTieredAchievements({
-    completedCount: completed,
-    wainwrightsCompleted,
-    munrosCompleted,
-    totalDistance,
-    totalSteps,
-    totalHeight,
-    routeCount: recentRoutes.length,
-  });
+  const achievements       = buildTieredAchievements({ completedCount: completed, wainwrightsCompleted, munrosCompleted, totalDistance, totalSteps, totalHeight, routeCount: recentRoutes.length });
   const earnedBadgeCount   = countEarnedBadges(achievements);
   const achievementPercent = Math.round((earnedBadgeCount / TOTAL_POSSIBLE_BADGES) * 100);
 
@@ -247,7 +233,7 @@ function generateDemoStats() {
     { id: 2, mountain_detail: { name: "Helvellyn",    slug: "helvellyn",    height_m: 950,  region: { name: "Lake District" } }, status: "completed", completed_date: "2024-07-22", hike_distance_km: 9.8,  steps: 19500, hike_duration_hours: 5.2,  route_name: null },
     { id: 3, mountain_detail: { name: "Ben Nevis",    slug: "ben-nevis",    height_m: 1345, region: { name: "Scotland" }       }, status: "planned",   completed_date: null,         hike_distance_km: null, steps: null,  hike_duration_hours: null, route_name: null },
     { id: 4, mountain_detail: { name: "Snowdon",      slug: "snowdon",      height_m: 1085, region: { name: "Wales" }          }, status: "completed", completed_date: "2024-06-10", hike_distance_km: 8.2,  steps: 16800, hike_duration_hours: 4.8,  route_name: null },
-    { id: 5, mountain_detail: { name: "Skiddaw",      slug: "skiddaw",      height_m: 931,  region: { name: "Lake District" } }, status: "completed", completed_date: "2024-05-30", hike_distance_km: 7.6,  steps: 15200, hike_duration_hours: 4.1,  route_name: null },
+    { id: 5, mountain_detail: { name: "Skiddaw",      slug: "skiddaw",      height_m: 931,  region: { name: "Lake District" }  }, status: "completed", completed_date: "2024-05-30", hike_distance_km: 7.6,  steps: 15200, hike_duration_hours: 4.1,  route_name: null },
   ];
 
   const personalBests = {
@@ -278,6 +264,24 @@ function generateDemoStats() {
     { x: 899,  y: 11.4, name: "Bow Fell" },        { x: 736,  y: 7.8,  name: "Dale Head" },
   ];
 
+  // Demo upcoming planned — fixed future dates so they always look realistic
+  const now = new Date();
+  const upcomingPlanned = [
+    { id: 101, mountain_detail: { name: "Ben Nevis",    slug: "ben-nevis",    height_m: 1345, region: { name: "Scotland" }       }, status: "planned", completed_date: new Date(now.getTime() + 12  * 86400000).toISOString().slice(0, 10) },
+    { id: 102, mountain_detail: { name: "Scafell Pike", slug: "scafell-pike", height_m: 978,  region: { name: "Lake District" }  }, status: "planned", completed_date: new Date(now.getTime() + 28  * 86400000).toISOString().slice(0, 10) },
+    { id: 103, mountain_detail: { name: "Snowdon",      slug: "snowdon",      height_m: 1085, region: { name: "Wales" }          }, status: "planned", completed_date: new Date(now.getTime() + 52  * 86400000).toISOString().slice(0, 10) },
+  ];
+
+  // Demo heatmap — spread 40 ascents randomly across the past year
+  const baseNow = new Date();
+  const demoHeatmapLogs = [];
+  for (let i = 0; i < 40; i++) {
+    const daysAgo = Math.floor(rng() * 340) + 1;
+    const d = new Date(baseNow);
+    d.setDate(d.getDate() - daysAgo);
+    demoHeatmapLogs.push({ completed_date: d.toISOString().slice(0, 10) });
+  }
+
   return {
     completed, planned, totalVisible: 800, totalDistance, totalHeight, totalSteps, totalFlightsClimbed,
     collectionStats, statusChartData, collectionChartData, completionTimelineData,
@@ -286,6 +290,8 @@ function generateDemoStats() {
     achievements, earnedBadgeCount, achievementPercent,
     regionStats, personalBests, mostSummited, scatterData,
     routeCount: recentRoutes.length, recentRoutes,
+    upcomingPlanned,
+    heatmapLogs: demoHeatmapLogs,
   };
 }
 
@@ -393,6 +399,162 @@ function PersonalBests({ personalBests }) {
   );
 }
 
+// ── Coming Up panel ──────────────────────────────────────────────────────────
+
+function daysUntilLabel(dateStr) {
+  if (!dateStr) return null;
+  const today  = new Date(); today.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr);
+  const diff   = Math.round((target - today) / 86400000);
+  if (diff < 0)  return "Overdue";
+  if (diff === 0) return "Today!";
+  if (diff === 1) return "Tomorrow";
+  if (diff < 7)   return `${diff} days`;
+  if (diff < 14)  return "Next week";
+  if (diff < 30)  return `${Math.round(diff / 7)} weeks`;
+  return `${Math.round(diff / 30)} months`;
+}
+
+function ComingUpPanel({ upcomingPlanned, isDemo }) {
+  if (!upcomingPlanned || upcomingPlanned.length === 0) return null;
+  return (
+    <div className="dashboard-coming-up">
+      <div className="dashboard-coming-up__header">
+        <p className="section-kicker"><span className="kicker-line" />Coming up</p>
+        <h2>Planned summits</h2>
+        <p>Mountains you've marked as planned with a target date, sorted by how soon they are.</p>
+      </div>
+      <div className="dashboard-coming-up__list">
+        {upcomingPlanned.map((log) => {
+          const until     = daysUntilLabel(log.completed_date);
+          const daysLeft  = log.completed_date ? Math.round((new Date(log.completed_date) - new Date()) / 86400000) : null;
+          const isImminent = daysLeft !== null && daysLeft <= 7;
+          return (
+            <Link
+              to={isDemo ? "#" : `/mountains/${log.mountain_detail?.slug}`}
+              className={`dashboard-coming-up__item${isImminent ? " dashboard-coming-up__item--imminent" : ""}`}
+              key={log.id}
+            >
+              <div className="dashboard-coming-up__item-left">
+                <span className="dashboard-coming-up__countdown">{until}</span>
+                <span className="dashboard-coming-up__date">{formatDate(log.completed_date)}</span>
+              </div>
+              <div className="dashboard-coming-up__item-main">
+                <strong>{log.mountain_detail?.name}</strong>
+                <span>
+                  {log.mountain_detail?.height_m}m
+                  {log.mountain_detail?.region?.name && ` · ${log.mountain_detail.region.name}`}
+                </span>
+              </div>
+              <TbChevronRight size={16} strokeWidth={2} className="dashboard-coming-up__arrow" />
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Activity heatmap ─────────────────────────────────────────────────────────
+
+function ActivityHeatmap({ logs }) {
+  const { weeks, monthLabels, totalAscents, activeDays } = buildHeatmapData(logs);
+
+  if (totalAscents === 0) return null;
+
+  const CELL = 12;
+  const GAP  = 3;
+  const STEP = CELL + GAP;
+  const LEFT_PAD = 28;
+  const TOP_PAD  = 20;
+  const svgW = LEFT_PAD + 52 * STEP;
+  const svgH = TOP_PAD  +  7 * STEP;
+
+  const DAY_LABELS = ["Mon", "", "Wed", "", "Fri", "", ""];
+
+  function cellColor(count, isFuture) {
+    if (isFuture) return "rgba(4,57,59,0.04)";
+    if (count === 0) return "rgba(4,57,59,0.09)";
+    if (count === 1) return "rgba(4,57,59,0.38)";
+    if (count === 2) return "var(--color-teal)";
+    return "var(--color-accent)";
+  }
+
+  return (
+    <div className="activity-heatmap">
+      <div className="activity-heatmap__header">
+        <p className="section-kicker"><span className="kicker-line" />Activity</p>
+        <h2>Ascent calendar</h2>
+        <p>
+          {activeDays} active {activeDays === 1 ? "day" : "days"} · {totalAscents} {totalAscents === 1 ? "ascent" : "ascents"} in the past year
+        </p>
+      </div>
+      <div className="activity-heatmap__scroll">
+        <svg
+          viewBox={`0 0 ${svgW} ${svgH}`}
+          className="activity-heatmap__svg"
+          aria-label="Ascent activity heatmap"
+          role="img"
+        >
+          {/* Month labels */}
+          {monthLabels.map(({ week, label }) => (
+            <text
+              key={`${week}-${label}`}
+              x={LEFT_PAD + week * STEP}
+              y={12}
+              fontSize="9"
+              fontWeight="700"
+              fill="#8b9493"
+              fontFamily="DM Sans, sans-serif"
+            >
+              {label}
+            </text>
+          ))}
+          {/* Day labels */}
+          {DAY_LABELS.map((label, di) =>
+            label ? (
+              <text
+                key={di}
+                x={LEFT_PAD - 5}
+                y={TOP_PAD + di * STEP + CELL * 0.82}
+                fontSize="8"
+                fill="#8b9493"
+                textAnchor="end"
+                fontFamily="DM Sans, sans-serif"
+              >
+                {label}
+              </text>
+            ) : null
+          )}
+          {/* Cells */}
+          {weeks.map((week, wi) =>
+            week.map((day, di) => (
+              <rect
+                key={day.date}
+                x={LEFT_PAD + wi * STEP}
+                y={TOP_PAD + di * STEP}
+                width={CELL}
+                height={CELL}
+                rx={2.5}
+                fill={cellColor(day.count, day.isFuture)}
+              >
+                <title>{day.date}: {day.count} {day.count === 1 ? "ascent" : "ascents"}</title>
+              </rect>
+            ))
+          )}
+        </svg>
+      </div>
+      <div className="activity-heatmap__legend">
+        <span>Less</span>
+        {[0, 1, 2, 3].map((v) => (
+          <span key={v} className="activity-heatmap__legend-dot" style={{ background: cellColor(v, false) }} />
+        ))}
+        <span>More</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Most summited horizontal bar chart ──────────────────────────────────────
 function MostSummitedChart({ data }) {
   if (!data || data.length === 0) return null;
@@ -460,13 +622,10 @@ function HeightVsDistanceChart({ data }) {
     </article>
   );
 }
+
 // ────────────────────────────────────────────────────────────────────────────
 
-const TIER_COLORS = {
-  Bronze: "#c97c3a",
-  Silver: "#8b9493",
-  Gold:   "var(--color-accent)",
-};
+const TIER_COLORS = { Bronze: "#c97c3a", Silver: "#8b9493", Gold: "var(--color-accent)" };
 
 function mountainBelongsToCollection(mountain, collectionSlug) {
   return (
@@ -560,10 +719,8 @@ function DashboardPage() {
   const [exporting, setExporting] = useState(null);
 
   async function handleExport(format) {
-    try {
-      setExporting(format);
-      await exportLogs(format);
-    } catch (e) { console.error(e); }
+    try { setExporting(format); await exportLogs(format); }
+    catch (e) { console.error(e); }
     finally { setExporting(null); }
   }
 
@@ -572,10 +729,8 @@ function DashboardPage() {
       try {
         const userData = await getCurrentUser();
         setUser(userData.user || userData);
-      } catch {
-        setStatus("demo");
-        return;
-      }
+      } catch { setStatus("demo"); return; }
+
       try {
         const [mountainData, collectionData, logData] = await Promise.all([
           getMountains(), getCollections(), getProgressLogs(),
@@ -589,6 +744,7 @@ function DashboardPage() {
         setLogs([]); setMountains([]); setCollections([]);
         setStatus("success");
       }
+
       try {
         const routeData = await getRouteLogs();
         setRouteLogs(Array.isArray(routeData) ? routeData : []);
@@ -623,7 +779,6 @@ function DashboardPage() {
       { name: "Planned",   value: plannedLogs.length },
       { name: "Remaining", value: Math.max(mountains.length - loggedMountainIds.size, 0) },
     ];
-
     const collectionChartData = collectionStats.map((c) => ({ name: c.name, completed: c.completed, remaining: Math.max(c.total - c.completed, 0) }));
 
     const monthlyCompletionData = completedLogs.filter((l) => l.completed_date).reduce((months, l) => {
@@ -631,7 +786,9 @@ function DashboardPage() {
       months[key] = (months[key] || 0) + 1;
       return months;
     }, {});
-    const completionTimelineData = Object.entries(monthlyCompletionData).map(([month, completed]) => ({ month, completed }));
+    const completionTimelineData = Object.entries(monthlyCompletionData)
+    .map(([month, completed]) => ({ month, completed }))
+    .sort((a, b) => new Date(`1 ${a.month}`) - new Date(`1 ${b.month}`));
 
     const recentLogs    = [...logs].sort((a, b) => new Date(b.completed_date || b.updated_at || b.created_at) - new Date(a.completed_date || a.updated_at || a.created_at)).slice(0, 4);
     const nextObjective = plannedLogs[0] || null;
@@ -658,25 +815,24 @@ function DashboardPage() {
       .filter((l) => l.mountain_detail?.height_m && l.hike_distance_km)
       .map((l) => ({ x: Number(l.mountain_detail.height_m), y: Number(l.hike_distance_km), name: l.mountain_detail.name }));
 
-    // ── Tiered achievements ──
-    const achievements = buildTieredAchievements({
-      completedCount:      completedLogs.length,
-      wainwrightsCompleted: collectionStats.find((c) => c.slug === "wainwrights")?.completed || 0,
-      munrosCompleted:      collectionStats.find((c) => c.slug === "munros")?.completed || 0,
-      totalDistance,
-      totalSteps,
-      totalHeight,
-      routeCount,
-    });
+    const achievements       = buildTieredAchievements({ completedCount: completedLogs.length, wainwrightsCompleted: collectionStats.find((c) => c.slug === "wainwrights")?.completed || 0, munrosCompleted: collectionStats.find((c) => c.slug === "munros")?.completed || 0, totalDistance, totalSteps, totalHeight, routeCount });
     const earnedBadgeCount   = countEarnedBadges(achievements);
     const achievementPercent = TOTAL_POSSIBLE_BADGES > 0 ? Math.round((earnedBadgeCount / TOTAL_POSSIBLE_BADGES) * 100) : 0;
+
+    // Coming up — planned logs with target date, soonest first, max 6
+    const upcomingPlanned = plannedLogs
+      .filter((l) => l.completed_date)
+      .sort((a, b) => new Date(a.completed_date) - new Date(b.completed_date))
+      .slice(0, 6);
+
+    // Heatmap data uses completed logs directly
+    const heatmapLogs = completedLogs;
 
     return {
       completed: completedLogs.length, planned: plannedLogs.length, totalVisible: mountains.length,
       totalDistance, totalHeight, totalSteps, totalFlightsClimbed,
       collectionStats, statusChartData, collectionChartData, recentLogs, nextObjective,
-      photoLogs, elevationPercent,
-      achievements, earnedBadgeCount, achievementPercent,
+      photoLogs, elevationPercent, achievements, earnedBadgeCount, achievementPercent,
       regionStats: ["Lake District", "Scotland", "Wales", "England"].map((regionName) => {
         const regionMountains = mountains.filter((m) => m.region?.name === regionName);
         const completed = regionMountains.filter((m) => completedMountainIds.has(m.id)).length;
@@ -686,6 +842,7 @@ function DashboardPage() {
       }),
       completionTimelineData, personalBests, mostSummited, scatterData,
       routeCount, recentRoutes,
+      upcomingPlanned, heatmapLogs,
     };
   }, [collections, logs, mountains, status, routeLogs]);
 
@@ -790,6 +947,11 @@ function DashboardPage() {
                   <p>{stats.elevationPercent}% of a 50,000m milestone</p>
                 </article>
               </div>
+
+              {/* ── Coming up panel — planned summits with target dates ── */}
+              {stats.upcomingPlanned?.length > 0 && (
+                <ComingUpPanel upcomingPlanned={stats.upcomingPlanned} isDemo={isDemo} />
+              )}
 
               <div className="dashboard-chart-grid">
                 <article className="dashboard-chart-card dashboard-chart-card--status">
@@ -909,6 +1071,9 @@ function DashboardPage() {
                 </article>
               </div>
 
+              {/* ── Activity heatmap ── */}
+              {stats.heatmapLogs && <ActivityHeatmap logs={stats.heatmapLogs} />}
+
               {/* ── Tiered achievements ── */}
               <div className="dashboard-achievement-panel">
                 <div className="dashboard-achievement-summary">
@@ -924,7 +1089,6 @@ function DashboardPage() {
                     <span style={{ width: `${stats.achievementPercent}%` }} />
                   </div>
                   <p>{TOTAL_POSSIBLE_BADGES - stats.earnedBadgeCount} badges remaining</p>
-                  {/* Legend */}
                   <div className="achievement-tier-legend">
                     {["Bronze", "Silver", "Gold"].map((tier) => (
                       <span key={tier} className="achievement-tier-legend__item">
@@ -934,37 +1098,27 @@ function DashboardPage() {
                     ))}
                   </div>
                 </div>
-
                 <div className="dashboard-achievement-list">
                   {stats.achievements.map((ach) => {
                     const AchIcon    = ach.icon || TbStar;
                     const badgeColor = ach.activeTier ? TIER_COLORS[ach.activeTier.label] : "rgba(127,181,179,0.12)";
                     const badgeFg    = ach.activeTier ? "#fff" : "var(--color-teal-deep)";
-
                     return (
-                      <article
-                        key={ach.id}
-                        className={`dashboard-achievement-item${ach.activeTierIndex >= 0 ? " achieved" : ""}`}
-                      >
+                      <article key={ach.id} className={`dashboard-achievement-item${ach.activeTierIndex >= 0 ? " achieved" : ""}`}>
                         <div>
                           <div className="dashboard-achievement-item__header">
                             <h3>{ach.title}</h3>
-                            {/* Three tier dots */}
                             <div className="achievement-tier-dots">
                               {ach.tiers.map((tier, i) => (
                                 <span
                                   key={tier.label}
                                   className="achievement-tier-dot"
-                                  style={{
-                                    background: i <= ach.activeTierIndex ? TIER_COLORS[tier.label] : "rgba(4,57,59,0.1)",
-                                    border: i <= ach.activeTierIndex ? "none" : "1px solid rgba(4,57,59,0.15)",
-                                  }}
+                                  style={{ background: i <= ach.activeTierIndex ? TIER_COLORS[tier.label] : "rgba(4,57,59,0.1)", border: i <= ach.activeTierIndex ? "none" : "1px solid rgba(4,57,59,0.15)" }}
                                   title={`${tier.label}: ${tier.target.toLocaleString()}`}
                                 />
                               ))}
                             </div>
                           </div>
-
                           {ach.allComplete ? (
                             <p className="achievement-complete">All tiers complete! 🏆</p>
                           ) : (
@@ -975,22 +1129,15 @@ function DashboardPage() {
                               </div>
                             </>
                           )}
-
                           <small>
                             {ach.current.toLocaleString()}
                             {!ach.allComplete && ` / ${ach.nextTier?.target.toLocaleString()}`}
                             {ach.activeTier && (
-                              <span className={`achievement-tier-label achievement-tier-label--${ach.activeTier.label.toLowerCase()}`}>
-                                {ach.activeTier.label}
-                              </span>
+                              <span className={`achievement-tier-label achievement-tier-label--${ach.activeTier.label.toLowerCase()}`}>{ach.activeTier.label}</span>
                             )}
                           </small>
                         </div>
-
-                        <strong
-                          className="dashboard-achievement-badge"
-                          style={{ background: badgeColor, color: badgeFg }}
-                        >
+                        <strong className="dashboard-achievement-badge" style={{ background: badgeColor, color: badgeFg }}>
                           <AchIcon size={16} strokeWidth={ach.activeTierIndex >= 0 ? 2.5 : 1.5} />
                         </strong>
                       </article>
