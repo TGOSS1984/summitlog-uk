@@ -14,20 +14,25 @@ import {
   TbBook,
   TbPhoto,
   TbRoute,
+  TbSearch,
 } from "react-icons/tb";
+import SearchModal from "./SearchModal";
 
 function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen,  setMobileOpen]  = useState(false);
+  const [scrolled,    setScrolled]    = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
+  const [searchOpen,  setSearchOpen]  = useState(false);
   const dropdownRef = useRef(null);
 
+  // Scroll detection
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Close explore dropdown when clicking outside
   useEffect(() => {
     const handleClick = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
@@ -38,209 +43,209 @@ function Navbar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  // Cmd+K / Ctrl+K opens search
+  useEffect(() => {
+    function onKey(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen((open) => !open);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  function openSearch() {
+    setMobileOpen(false);
+    setExploreOpen(false);
+    setSearchOpen(true);
+  }
+
   return (
-    <header className={`site-header${scrolled ? " site-header--scrolled" : ""}`}>
-      <div className="container site-header__inner">
+    <>
+      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
 
-        {/* Logo */}
-        <Link to="/" className="site-logo" onClick={() => setMobileOpen(false)}>
-          <span className="site-logo__emblem" aria-hidden="true">
-            <svg viewBox="0 0 44 44" fill="none" width="20" height="20">
-              <polyline
-                points="9,30 16,18 22,23 28,13 35,30"
-                stroke="#d0aa62"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-          <span className="site-logo__wordmark">
-            <span className="site-logo__primary">Summit</span>
-            <span className="site-logo__secondary">Log</span>
-            <span className="site-logo__region">UK</span>
-          </span>
-        </Link>
+      <header className={`site-header${scrolled ? " site-header--scrolled" : ""}`}>
+        <div className="container site-header__inner">
 
-        {/* Desktop Nav */}
-        <nav className="site-nav" aria-label="Main navigation">
+          {/* Logo */}
+          <Link to="/" className="site-logo" onClick={() => setMobileOpen(false)}>
+            <span className="site-logo__emblem" aria-hidden="true">
+              <svg viewBox="0 0 44 44" fill="none" width="20" height="20">
+                <polyline
+                  points="9,30 16,18 22,23 28,13 35,30"
+                  stroke="#d0aa62"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <span className="site-logo__wordmark">
+              <span className="site-logo__primary">Summit</span>
+              <span className="site-logo__secondary">Log</span>
+              <span className="site-logo__region">UK</span>
+            </span>
+          </Link>
 
-          {/* Explore Dropdown */}
-          <div className="site-nav__dropdown" ref={dropdownRef}>
-            <button
-              className={`site-nav__dropdown-trigger${exploreOpen ? " active" : ""}`}
-              onClick={() => setExploreOpen(!exploreOpen)}
-              aria-expanded={exploreOpen}
-            >
-              <TbCompass size={16} strokeWidth={1.8} />
-              Explore
-              <TbChevronDown
-                size={14}
-                strokeWidth={2}
-                className={`dropdown-chevron${exploreOpen ? " open" : ""}`}
-              />
-            </button>
-            {exploreOpen && (
-              <div className="site-nav__dropdown-panel" role="menu">
-                <NavLink
-                  to="/mountains"
-                  className="dropdown-item"
-                  onClick={() => setExploreOpen(false)}
-                >
-                  <span className="dropdown-item__icon"><TbMountain size={18} strokeWidth={1.5} /></span>
-                  <span>
-                    <strong>Mountains</strong>
-                    <small>Browse all UK peaks</small>
-                  </span>
-                </NavLink>
-                <NavLink
-                  to="/map"
-                  className="dropdown-item"
-                  onClick={() => setExploreOpen(false)}
-                >
-                  <span className="dropdown-item__icon"><TbMap2 size={18} strokeWidth={1.5} /></span>
-                  <span>
-                    <strong>Map</strong>
-                    <small>Interactive summit map</small>
-                  </span>
-                </NavLink>
-                <div className="dropdown-divider" />
-                <NavLink
-                  to="/dashboard"
-                  className="dropdown-item"
-                  onClick={() => setExploreOpen(false)}
-                >
-                  <span className="dropdown-item__icon"><TbTrophy size={18} strokeWidth={1.5} /></span>
-                  <span>
-                    <strong>Collections</strong>
-                    <small>Wainwrights, Munros & more</small>
-                  </span>
-                </NavLink>
-                <NavLink
-                  to="/journal"
-                  className="dropdown-item"
-                  onClick={() => setExploreOpen(false)}
-                >
-                  <span className="dropdown-item__icon"><TbBook size={18} strokeWidth={1.5} /></span>
-                  <span>
-                    <strong>Journal</strong>
-                    <small>Your mountain diary</small>
-                  </span>
-                </NavLink>
-                <NavLink
-                  to="/gallery"
-                  className="dropdown-item"
-                  onClick={() => setExploreOpen(false)}
-                >
-                  <span className="dropdown-item__icon"><TbPhoto size={18} strokeWidth={1.5} /></span>
-                  <span>
-                    <strong>Gallery</strong>
-                    <small>Your summit photos</small>
-                  </span>
-                </NavLink>
+          {/* Desktop Nav */}
+          <nav className="site-nav" aria-label="Main navigation">
 
-                {/* Log a route — visually separated as a track action */}
-                <div className="dropdown-divider" />
-                <NavLink
-                  to="/log-route"
-                  className="dropdown-item dropdown-item--action"
-                  onClick={() => setExploreOpen(false)}
-                >
-                  <span className="dropdown-item__icon dropdown-item__icon--action">
-                    <TbRoute size={18} strokeWidth={1.5} />
-                  </span>
-                  <span>
-                    <strong>Log a route</strong>
-                    <small>Multi-mountain day in one go</small>
-                  </span>
-                </NavLink>
-              </div>
-            )}
-          </div>
+            {/* Explore Dropdown */}
+            <div className="site-nav__dropdown" ref={dropdownRef}>
+              <button
+                className={`site-nav__dropdown-trigger${exploreOpen ? " active" : ""}`}
+                onClick={() => setExploreOpen(!exploreOpen)}
+                aria-expanded={exploreOpen}
+              >
+                <TbCompass size={16} strokeWidth={1.8} />
+                Explore
+                <TbChevronDown
+                  size={14}
+                  strokeWidth={2}
+                  className={`dropdown-chevron${exploreOpen ? " open" : ""}`}
+                />
+              </button>
+              {exploreOpen && (
+                <div className="site-nav__dropdown-panel" role="menu">
+                  <NavLink to="/mountains" className="dropdown-item" onClick={() => setExploreOpen(false)}>
+                    <span className="dropdown-item__icon"><TbMountain size={18} strokeWidth={1.5} /></span>
+                    <span><strong>Mountains</strong><small>Browse all UK peaks</small></span>
+                  </NavLink>
+                  <NavLink to="/map" className="dropdown-item" onClick={() => setExploreOpen(false)}>
+                    <span className="dropdown-item__icon"><TbMap2 size={18} strokeWidth={1.5} /></span>
+                    <span><strong>Map</strong><small>Interactive summit map</small></span>
+                  </NavLink>
+                  <div className="dropdown-divider" />
+                  <NavLink to="/dashboard" className="dropdown-item" onClick={() => setExploreOpen(false)}>
+                    <span className="dropdown-item__icon"><TbTrophy size={18} strokeWidth={1.5} /></span>
+                    <span><strong>Collections</strong><small>Wainwrights, Munros & more</small></span>
+                  </NavLink>
+                  <NavLink to="/journal" className="dropdown-item" onClick={() => setExploreOpen(false)}>
+                    <span className="dropdown-item__icon"><TbBook size={18} strokeWidth={1.5} /></span>
+                    <span><strong>Journal</strong><small>Your mountain diary</small></span>
+                  </NavLink>
+                  <NavLink to="/gallery" className="dropdown-item" onClick={() => setExploreOpen(false)}>
+                    <span className="dropdown-item__icon"><TbPhoto size={18} strokeWidth={1.5} /></span>
+                    <span><strong>Gallery</strong><small>Your summit photos</small></span>
+                  </NavLink>
+                  <div className="dropdown-divider" />
+                  <NavLink to="/log-route" className="dropdown-item dropdown-item--action" onClick={() => setExploreOpen(false)}>
+                    <span className="dropdown-item__icon dropdown-item__icon--action">
+                      <TbRoute size={18} strokeWidth={1.5} />
+                    </span>
+                    <span><strong>Log a route</strong><small>Multi-mountain day in one go</small></span>
+                  </NavLink>
+                </div>
+              )}
+            </div>
 
-          <NavLink to="/dashboard" className="site-nav__link">
-            <TbLayoutDashboard size={16} strokeWidth={1.8} />
-            Dashboard
-          </NavLink>
-
-          {/* Standalone Log a route CTA — gold outlined, distinct from text links */}
-          <NavLink
-            to="/log-route"
-            className={({ isActive }) =>
-              `site-nav__log-route${isActive ? " site-nav__log-route--active" : ""}`
-            }
-          >
-            <TbRoute size={15} strokeWidth={2} />
-            Log a route
-          </NavLink>
-
-        </nav>
-
-        {/* Right side */}
-        <div className="site-header__right">
-          <NavLink to="/account" className="site-header__account" aria-label="Account">
-            <TbUser size={18} strokeWidth={1.8} />
-            <span className="site-header__account-label">Account</span>
-          </NavLink>
-
-          <button
-            className="site-header__mobile-toggle"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Toggle menu"
-            aria-expanded={mobileOpen}
-          >
-            {mobileOpen ? <TbX size={22} /> : <TbMenu2 size={22} />}
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile Drawer */}
-      {mobileOpen && (
-        <div className="mobile-nav">
-          <nav className="mobile-nav__links">
-            <NavLink to="/" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
-              <TbFlag size={18} strokeWidth={1.5} />
-              Home
+            <NavLink to="/dashboard" className="site-nav__link">
+              <TbLayoutDashboard size={16} strokeWidth={1.8} />
+              Dashboard
             </NavLink>
 
-            {/* Log a route — promoted to top of drawer so it's above the fold on all phones */}
             <NavLink
               to="/log-route"
-              className="mobile-nav__link mobile-nav__link--action"
-              onClick={() => setMobileOpen(false)}
+              className={({ isActive }) =>
+                `site-nav__log-route${isActive ? " site-nav__log-route--active" : ""}`
+              }
             >
-              <TbRoute size={18} strokeWidth={1.5} />
+              <TbRoute size={15} strokeWidth={2} />
               Log a route
             </NavLink>
 
-            <NavLink to="/mountains" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
-              <TbMountain size={18} strokeWidth={1.5} />
-              Mountains
-            </NavLink>
-            <NavLink to="/map" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
-              <TbMap2 size={18} strokeWidth={1.5} />
-              Map
-            </NavLink>
-            <NavLink to="/dashboard" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
-              <TbLayoutDashboard size={18} strokeWidth={1.5} />
-              Dashboard
-            </NavLink>
-            <NavLink to="/journal" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
-              <TbBook size={18} strokeWidth={1.5} />
-              Journal
-            </NavLink>
-            <NavLink to="/gallery" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
-              <TbPhoto size={18} strokeWidth={1.5} />
-              Gallery
-            </NavLink>
-            <NavLink to="/account" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
-              <TbUser size={18} strokeWidth={1.5} />
-              Account
-            </NavLink>
           </nav>
+
+          {/* Right side */}
+          <div className="site-header__right">
+
+            {/* Search trigger */}
+            <button
+              className="site-header__search"
+              onClick={openSearch}
+              aria-label="Search mountains (Ctrl+K)"
+            >
+              <TbSearch size={16} strokeWidth={1.8} />
+              <span className="site-header__search-label">Search</span>
+              <span className="site-header__search-kbd" aria-hidden="true">
+                <kbd>⌘K</kbd>
+              </span>
+            </button>
+
+            <NavLink to="/account" className="site-header__account" aria-label="Account">
+              <TbUser size={18} strokeWidth={1.8} />
+              <span className="site-header__account-label">Account</span>
+            </NavLink>
+
+            <button
+              className="site-header__mobile-toggle"
+              onClick={() => setMobileOpen(!mobileOpen)}
+              aria-label="Toggle menu"
+              aria-expanded={mobileOpen}
+            >
+              {mobileOpen ? <TbX size={22} /> : <TbMenu2 size={22} />}
+            </button>
+          </div>
         </div>
-      )}
-    </header>
+
+        {/* Mobile Drawer */}
+        {mobileOpen && (
+          <div className="mobile-nav">
+            <nav className="mobile-nav__links">
+              <NavLink to="/" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
+                <TbFlag size={18} strokeWidth={1.5} />
+                Home
+              </NavLink>
+
+              {/* Log a route — above the fold */}
+              <NavLink
+                to="/log-route"
+                className="mobile-nav__link mobile-nav__link--action"
+                onClick={() => setMobileOpen(false)}
+              >
+                <TbRoute size={18} strokeWidth={1.5} />
+                Log a route
+              </NavLink>
+
+              {/* Search — mobile drawer entry */}
+              <button
+                className="mobile-nav__link mobile-nav__link--search"
+                onClick={openSearch}
+              >
+                <TbSearch size={18} strokeWidth={1.5} />
+                Search mountains
+              </button>
+
+              <NavLink to="/mountains" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
+                <TbMountain size={18} strokeWidth={1.5} />
+                Mountains
+              </NavLink>
+              <NavLink to="/map" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
+                <TbMap2 size={18} strokeWidth={1.5} />
+                Map
+              </NavLink>
+              <NavLink to="/dashboard" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
+                <TbLayoutDashboard size={18} strokeWidth={1.5} />
+                Dashboard
+              </NavLink>
+              <NavLink to="/journal" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
+                <TbBook size={18} strokeWidth={1.5} />
+                Journal
+              </NavLink>
+              <NavLink to="/gallery" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
+                <TbPhoto size={18} strokeWidth={1.5} />
+                Gallery
+              </NavLink>
+              <NavLink to="/account" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
+                <TbUser size={18} strokeWidth={1.5} />
+                Account
+              </NavLink>
+            </nav>
+          </div>
+        )}
+      </header>
+    </>
   );
 }
 
