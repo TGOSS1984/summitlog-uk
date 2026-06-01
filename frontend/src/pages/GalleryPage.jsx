@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { TbMountain } from "react-icons/tb";
-import { getProgressLogs, getCollections } from "../lib/api";
+import { TbMountain, TbTrash } from "react-icons/tb";
+import { getProgressLogs, getCollections, updateProgressLog } from "../lib/api";
+import { ConfirmModal } from "../components/ui/ConfirmModal";
 
 function formatDate(d) {
   if (!d) return null;
@@ -10,7 +11,6 @@ function formatDate(d) {
   });
 }
 
-// Distribute items into columns for masonry layout
 function buildColumns(items, columnCount) {
   const columns = Array.from({ length: columnCount }, () => []);
   items.forEach((item, i) => {
@@ -19,30 +19,40 @@ function buildColumns(items, columnCount) {
   return columns;
 }
 
-function GalleryItem({ log, index, onClick }) {
-  // Alternate aspect ratios for visual variety — tall, square, wide
+function GalleryItem({ log, index, onClick, onDelete }) {
   const aspects = ["gallery-item--tall", "gallery-item--square", "gallery-item--square", "gallery-item--wide", "gallery-item--square"];
   const aspect = aspects[index % aspects.length];
 
   return (
-    <button
-      className={`gallery-item ${aspect}`}
-      onClick={onClick}
-      aria-label={`View photo of ${log.mountain_detail?.name}`}
-    >
-      <img src={log.uploaded_image} alt={log.mountain_detail?.name} loading="lazy" />
-      <div className="gallery-item__overlay">
-        <strong>{log.mountain_detail?.name}</strong>
-        <div className="gallery-item__overlay-meta">
-          {log.mountain_detail?.region?.name && (
-            <span className="gallery-item__region">{log.mountain_detail.region.name}</span>
-          )}
-          {log.completed_date && (
-            <span className="gallery-item__date">{formatDate(log.completed_date)}</span>
-          )}
+    <div className={`gallery-item ${aspect}`}>
+      <button
+        className="gallery-item__image-btn"
+        onClick={onClick}
+        aria-label={`View photo of ${log.mountain_detail?.name}`}
+      >
+        <img src={log.uploaded_image} alt={log.mountain_detail?.name} loading="lazy" />
+        <div className="gallery-item__overlay">
+          <strong>{log.mountain_detail?.name}</strong>
+          <div className="gallery-item__overlay-meta">
+            {log.mountain_detail?.region?.name && (
+              <span className="gallery-item__region">{log.mountain_detail.region.name}</span>
+            )}
+            {log.completed_date && (
+              <span className="gallery-item__date">{formatDate(log.completed_date)}</span>
+            )}
+          </div>
         </div>
-      </div>
-    </button>
+      </button>
+      {/* Delete photo button — appears on hover */}
+      <button
+        className="gallery-item__delete"
+        onClick={(e) => { e.stopPropagation(); onDelete(log); }}
+        title="Delete this photo"
+        aria-label={`Delete photo of ${log.mountain_detail?.name}`}
+      >
+        <TbTrash size={14} strokeWidth={2} />
+      </button>
+    </div>
   );
 }
 
@@ -55,6 +65,7 @@ function GalleryPage() {
   const [search, setSearch] = useState("");
   const [lightbox, setLightbox] = useState(null);
   const [columns, setColumns] = useState(3);
+  const [deleteTarget, setDeleteTarget] = useState(null); // log to delete photo from
 
   // Responsive column count
   useEffect(() => {
@@ -93,6 +104,29 @@ function GalleryPage() {
     load();
   }, [navigate]);
 
+  // ── Photo delete ─────────────────────────────────────────────────────────
+
+  function handleDeletePhoto(log) {
+    setDeleteTarget(log);
+  }
+
+  async function handleDeleteConfirmed() {
+    if (!deleteTarget) return;
+    try {
+      await updateProgressLog(deleteTarget.id, { clear_image: true });
+      // Remove the log from gallery state — it no longer has an image
+      setLogs((prev) => prev.filter((l) => l.id !== deleteTarget.id));
+      // If the deleted photo was open in the lightbox, close it
+      setLightbox(null);
+      setDeleteTarget(null);
+    } catch (err) {
+      alert(err.message || "Unable to delete photo.");
+      setDeleteTarget(null);
+    }
+  }
+
+  // ── Filtering ─────────────────────────────────────────────────────────────
+
   const filtered = logs.filter((log) => {
     if (filterCollection !== "all") {
       const m = log.mountain_detail;
@@ -115,14 +149,29 @@ function GalleryPage() {
     function onKey(e) {
       if (e.key === "Escape") setLightbox(null);
       if (e.key === "ArrowRight" && lightbox !== null) setLightbox((i) => (i + 1) % filtered.length);
-      if (e.key === "ArrowLeft" && lightbox !== null) setLightbox((i) => (i - 1 + filtered.length) % filtered.length);
+      if (e.key === "ArrowLeft"  && lightbox !== null) setLightbox((i) => (i - 1 + filtered.length) % filtered.length);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [lightbox, filtered.length]);
 
+  const deleteTargetName = deleteTarget?.mountain_detail?.name || "this summit";
+
   return (
     <main className="gallery-page">
+
+      {deleteTarget && (
+        <ConfirmModal
+          title="Delete photo"
+          message={`Remove your photo for ${deleteTargetName}? The log entry will be kept — only the photo is deleted. This cannot be undone.`}
+          confirmLabel="Delete photo"
+          cancelLabel="Keep it"
+          danger
+          onConfirm={handleDeleteConfirmed}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
       <section className="section section-dark gallery-hero">
         <div className="container">
           <p className="section-kicker"><span className="kicker-line" />Gallery</p>
@@ -155,7 +204,12 @@ function GalleryPage() {
                   {filtered.length} {filtered.length === 1 ? "photo" : "photos"}
                 </p>
                 <div className="gallery-filters">
-                  <input type="text" placeholder="Search mountains..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                  <input
+                    type="text"
+                    placeholder="Search mountains..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
                   <select value={filterCollection} onChange={(e) => setFilterCollection(e.target.value)}>
                     <option value="all">All collections</option>
                     {collections.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
@@ -184,6 +238,7 @@ function GalleryPage() {
                             log={log}
                             index={ci * 10 + i}
                             onClick={() => setLightbox(globalIndex)}
+                            onDelete={handleDeletePhoto}
                           />
                         );
                       })}
@@ -200,6 +255,15 @@ function GalleryPage() {
       {lightbox !== null && filtered[lightbox] && (
         <div className="gallery-lightbox" onClick={() => setLightbox(null)} role="dialog" aria-modal="true">
           <button className="gallery-lightbox__close" onClick={() => setLightbox(null)} aria-label="Close">✕</button>
+          {/* Delete from lightbox */}
+          <button
+            className="gallery-lightbox__delete"
+            onClick={(e) => { e.stopPropagation(); handleDeletePhoto(filtered[lightbox]); }}
+            aria-label="Delete this photo"
+            title="Delete photo"
+          >
+            <TbTrash size={16} strokeWidth={2} />
+          </button>
           {lightbox > 0 && (
             <button className="gallery-lightbox__prev" onClick={(e) => { e.stopPropagation(); setLightbox(lightbox - 1); }} aria-label="Previous">‹</button>
           )}
@@ -223,3 +287,4 @@ function GalleryPage() {
 }
 
 export default GalleryPage;
+

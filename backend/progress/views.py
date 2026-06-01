@@ -45,6 +45,23 @@ class UserMountainLogDetailView(generics.RetrieveUpdateDestroyAPIView):
             "mountain__region", "mountain__subregion", "route_group",
         )
 
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Handle clear_image flag — clears the uploaded_image field without
+        going through the serializer (which doesn't accept this flag).
+        All other PATCH requests delegate to the standard DRF implementation.
+        """
+        if request.data.get("clear_image"):
+            instance = self.get_object()
+            if instance.uploaded_image:
+                # Delete from storage (R2 or local) before nulling the field
+                instance.uploaded_image.delete(save=False)
+            instance.uploaded_image = None
+            instance.save(update_fields=["uploaded_image"])
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        return super().partial_update(request, *args, **kwargs)
+
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
         self.perform_destroy(instance)
@@ -71,9 +88,9 @@ class RouteLogCreateView(APIView):
 
 class RouteLogDetailView(APIView):
     """
-    GET    /api/progress/routes/<pk>/ — retrieve a single route with mountains + primary stats
-    PATCH  /api/progress/routes/<pk>/ — update route metadata and primary summit stats
-    DELETE /api/progress/routes/<pk>/ — delete route and all linked mountain logs
+    GET    /api/progress/routes/<pk>/
+    PATCH  /api/progress/routes/<pk>/
+    DELETE /api/progress/routes/<pk>/
     """
 
     permission_classes = [permissions.IsAuthenticated]
@@ -116,7 +133,6 @@ class RouteLogDetailView(APIView):
             "mountains": mountains,
             "mountains_count": len(mountains),
             "primary_mountain_id": primary_log.mountain_id if primary_log else None,
-            # Primary summit stats — pre-populate edit form
             "season":              primary_log.season              if primary_log else "",
             "route_taken":         primary_log.route_taken         if primary_log else "",
             "hike_distance_km":    primary_log.hike_distance_km    if primary_log else None,
@@ -131,35 +147,27 @@ class RouteLogDetailView(APIView):
         if not route:
             return Response({"detail": "Route not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # Update RouteLog fields
         if "name" in request.data and request.data["name"].strip():
             route.name = request.data["name"].strip()
         if "description" in request.data:
             route.description = request.data["description"]
         if "completed_date" in request.data:
             route.completed_date = request.data["completed_date"]
-            # Keep all mountain logs in sync with the route date
             route.mountain_logs.all().update(completed_date=request.data["completed_date"])
         route.save()
 
-        # Update primary summit stats
         primary_log = route.mountain_logs.filter(is_route_primary=True).first()
         if primary_log:
-            text_fields = ["route_taken", "notes", "season"]
-            numeric_fields = ["hike_distance_km", "hike_duration_hours", "steps", "flights_climbed"]
-            for field in text_fields:
+            for field in ["route_taken", "notes", "season"]:
                 if field in request.data:
                     setattr(primary_log, field, request.data[field] or "")
-            for field in numeric_fields:
+            for field in ["hike_distance_km", "hike_duration_hours", "steps", "flights_climbed"]:
                 if field in request.data:
                     val = request.data[field]
                     setattr(primary_log, field, val if val not in ("", None) else None)
             primary_log.save()
 
-        return Response({
-            "detail": f"Route '{route.name}' updated successfully.",
-            "id": route.id,
-        })
+        return Response({"detail": f"Route '{route.name}' updated successfully.", "id": route.id})
 
     def delete(self, request, pk):
         route = self._get_route(pk, request.user)
@@ -168,7 +176,6 @@ class RouteLogDetailView(APIView):
 
         route_name = route.name
         log_count = route.mountain_logs.count()
-        # route_group is SET_NULL so we must delete logs explicitly
         route.mountain_logs.all().delete()
         route.delete()
 
@@ -179,7 +186,7 @@ class RouteLogDetailView(APIView):
 
 
 class UserRouteLogListView(generics.ListAPIView):
-    """GET /api/progress/routes/list/ — all route logs for the authenticated user."""
+    """GET /api/progress/routes/list/"""
 
     permission_classes = [permissions.IsAuthenticated]
 
