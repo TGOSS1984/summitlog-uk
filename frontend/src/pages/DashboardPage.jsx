@@ -333,7 +333,11 @@ function HeightVsDistanceChart({ data }) {
   if (!data || data.length === 0) return null;
 
   const avgDistance = data.length
-    ? Math.round((data.reduce((s, d) => s + d.y, 0) / data.length) * 10) / 10
+  ? Math.round((data.reduce((s, d) => s + d.y, 0) / data.length) * 10) / 10
+  : 0;
+
+  const avgHeight = data.length
+    ? Math.round(data.reduce((s, d) => s + d.x, 0) / data.length)
     : 0;
 
   return (
@@ -401,6 +405,20 @@ function HeightVsDistanceChart({ data }) {
               fontSize: 10,
               fontWeight: 700,
               fill: "var(--color-accent)",
+            }}
+          />
+          {/* Average height reference line — vertical */}
+          <ReferenceLine
+            x={avgHeight}
+            stroke="var(--color-teal)"
+            strokeDasharray="5 4"
+            strokeWidth={1.5}
+            label={{
+              value: `avg ${avgHeight}m`,
+              position: "insideTopLeft",
+              fontSize: 10,
+              fontWeight: 700,
+              fill: "var(--color-teal)",
             }}
           />
           <Scatter
