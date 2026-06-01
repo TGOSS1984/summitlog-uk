@@ -12,6 +12,11 @@ class RouteLog(models.Model):
     Individual UserMountainLog entries are linked back here via route_group_id.
     """
 
+    STATUS_CHOICES = [
+        ("planned",   "Planned"),
+        ("completed", "Completed"),
+    ]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -28,7 +33,20 @@ class RouteLog(models.Model):
         help_text="Optional notes about the route.",
     )
 
-    completed_date = models.DateField()
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="completed",
+        help_text="Whether this route has been completed or is being planned.",
+    )
+
+    # Now nullable so planned routes don't require a completed date.
+    # For completed routes this is the actual date; for planned routes it
+    # doubles as the intended/target date.
+    completed_date = models.DateField(
+        null=True,
+        blank=True,
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -37,15 +55,15 @@ class RouteLog(models.Model):
         ordering = ["-completed_date", "-created_at"]
 
     def __str__(self):
-        return f"{self.user} — {self.name} ({self.completed_date})"
+        return f"{self.user} — {self.name} ({self.completed_date or 'no date'})"
 
 
 class UserMountainLog(models.Model):
 
     STATUS_CHOICES = [
         ("not_started", "Not Started"),
-        ("planned", "Planned"),
-        ("completed", "Completed"),
+        ("planned",     "Planned"),
+        ("completed",   "Completed"),
     ]
 
     SEASON_CHOICES = [
@@ -56,13 +74,13 @@ class UserMountainLog(models.Model):
     ]
 
     CONDITIONS_CHOICES = [
-        ("clear", "Clear & sunny"),
-        ("good", "Good visibility"),
-        ("misty", "Misty / low cloud"),
-        ("rain", "Rain / wet"),
-        ("snow", "Snow / ice"),
-        ("winter", "Full winter conditions"),
-        ("storm", "Storm / poor conditions"),
+        ("clear",   "Clear & sunny"),
+        ("good",    "Good visibility"),
+        ("misty",   "Misty / low cloud"),
+        ("rain",    "Rain / wet"),
+        ("snow",    "Snow / ice"),
+        ("winter",  "Full winter conditions"),
+        ("storm",   "Storm / poor conditions"),
     ]
 
     user = models.ForeignKey(
@@ -88,6 +106,7 @@ class UserMountainLog(models.Model):
     )
 
     # Stable UUID so all logs from one route session share an identifier
+    # even if the RouteLog is later deleted
     route_group_id_ref = models.UUIDField(
         null=True,
         blank=True,
@@ -173,3 +192,46 @@ class UserMountainLog(models.Model):
     def __str__(self):
         date = self.completed_date or "no date"
         return f"{self.user} - {self.mountain} ({date})"
+
+
+class UserCollectionNote(models.Model):
+    """
+    A personal note a user attaches to a collection, e.g.
+    'Started Wainwrights July 2024, aiming to finish by 2027'.
+    One note per user per collection (upsert pattern).
+
+    Stored with collection_id_ref + collection_slug rather than a FK
+    to avoid coupling to the mountains app's internal model name.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="collection_notes",
+    )
+
+    # Reference to the collection — stored as ID + slug, no FK needed
+    collection_id_ref = models.PositiveIntegerField(
+        db_index=True,
+        help_text="ID of the collection this note belongs to.",
+    )
+    collection_slug = models.CharField(
+        max_length=120,
+        db_index=True,
+        help_text="Slug of the collection, for lookups without a join.",
+    )
+
+    body = models.TextField(
+        blank=True,
+        help_text="Personal note about progress on this collection.",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("user", "collection_id_ref")]
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"{self.user} — note on collection {self.collection_id_ref}"
