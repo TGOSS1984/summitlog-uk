@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
-import { getCollections, getMountains, getProgressLogs } from "../lib/api";
-import { TbCheck, TbFlag, TbMountain, TbRepeat } from "react-icons/tb";
+import { getCollections, getMountains, getProgressLogs, getCollectionNote, saveCollectionNote, deleteCollectionNote } from "../lib/api";
+import { TbCheck, TbFlag, TbMountain, TbRepeat, TbNotes, TbTrash, TbDeviceFloppy } from "react-icons/tb";
 
 function getCollectionRank(mountain, collectionSlug) {
   const membership = mountain.collection_memberships?.find(
@@ -17,7 +17,7 @@ function getMountainLogStatus(mountain, logs) {
 
 function getStatusLabel(status) {
   if (status === "completed") return "Completed";
-  if (status === "planned") return "Planned";
+  if (status === "planned")   return "Planned";
   return "Not started";
 }
 
@@ -40,14 +40,150 @@ function RowSkeleton() {
   );
 }
 
+// ── Collection notes ─────────────────────────────────────────────────────────
+
+function CollectionNotes({ collectionId, collectionSlug, isLoggedIn }) {
+  const [noteId,    setNoteId]    = useState(null);
+  const [body,      setBody]      = useState("");
+  const [savedBody, setSavedBody] = useState("");
+  const [updatedAt, setUpdatedAt] = useState(null);
+  const [saving,    setSaving]    = useState(false);
+  const [saveMsg,   setSaveMsg]   = useState(null);
+  const saveMsgTimer = useRef(null);
+
+  // Load existing note on mount
+  useEffect(() => {
+    if (!isLoggedIn || !collectionId) return;
+    getCollectionNote(collectionId)
+      .then((notes) => {
+        const note = Array.isArray(notes) ? notes[0] : null;
+        if (note) {
+          setNoteId(note.id);
+          setBody(note.body || "");
+          setSavedBody(note.body || "");
+          setUpdatedAt(note.updated_at);
+        }
+      })
+      .catch(() => {});
+  }, [collectionId, isLoggedIn]);
+
+  function showSaveMsg(msg) {
+    setSaveMsg(msg);
+    clearTimeout(saveMsgTimer.current);
+    saveMsgTimer.current = setTimeout(() => setSaveMsg(null), 2500);
+  }
+
+  async function handleSave() {
+    if (body.trim() === savedBody.trim()) return; // nothing changed
+    setSaving(true);
+    try {
+      const result = await saveCollectionNote(collectionId, collectionSlug, body.trim());
+      setNoteId(result.id);
+      setSavedBody(result.body || "");
+      setUpdatedAt(result.updated_at);
+      showSaveMsg("Saved");
+    } catch {
+      showSaveMsg("Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!noteId) { setBody(""); setSavedBody(""); return; }
+    setSaving(true);
+    try {
+      await deleteCollectionNote(noteId);
+      setNoteId(null);
+      setBody("");
+      setSavedBody("");
+      setUpdatedAt(null);
+      showSaveMsg("Note deleted");
+    } catch {
+      showSaveMsg("Delete failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function formatUpdated(ts) {
+    if (!ts) return null;
+    return new Date(ts).toLocaleDateString("en-GB", {
+      day: "numeric", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+  }
+
+  if (!isLoggedIn) return null;
+
+  const isDirty = body.trim() !== savedBody.trim();
+
+  return (
+    <div className="collection-notes">
+      <div className="collection-notes__header">
+        <div className="collection-notes__title">
+          <TbNotes size={18} strokeWidth={1.8} />
+          <h3>Personal notes</h3>
+        </div>
+        <div className="collection-notes__meta">
+          {updatedAt && !isDirty && (
+            <span className="collection-notes__updated">Last saved {formatUpdated(updatedAt)}</span>
+          )}
+          {saveMsg && (
+            <span className={`collection-notes__save-msg${saveMsg.includes("fail") ? " collection-notes__save-msg--error" : ""}`}>
+              {saveMsg}
+            </span>
+          )}
+        </div>
+      </div>
+
+      <textarea
+        className="collection-notes__textarea"
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        onBlur={handleSave}
+        placeholder="Add personal notes about this collection — your goal, start date, routes you want to do…"
+        rows={5}
+        disabled={saving}
+      />
+
+      <div className="collection-notes__actions">
+        <button
+          type="button"
+          className="collection-notes__save-btn"
+          onClick={handleSave}
+          disabled={saving || !isDirty}
+        >
+          <TbDeviceFloppy size={14} strokeWidth={2} />
+          {saving ? "Saving…" : "Save note"}
+        </button>
+        {(noteId || body) && (
+          <button
+            type="button"
+            className="collection-notes__delete-btn"
+            onClick={handleDelete}
+            disabled={saving}
+          >
+            <TbTrash size={14} strokeWidth={2} />
+            Delete note
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 function CollectionDetailPage() {
   const { slug } = useParams();
-  const [collections, setCollections] = useState([]);
-  const [mountains, setMountains] = useState([]);
-  const [logs, setLogs] = useState([]);
-  const [status, setStatus] = useState("loading");
+  const [collections,  setCollections]  = useState([]);
+  const [mountains,    setMountains]    = useState([]);
+  const [logs,         setLogs]         = useState([]);
+  const [status,       setStatus]       = useState("loading");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [sortOrder, setSortOrder] = useState("rank");
+  const [sortOrder,    setSortOrder]    = useState("rank");
+  const [isLoggedIn,   setIsLoggedIn]   = useState(false);
 
   useEffect(() => {
     async function loadCollection() {
@@ -61,8 +197,9 @@ function CollectionDetailPage() {
         try {
           const logData = await getProgressLogs();
           setLogs(Array.isArray(logData) ? logData : logData.results || []);
+          setIsLoggedIn(true);
         } catch {
-          // not logged in — show collection without personal progress
+          setIsLoggedIn(false);
         }
         setStatus("success");
       } catch (error) {
@@ -75,7 +212,6 @@ function CollectionDetailPage() {
 
   const collection = collections.find((item) => item.slug === slug);
 
-  // Completion count per mountain id (completed logs only)
   const completionCountById = useMemo(() => {
     return logs.reduce((acc, log) => {
       if (log.status === "completed") {
@@ -99,7 +235,6 @@ function CollectionDetailPage() {
     if (sortOrder === "name") {
       return sorted.sort((a, b) => a.name.localeCompare(b.name));
     }
-    // default: rank
     return sorted.sort((a, b) => {
       const rankA = Number(getCollectionRank(a, slug)) || 9999;
       const rankB = Number(getCollectionRank(b, slug)) || 9999;
@@ -109,18 +244,16 @@ function CollectionDetailPage() {
 
   const filteredMountains = useMemo(() => {
     if (statusFilter === "all") return orderedMountains;
-    return orderedMountains.filter(
-      (m) => getMountainLogStatus(m, logs) === statusFilter
-    );
+    return orderedMountains.filter((m) => getMountainLogStatus(m, logs) === statusFilter);
   }, [orderedMountains, logs, statusFilter]);
 
   const stats = useMemo(() => {
     const completedIds = new Set(logs.filter((l) => l.status === "completed").map((l) => l.mountain));
-    const plannedIds = new Set(logs.filter((l) => l.status === "planned").map((l) => l.mountain));
-    const completed = mountains.filter((m) => completedIds.has(m.id)).length;
-    const planned = mountains.filter((m) => plannedIds.has(m.id)).length;
-    const total = collection?.expected_total || mountains.length || 0;
-    const percent = total ? Math.round((completed / total) * 100) : 0;
+    const plannedIds   = new Set(logs.filter((l) => l.status === "planned").map((l) => l.mountain));
+    const completed    = mountains.filter((m) => completedIds.has(m.id)).length;
+    const planned      = mountains.filter((m) => plannedIds.has(m.id)).length;
+    const total        = collection?.expected_total || mountains.length || 0;
+    const percent      = total ? Math.round((completed / total) * 100) : 0;
     return { completed, planned, total, percent };
   }, [collection, logs, mountains]);
 
@@ -225,7 +358,7 @@ function CollectionDetailPage() {
             </article>
           </div>
 
-          {/* Toolbar — status filter + sort */}
+          {/* Toolbar */}
           <div className="collection-list-toolbar">
             <p className="collection-list-count">
               {statusFilter === "all"
@@ -266,9 +399,9 @@ function CollectionDetailPage() {
               <h2>No mountains match this filter</h2>
               <p>
                 {statusFilter === "completed" && "You haven't completed any mountains in this collection yet."}
-                {statusFilter === "planned" && "You haven't planned any mountains in this collection yet."}
+                {statusFilter === "planned"   && "You haven't planned any mountains in this collection yet."}
                 {statusFilter === "not_started" && "All mountains in this collection have been logged."}
-                {statusFilter === "all" && "No mountains found in this collection."}
+                {statusFilter === "all"       && "No mountains found in this collection."}
               </p>
               {statusFilter !== "all" && (
                 <button className="button-secondary" onClick={() => setStatusFilter("all")}>
@@ -279,8 +412,8 @@ function CollectionDetailPage() {
           ) : (
             <div className="collection-mountain-list">
               {filteredMountains.map((mountain) => {
-                const mountainStatus = getMountainLogStatus(mountain, logs);
-                const rank = getCollectionRank(mountain, slug);
+                const mountainStatus  = getMountainLogStatus(mountain, logs);
+                const rank            = getCollectionRank(mountain, slug);
                 const completionCount = completionCountById[mountain.id] || 0;
                 return (
                   <Link
@@ -291,11 +424,9 @@ function CollectionDetailPage() {
                     <span className={`collection-rank ${getRankStyle(rank)}`}>{rank}</span>
                     <strong>{mountain.name}</strong>
                     <small>{mountain.height_m}m</small>
-                    {/* Completion count badge — only shown when summit has been completed */}
                     {completionCount > 0 && (
                       <span className="collection-completion-count" title={`Summited ${completionCount} ${completionCount === 1 ? "time" : "times"}`}>
-                        <TbRepeat size={11} strokeWidth={2} />
-                        ×{completionCount}
+                        <TbRepeat size={11} strokeWidth={2} />×{completionCount}
                       </span>
                     )}
                     <em className={`collection-status collection-status--${mountainStatus}`}>
@@ -306,6 +437,13 @@ function CollectionDetailPage() {
               })}
             </div>
           )}
+
+          {/* Personal notes — logged-in users only */}
+          <CollectionNotes
+            collectionId={collection.id}
+            collectionSlug={collection.slug}
+            isLoggedIn={isLoggedIn}
+          />
         </div>
       </section>
     </main>

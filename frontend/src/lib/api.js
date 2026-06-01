@@ -206,3 +206,36 @@ export async function deleteRouteLog(id) {
   }
   return response.json().catch(() => ({ detail: "Deleted." }));
 }
+
+// ── Collection notes ─────────────────────────────────────────────────────────
+
+export function getCollectionNote(collectionId) {
+  return request(`/progress/collection-notes/?collection=${collectionId}`);
+}
+
+export async function saveCollectionNote(collectionId, collectionSlug, body) {
+  const csrfToken = await getCsrfToken();
+  return request("/progress/collection-notes/", {
+    method: "POST",
+    headers: { "X-CSRFToken": csrfToken },
+    body: JSON.stringify({
+      collection_id_ref: collectionId,
+      collection_slug:   collectionSlug,
+      body,
+    }),
+  });
+}
+
+export async function deleteCollectionNote(noteId) {
+  const csrfToken = await getCsrfToken();
+  const response = await fetch(`${API_BASE}/progress/collection-notes/${noteId}/`, {
+    method: "DELETE",
+    credentials: "include",
+    headers: { "X-CSRFToken": csrfToken },
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    throw new Error(data?.detail || "Delete failed.");
+  }
+  return true;
+}
