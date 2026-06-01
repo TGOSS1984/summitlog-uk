@@ -165,8 +165,11 @@ export async function createRouteLog(payload) {
   });
 }
 
-export function getRouteLogs() {
-  return request("/progress/routes/list/");
+export function getRouteLogs(status = null) {
+  const url = status
+    ? `/progress/routes/list/?status=${status}`
+    : "/progress/routes/list/";
+  return request(url);
 }
 
 /** Fetch a single route log by ID (for edit form). */

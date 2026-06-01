@@ -3,8 +3,9 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   TbMountain, TbCalendar, TbRoute, TbWalk,
   TbStairs, TbRepeat, TbEdit, TbTrash, TbX,
+  TbFlag, TbChevronRight, TbCloud,
 } from "react-icons/tb";
-import { getProgressLogs, getCollections, deleteRouteLog, deleteProgressLog } from "../lib/api";
+import { getProgressLogs, getCollections, getRouteLogs, deleteRouteLog, deleteProgressLog } from "../lib/api";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
 
 function formatDate(d) {
@@ -12,13 +13,87 @@ function formatDate(d) {
   return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 }
 
+function formatDateShort(d) {
+  if (!d) return null;
+  return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
 function formatMonth(d) {
   if (!d) return null;
   return new Date(d).toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 }
 
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const today  = new Date(); today.setHours(0, 0, 0, 0);
+  const target = new Date(dateStr);
+  const diff   = Math.round((target - today) / 86400000);
+  if (diff < 0)   return "Overdue";
+  if (diff === 0) return "Today!";
+  if (diff === 1) return "Tomorrow";
+  if (diff < 7)   return `${diff} days`;
+  if (diff < 14)  return "Next week";
+  if (diff < 30)  return `${Math.round(diff / 7)} weeks`;
+  return `${Math.round(diff / 30)} months`;
+}
+
 const STATUS_LABELS = { completed: "Completed", planned: "Planned", not_started: "Not started" };
 const SEASON_LABELS = { summer: "☀️ Summer", winter: "❄️ Winter", spring: "🌸 Spring", autumn: "🍂 Autumn" };
+
+// ── Historical weather chip ──────────────────────────────────────────────────
+// Fetches Open-Meteo archive for the specific date of the ascent.
+// Renders nothing if no coordinates or date, or if fetch fails.
+
+function weatherEmojiFromCode(code) {
+  if (code === 0 || code === 1) return "☀️";
+  if (code === 2 || code === 3) return "⛅";
+  if (code === 45 || code === 48) return "🌫️";
+  if (code >= 51 && code <= 67) return "🌧️";
+  if (code >= 71 && code <= 77) return "🌨️";
+  if (code >= 80 && code <= 82) return "🌦️";
+  if (code >= 85 && code <= 86) return "❄️";
+  if (code >= 95) return "⛈️";
+  return "🌤️";
+}
+
+function HistoricalWeatherChip({ lat, lon, date }) {
+  const [data,   setData]   = useState(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!lat || !lon || !date) { setLoaded(true); return; }
+    // Only fetch for dates in the past (archive API doesn't serve future dates)
+    if (new Date(date) >= new Date()) { setLoaded(true); return; }
+
+    fetch(
+      `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}` +
+      `&start_date=${date}&end_date=${date}` +
+      `&daily=weathercode,temperature_2m_max,temperature_2m_min&timezone=Europe%2FLondon`
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        if (json?.daily?.weathercode?.[0] != null) {
+          setData({
+            code:    json.daily.weathercode[0],
+            maxTemp: Math.round(json.daily.temperature_2m_max[0]),
+            minTemp: Math.round(json.daily.temperature_2m_min[0]),
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true));
+  }, [lat, lon, date]);
+
+  if (!loaded || !data) return null;
+
+  return (
+    <span className="journal-weather-chip" title={`Weather on ${date}`}>
+      {weatherEmojiFromCode(data.code)} {data.maxTemp}°/{data.minTemp}°
+    </span>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 
 function JournalEntrySkeleton() {
   return (
@@ -35,6 +110,9 @@ function JournalEntrySkeleton() {
 
 function JournalEntry({ log, completionCount, onDelete }) {
   const mountain = log.mountain_detail;
+  const lat = mountain?.latitude;
+  const lon = mountain?.longitude;
+
   return (
     <article className="journal-entry">
       <div className="journal-entry__header">
@@ -55,6 +133,10 @@ function JournalEntry({ log, completionCount, onDelete }) {
           {mountain?.region?.name && <span className="journal-entry__region">{mountain.region.name}</span>}
           {log.season && <span className="journal-entry__season">{SEASON_LABELS[log.season] || log.season}</span>}
           {mountain?.height_m && <span className="journal-entry__height">{mountain.height_m}m</span>}
+          {/* Historical weather chip — only for completed logs with a date */}
+          {log.status === "completed" && log.completed_date && (
+            <HistoricalWeatherChip lat={lat} lon={lon} date={log.completed_date} />
+          )}
         </div>
       </div>
 
@@ -70,24 +152,19 @@ function JournalEntry({ log, completionCount, onDelete }) {
       {log.notes && <p className="journal-entry__notes">{log.notes}</p>}
       {log.uploaded_image && <img className="journal-entry__image" src={log.uploaded_image} alt={`${mountain?.name} summit photo`} />}
 
-      {/* Edit / delete actions */}
       <div className="journal-entry__actions">
         <Link
           to={`/mountains/${mountain?.slug}`}
           className="journal-entry__action-btn journal-entry__action-btn--edit"
-          title="Edit this log on the mountain page"
         >
-          <TbEdit size={13} strokeWidth={2} />
-          Edit
+          <TbEdit size={13} strokeWidth={2} />Edit
         </Link>
         <button
           type="button"
           className="journal-entry__action-btn journal-entry__action-btn--delete"
           onClick={() => onDelete(log)}
-          title="Delete this log"
         >
-          <TbTrash size={13} strokeWidth={2} />
-          Delete
+          <TbTrash size={13} strokeWidth={2} />Delete
         </button>
       </div>
     </article>
@@ -96,27 +173,32 @@ function JournalEntry({ log, completionCount, onDelete }) {
 
 // ── Route group entry ────────────────────────────────────────────────────────
 
-function RouteEntry({ routeId, routeName, routeDate, logs, completionCountById, onDeleteRoute }) {
+function RouteEntry({ routeId, routeName, routeDate, routeStatus, logs, completionCountById, onDeleteRoute }) {
   const [expanded, setExpanded] = useState(true);
   const primaryLog = logs.find((l) => l.is_route_primary) || logs[0];
+  const isPlanned  = routeStatus === "planned";
 
   return (
-    <article className="journal-route-entry">
+    <article className={`journal-route-entry${isPlanned ? " journal-route-entry--planned" : ""}`}>
       <div className="journal-route-entry__header">
         <div className="journal-route-entry__title-row">
-          <div className="journal-route-entry__badge">
-            <TbRoute size={13} strokeWidth={2} />
-            Route
+          <div className={`journal-route-entry__badge${isPlanned ? " journal-route-entry__badge--planned" : ""}`}>
+            {isPlanned ? <TbFlag size={13} strokeWidth={2} /> : <TbRoute size={13} strokeWidth={2} />}
+            {isPlanned ? "Planned route" : "Route"}
           </div>
           <strong className="journal-route-entry__name">{routeName}</strong>
-          <span className="journal-route-entry__date">{formatDate(routeDate)}</span>
+          {routeDate && (
+            <span className="journal-route-entry__date">
+              {isPlanned ? daysUntil(routeDate) : formatDate(routeDate)}
+            </span>
+          )}
           <span className="journal-route-entry__count">{logs.length} summits</span>
         </div>
 
         {(primaryLog?.hike_distance_km || primaryLog?.hike_duration_hours || primaryLog?.steps) && (
           <div className="journal-entry__stats" style={{ marginTop: "0.5rem" }}>
-            {primaryLog.hike_distance_km && <span><TbRoute size={14} strokeWidth={1.8} />{Number(primaryLog.hike_distance_km).toFixed(1)}km total</span>}
-            {primaryLog.hike_duration_hours && <span><TbCalendar size={14} strokeWidth={1.8} />{Number(primaryLog.hike_duration_hours)}hrs total</span>}
+            {primaryLog.hike_distance_km && <span><TbRoute size={14} strokeWidth={1.8} />{Number(primaryLog.hike_distance_km).toFixed(1)}km{isPlanned ? " est." : " total"}</span>}
+            {primaryLog.hike_duration_hours && <span><TbCalendar size={14} strokeWidth={1.8} />{Number(primaryLog.hike_duration_hours)}hrs{isPlanned ? " est." : " total"}</span>}
             {primaryLog.steps && <span><TbWalk size={14} strokeWidth={1.8} />{Number(primaryLog.steps).toLocaleString()} steps</span>}
             {primaryLog.flights_climbed && <span><TbStairs size={14} strokeWidth={1.8} />{primaryLog.flights_climbed} flights</span>}
           </div>
@@ -159,28 +241,69 @@ function RouteEntry({ routeId, routeName, routeDate, logs, completionCountById, 
   );
 }
 
+// ── Upcoming planned routes strip ────────────────────────────────────────────
+
+function UpcomingRoutesStrip({ routes }) {
+  if (!routes || routes.length === 0) return null;
+
+  return (
+    <div className="journal-upcoming-routes">
+      <div className="journal-upcoming-routes__header">
+        <p className="section-kicker"><span className="kicker-line" />Coming up</p>
+        <h2>Planned routes</h2>
+        <p>Multi-mountain routes you've saved as planned, sorted by target date.</p>
+      </div>
+      <div className="journal-upcoming-routes__list">
+        {routes.map((route) => {
+          const until     = daysUntil(route.completed_date);
+          const daysLeft  = route.completed_date
+            ? Math.round((new Date(route.completed_date) - new Date()) / 86400000)
+            : null;
+          const isImminent = daysLeft !== null && daysLeft <= 7;
+          return (
+            <Link
+              to={`/log-route/${route.id}/edit`}
+              className={`journal-upcoming-route-item${isImminent ? " journal-upcoming-route-item--imminent" : ""}`}
+              key={route.id}
+            >
+              <div className="journal-upcoming-route-item__left">
+                <span className="journal-upcoming-route-item__countdown">{until || "No date"}</span>
+                {route.completed_date && (
+                  <span className="journal-upcoming-route-item__date">{formatDateShort(route.completed_date)}</span>
+                )}
+              </div>
+              <div className="journal-upcoming-route-item__main">
+                <strong>{route.name}</strong>
+                <span>{route.mountains_count} summit{route.mountains_count !== 1 ? "s" : ""}</span>
+              </div>
+              <TbChevronRight size={15} strokeWidth={2} className="journal-upcoming-route-item__arrow" />
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Main page ────────────────────────────────────────────────────────────────
 
 function JournalPage() {
   const navigate = useNavigate();
-  const [logs, setLogs] = useState([]);
-  const [collections, setCollections] = useState([]);
-  const [status, setStatus] = useState("loading");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterSeason, setFilterSeason] = useState("all");
+  const [logs,            setLogs]            = useState([]);
+  const [collections,     setCollections]     = useState([]);
+  const [plannedRoutes,   setPlannedRoutes]   = useState([]);
+  const [status,          setStatus]          = useState("loading");
+  const [filterStatus,    setFilterStatus]    = useState("all");
+  const [filterSeason,    setFilterSeason]    = useState("all");
   const [filterCollection, setFilterCollection] = useState("all");
-  const [filterDateFrom, setFilterDateFrom] = useState("");
-  const [filterDateTo, setFilterDateTo] = useState("");
-  const [search, setSearch] = useState("");
+  const [filterDateFrom,  setFilterDateFrom]  = useState("");
+  const [filterDateTo,    setFilterDateTo]    = useState("");
+  const [search,          setSearch]          = useState("");
   const [deleteRouteTarget, setDeleteRouteTarget] = useState(null);
-  const [deleteLogTarget, setDeleteLogTarget] = useState(null); // individual log
+  const [deleteLogTarget,   setDeleteLogTarget]   = useState(null);
 
   const hasDateFilter = filterDateFrom || filterDateTo;
-
-  function clearDateFilter() {
-    setFilterDateFrom("");
-    setFilterDateTo("");
-  }
+  function clearDateFilter() { setFilterDateFrom(""); setFilterDateTo(""); }
 
   useEffect(() => {
     async function load() {
@@ -200,9 +323,24 @@ function JournalPage() {
       }
     }
     load();
-  }, [navigate]);
 
-  // ── Route delete ────────────────────────────────────────────────────────────
+    // Planned routes — non-blocking, fail silently
+    async function loadPlannedRoutes() {
+      try {
+        const data = await getRouteLogs("planned");
+        const list = Array.isArray(data) ? data : [];
+        // Sort soonest first, no-date routes last
+        list.sort((a, b) => {
+          if (!a.completed_date && !b.completed_date) return 0;
+          if (!a.completed_date) return 1;
+          if (!b.completed_date) return -1;
+          return new Date(a.completed_date) - new Date(b.completed_date);
+        });
+        setPlannedRoutes(list);
+      } catch { /* not a fatal error */ }
+    }
+    loadPlannedRoutes();
+  }, [navigate]);
 
   function handleDeleteRoute(routeId, routeName, count) {
     setDeleteRouteTarget({ id: routeId, name: routeName, count });
@@ -213,6 +351,7 @@ function JournalPage() {
     try {
       await deleteRouteLog(deleteRouteTarget.id);
       setLogs((prev) => prev.filter((l) => l.route_group !== deleteRouteTarget.id));
+      setPlannedRoutes((prev) => prev.filter((r) => r.id !== deleteRouteTarget.id));
       setDeleteRouteTarget(null);
     } catch (err) {
       alert(err.message || "Unable to delete route.");
@@ -220,11 +359,7 @@ function JournalPage() {
     }
   }
 
-  // ── Individual log delete ────────────────────────────────────────────────────
-
-  function handleDeleteLog(log) {
-    setDeleteLogTarget(log);
-  }
+  function handleDeleteLog(log) { setDeleteLogTarget(log); }
 
   async function handleDeleteLogConfirmed() {
     if (!deleteLogTarget) return;
@@ -237,8 +372,6 @@ function JournalPage() {
       setDeleteLogTarget(null);
     }
   }
-
-  // ── Computed values ──────────────────────────────────────────────────────────
 
   const completionCountById = useMemo(() => {
     return logs.reduce((acc, log) => {
@@ -267,9 +400,9 @@ function JournalPage() {
     }
     if (search) {
       const q = search.toLowerCase();
-      const name = log.mountain_detail?.name?.toLowerCase() || "";
-      const notes = log.notes?.toLowerCase() || "";
-      const route = log.route_taken?.toLowerCase() || "";
+      const name      = log.mountain_detail?.name?.toLowerCase() || "";
+      const notes     = log.notes?.toLowerCase() || "";
+      const route     = log.route_taken?.toLowerCase() || "";
       const routeName = log.route_name?.toLowerCase() || "";
       if (!name.includes(q) && !notes.includes(q) && !route.includes(q) && !routeName.includes(q)) return false;
     }
@@ -290,10 +423,11 @@ function JournalPage() {
       if (log.route_group) {
         if (!routeGroups[log.route_group]) {
           routeGroups[log.route_group] = {
-            routeId: log.route_group,
-            routeName: log.route_name || "Unnamed route",
-            routeDate: log.completed_date,
-            logs: [],
+            routeId:     log.route_group,
+            routeName:   log.route_name || "Unnamed route",
+            routeDate:   log.completed_date,
+            routeStatus: "completed", // logs in the timeline are completed
+            logs:        [],
           };
         }
         routeGroups[log.route_group].logs.push(log);
@@ -301,8 +435,8 @@ function JournalPage() {
         individualLogs.push(log);
       }
     }
-    const routeEntries = Object.values(routeGroups).map((g) => ({ type: "route", date: g.routeDate, data: g }));
-    const individualEntries = individualLogs.map((l) => ({ type: "individual", date: l.completed_date || l.updated_at || l.created_at, data: l }));
+    const routeEntries     = Object.values(routeGroups).map((g) => ({ type: "route",      date: g.routeDate,                              data: g }));
+    const individualEntries = individualLogs.map((l)             => ({ type: "individual", date: l.completed_date || l.updated_at || l.created_at, data: l }));
     return [...routeEntries, ...individualEntries].sort((a, b) => new Date(b.date) - new Date(a.date));
   }
 
@@ -310,13 +444,11 @@ function JournalPage() {
   const plannedCount      = logs.filter((l) => l.status === "planned").length;
   const repeatSummitCount = Object.values(completionCountById).filter((c) => c > 1).length;
   const routeCount        = new Set(logs.filter((l) => l.route_group).map((l) => l.route_group)).size;
-
   const deleteLogMountainName = deleteLogTarget?.mountain_detail?.name || "this log";
 
   return (
     <main className="journal-page">
 
-      {/* Route delete confirm */}
       {deleteRouteTarget && (
         <ConfirmModal
           title="Delete route"
@@ -329,7 +461,6 @@ function JournalPage() {
         />
       )}
 
-      {/* Individual log delete confirm */}
       {deleteLogTarget && (
         <ConfirmModal
           title="Delete ascent log"
@@ -395,6 +526,9 @@ function JournalPage() {
                   </div>
                 )}
               </div>
+
+              {/* Upcoming planned routes */}
+              <UpcomingRoutesStrip routes={plannedRoutes} />
 
               <div className="journal-filters">
                 <input
@@ -488,6 +622,7 @@ function JournalPage() {
                               routeId={entry.data.routeId}
                               routeName={entry.data.routeName}
                               routeDate={entry.data.routeDate}
+                              routeStatus={entry.data.routeStatus}
                               logs={entry.data.logs}
                               completionCountById={completionCountById}
                               onDeleteRoute={handleDeleteRoute}
@@ -515,4 +650,3 @@ function JournalPage() {
 }
 
 export default JournalPage;
-

@@ -6844,3 +6844,118 @@ a.dashboard-region-card:hover {
 
 .route-planned-hint p { margin: 0; }
 .route-planned-hint strong { color: var(--color-accent); }
+
+/* ── Historical weather chip ── */
+.journal-weather-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-soft);
+  background: rgba(4, 57, 59, 0.06);
+  border: 1px solid var(--border-dark);
+  border-radius: 999px;
+  padding: 0.15rem 0.55rem;
+}
+
+/* ── Upcoming planned routes strip ── */
+.journal-upcoming-routes {
+  margin-bottom: var(--space-xxl);
+}
+
+.journal-upcoming-routes__header { margin-bottom: var(--space-lg); }
+.journal-upcoming-routes__header h2 { margin-top: var(--space-sm); }
+.journal-upcoming-routes__header p { color: var(--color-text-soft); margin-top: var(--space-sm); }
+
+.journal-upcoming-routes__list { display: grid; gap: var(--space-sm); }
+
+.journal-upcoming-route-item {
+  display: grid;
+  grid-template-columns: 90px 1fr auto;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  background: #ffffff;
+  border: 1px solid var(--border-dark);
+  border-left: 4px solid var(--color-accent);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.journal-upcoming-route-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-large);
+}
+
+.journal-upcoming-route-item--imminent {
+  background: rgba(208, 170, 98, 0.04);
+}
+
+.journal-upcoming-route-item__left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.journal-upcoming-route-item__countdown {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-accent);
+  line-height: 1;
+}
+
+.journal-upcoming-route-item__date {
+  font-size: 0.68rem;
+  color: var(--color-text-soft);
+  font-weight: 600;
+}
+
+.journal-upcoming-route-item__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.journal-upcoming-route-item__main strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--color-teal-deep);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.journal-upcoming-route-item__main span {
+  font-size: 0.75rem;
+  color: var(--color-text-soft);
+  font-weight: 600;
+}
+
+.journal-upcoming-route-item__arrow {
+  color: rgba(4, 57, 59, 0.25);
+  flex-shrink: 0;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.journal-upcoming-route-item:hover .journal-upcoming-route-item__arrow {
+  color: var(--color-teal);
+  transform: translateX(3px);
+}
+
+/* ── Planned route entry in journal timeline ── */
+.journal-route-entry--planned {
+  border-left-color: var(--color-accent);
+  background: rgba(208, 170, 98, 0.03);
+}
+
+.journal-route-entry__badge--planned {
+  background: rgba(208, 170, 98, 0.15);
+  color: var(--color-accent);
+  border-color: rgba(208, 170, 98, 0.3);
+}
