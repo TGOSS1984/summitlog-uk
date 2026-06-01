@@ -6785,3 +6785,62 @@ a.dashboard-region-card:hover {
   color: var(--color-text-soft);
   font-size: 0.88rem;
 }
+
+/* ── Route status toggle (Planned / Completed) ── */
+.route-status-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: var(--space-sm);
+}
+
+.route-status-toggle__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(248, 250, 252, 0.6);
+  padding: 0.5rem 1rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.route-status-toggle__btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--color-text-light);
+}
+
+.route-status-toggle__btn--active {
+  background: rgba(4, 57, 59, 0.5);
+  border-color: var(--color-teal);
+  color: var(--color-text-light);
+}
+
+.route-status-toggle__btn--active-planned {
+  background: rgba(208, 170, 98, 0.14);
+  border-color: rgba(208, 170, 98, 0.5);
+  color: var(--color-accent);
+}
+
+/* ── Planned route hint panel ── */
+.route-planned-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  background: rgba(208, 170, 98, 0.08);
+  border: 1px solid rgba(208, 170, 98, 0.2);
+  border-radius: var(--radius-md);
+  color: rgba(208, 170, 98, 0.85);
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.route-planned-hint p { margin: 0; }
+.route-planned-hint strong { color: var(--color-accent); }
