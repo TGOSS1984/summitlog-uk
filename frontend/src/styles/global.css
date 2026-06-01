@@ -5952,3 +5952,48 @@ a.dashboard-region-card:hover {
   border-left: 1px solid rgba(4, 57, 59, 0.2);
   padding-left: 0.5rem;
 }
+
+/* Journal entry action buttons (edit / delete) */
+.journal-entry__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-dark);
+}
+
+.journal-entry__action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  appearance: none;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.journal-entry__action-btn--edit {
+  border: 1px solid rgba(4, 57, 59, 0.2);
+  background: transparent;
+  color: var(--color-teal-deep);
+}
+
+.journal-entry__action-btn--edit:hover {
+  background: rgba(4, 57, 59, 0.07);
+}
+
+.journal-entry__action-btn--delete {
+  border: 1px solid rgba(163, 45, 45, 0.2);
+  background: transparent;
+  color: #a32d2d;
+}
+
+.journal-entry__action-btn--delete:hover {
+  background: rgba(163, 45, 45, 0.08);
+}

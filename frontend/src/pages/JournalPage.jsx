@@ -4,7 +4,7 @@ import {
   TbMountain, TbCalendar, TbRoute, TbWalk,
   TbStairs, TbRepeat, TbEdit, TbTrash, TbX,
 } from "react-icons/tb";
-import { getProgressLogs, getCollections, deleteRouteLog } from "../lib/api";
+import { getProgressLogs, getCollections, deleteRouteLog, deleteProgressLog } from "../lib/api";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
 
 function formatDate(d) {
@@ -33,7 +33,7 @@ function JournalEntrySkeleton() {
 
 // ── Individual mountain log entry ────────────────────────────────────────────
 
-function JournalEntry({ log, completionCount }) {
+function JournalEntry({ log, completionCount, onDelete }) {
   const mountain = log.mountain_detail;
   return (
     <article className="journal-entry">
@@ -57,6 +57,7 @@ function JournalEntry({ log, completionCount }) {
           {mountain?.height_m && <span className="journal-entry__height">{mountain.height_m}m</span>}
         </div>
       </div>
+
       {(log.hike_distance_km || log.hike_duration_hours || log.steps || log.flights_climbed) && (
         <div className="journal-entry__stats">
           {log.hike_distance_km && <span><TbRoute size={14} strokeWidth={1.8} />{Number(log.hike_distance_km).toFixed(1)}km</span>}
@@ -68,6 +69,27 @@ function JournalEntry({ log, completionCount }) {
       {log.route_taken && <p className="journal-entry__route"><TbRoute size={13} strokeWidth={1.8} />{log.route_taken}</p>}
       {log.notes && <p className="journal-entry__notes">{log.notes}</p>}
       {log.uploaded_image && <img className="journal-entry__image" src={log.uploaded_image} alt={`${mountain?.name} summit photo`} />}
+
+      {/* Edit / delete actions */}
+      <div className="journal-entry__actions">
+        <Link
+          to={`/mountains/${mountain?.slug}`}
+          className="journal-entry__action-btn journal-entry__action-btn--edit"
+          title="Edit this log on the mountain page"
+        >
+          <TbEdit size={13} strokeWidth={2} />
+          Edit
+        </Link>
+        <button
+          type="button"
+          className="journal-entry__action-btn journal-entry__action-btn--delete"
+          onClick={() => onDelete(log)}
+          title="Delete this log"
+        >
+          <TbTrash size={13} strokeWidth={2} />
+          Delete
+        </button>
+      </div>
     </article>
   );
 }
@@ -150,7 +172,8 @@ function JournalPage() {
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   const [search, setSearch] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteRouteTarget, setDeleteRouteTarget] = useState(null);
+  const [deleteLogTarget, setDeleteLogTarget] = useState(null); // individual log
 
   const hasDateFilter = filterDateFrom || filterDateTo;
 
@@ -179,21 +202,43 @@ function JournalPage() {
     load();
   }, [navigate]);
 
-  async function handleDeleteRoute(routeId, routeName, count) {
-    setDeleteTarget({ id: routeId, name: routeName, count });
+  // ── Route delete ────────────────────────────────────────────────────────────
+
+  function handleDeleteRoute(routeId, routeName, count) {
+    setDeleteRouteTarget({ id: routeId, name: routeName, count });
   }
 
-  async function handleDeleteConfirmed() {
-    if (!deleteTarget) return;
+  async function handleDeleteRouteConfirmed() {
+    if (!deleteRouteTarget) return;
     try {
-      await deleteRouteLog(deleteTarget.id);
-      setLogs((prev) => prev.filter((l) => l.route_group !== deleteTarget.id));
-      setDeleteTarget(null);
+      await deleteRouteLog(deleteRouteTarget.id);
+      setLogs((prev) => prev.filter((l) => l.route_group !== deleteRouteTarget.id));
+      setDeleteRouteTarget(null);
     } catch (err) {
       alert(err.message || "Unable to delete route.");
-      setDeleteTarget(null);
+      setDeleteRouteTarget(null);
     }
   }
+
+  // ── Individual log delete ────────────────────────────────────────────────────
+
+  function handleDeleteLog(log) {
+    setDeleteLogTarget(log);
+  }
+
+  async function handleDeleteLogConfirmed() {
+    if (!deleteLogTarget) return;
+    try {
+      await deleteProgressLog(deleteLogTarget.id);
+      setLogs((prev) => prev.filter((l) => l.id !== deleteLogTarget.id));
+      setDeleteLogTarget(null);
+    } catch (err) {
+      alert(err.message || "Unable to delete log.");
+      setDeleteLogTarget(null);
+    }
+  }
+
+  // ── Computed values ──────────────────────────────────────────────────────────
 
   const completionCountById = useMemo(() => {
     return logs.reduce((acc, log) => {
@@ -214,7 +259,6 @@ function JournalPage() {
         String(m?.collection?.id) === filterCollection;
       if (!inCollection) return false;
     }
-    // Date range filter — uses completed_date, falls back to updated_at
     if (filterDateFrom || filterDateTo) {
       const logDate = log.completed_date || log.updated_at?.slice(0, 10) || null;
       if (!logDate) return false;
@@ -262,22 +306,39 @@ function JournalPage() {
     return [...routeEntries, ...individualEntries].sort((a, b) => new Date(b.date) - new Date(a.date));
   }
 
-  const completedCount = logs.filter((l) => l.status === "completed").length;
-  const plannedCount   = logs.filter((l) => l.status === "planned").length;
+  const completedCount    = logs.filter((l) => l.status === "completed").length;
+  const plannedCount      = logs.filter((l) => l.status === "planned").length;
   const repeatSummitCount = Object.values(completionCountById).filter((c) => c > 1).length;
-  const routeCount = new Set(logs.filter((l) => l.route_group).map((l) => l.route_group)).size;
+  const routeCount        = new Set(logs.filter((l) => l.route_group).map((l) => l.route_group)).size;
+
+  const deleteLogMountainName = deleteLogTarget?.mountain_detail?.name || "this log";
 
   return (
     <main className="journal-page">
-      {deleteTarget && (
+
+      {/* Route delete confirm */}
+      {deleteRouteTarget && (
         <ConfirmModal
           title="Delete route"
-          message={`Delete "${deleteTarget.name}" and all ${deleteTarget.count} linked summit logs? This cannot be undone.`}
+          message={`Delete "${deleteRouteTarget.name}" and all ${deleteRouteTarget.count} linked summit logs? This cannot be undone.`}
           confirmLabel="Delete route"
           cancelLabel="Keep it"
           danger
-          onConfirm={handleDeleteConfirmed}
-          onCancel={() => setDeleteTarget(null)}
+          onConfirm={handleDeleteRouteConfirmed}
+          onCancel={() => setDeleteRouteTarget(null)}
+        />
+      )}
+
+      {/* Individual log delete confirm */}
+      {deleteLogTarget && (
+        <ConfirmModal
+          title="Delete ascent log"
+          message={`Delete your log for ${deleteLogMountainName}? This cannot be undone.`}
+          confirmLabel="Delete log"
+          cancelLabel="Keep it"
+          danger
+          onConfirm={handleDeleteLogConfirmed}
+          onCancel={() => setDeleteLogTarget(null)}
         />
       )}
 
@@ -336,7 +397,6 @@ function JournalPage() {
               </div>
 
               <div className="journal-filters">
-                {/* Search */}
                 <input
                   type="text"
                   placeholder="Search mountains, notes, routes..."
@@ -344,8 +404,6 @@ function JournalPage() {
                   onChange={(e) => setSearch(e.target.value)}
                   className="journal-search"
                 />
-
-                {/* Dropdowns */}
                 <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
                   <option value="all">All statuses</option>
                   <option value="completed">Completed</option>
@@ -363,45 +421,24 @@ function JournalPage() {
                   <option value="all">All collections</option>
                   {collections.map((c) => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
                 </select>
-
-                {/* Date range row */}
                 <div className="journal-date-range">
                   <label className="journal-date-range__label">
                     <span>From</span>
-                    <input
-                      type="date"
-                      value={filterDateFrom}
-                      onChange={(e) => setFilterDateFrom(e.target.value)}
-                      max={filterDateTo || undefined}
-                      className="journal-date-input"
-                    />
+                    <input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} max={filterDateTo || undefined} className="journal-date-input" />
                   </label>
                   <span className="journal-date-range__sep">—</span>
                   <label className="journal-date-range__label">
                     <span>To</span>
-                    <input
-                      type="date"
-                      value={filterDateTo}
-                      onChange={(e) => setFilterDateTo(e.target.value)}
-                      min={filterDateFrom || undefined}
-                      className="journal-date-input"
-                    />
+                    <input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} min={filterDateFrom || undefined} className="journal-date-input" />
                   </label>
                   {hasDateFilter && (
-                    <button
-                      type="button"
-                      className="journal-date-range__clear"
-                      onClick={clearDateFilter}
-                      title="Clear date filter"
-                    >
-                      <TbX size={13} strokeWidth={2.5} />
-                      Clear dates
+                    <button type="button" className="journal-date-range__clear" onClick={clearDateFilter}>
+                      <TbX size={13} strokeWidth={2.5} />Clear dates
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Active date range chip — visible confirmation of what's filtered */}
               {hasDateFilter && (
                 <div className="journal-date-active">
                   <TbCalendar size={13} strokeWidth={2} />
@@ -460,6 +497,7 @@ function JournalPage() {
                               key={entry.data.id}
                               log={entry.data}
                               completionCount={completionCountById[entry.data.mountain] || 0}
+                              onDelete={handleDeleteLog}
                             />
                           )
                         )}
@@ -477,3 +515,4 @@ function JournalPage() {
 }
 
 export default JournalPage;
+
