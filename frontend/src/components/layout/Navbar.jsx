@@ -202,6 +202,17 @@ function Navbar() {
               <TbFlag size={18} strokeWidth={1.5} />
               Home
             </NavLink>
+
+            {/* Log a route — promoted to top of drawer so it's above the fold on all phones */}
+            <NavLink
+              to="/log-route"
+              className="mobile-nav__link mobile-nav__link--action"
+              onClick={() => setMobileOpen(false)}
+            >
+              <TbRoute size={18} strokeWidth={1.5} />
+              Log a route
+            </NavLink>
+
             <NavLink to="/mountains" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
               <TbMountain size={18} strokeWidth={1.5} />
               Mountains
@@ -221,15 +232,6 @@ function Navbar() {
             <NavLink to="/gallery" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
               <TbPhoto size={18} strokeWidth={1.5} />
               Gallery
-            </NavLink>
-            {/* Log a route — visually highlighted in mobile drawer too */}
-            <NavLink
-              to="/log-route"
-              className="mobile-nav__link mobile-nav__link--action"
-              onClick={() => setMobileOpen(false)}
-            >
-              <TbRoute size={18} strokeWidth={1.5} />
-              Log a route
             </NavLink>
             <NavLink to="/account" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
               <TbUser size={18} strokeWidth={1.5} />
