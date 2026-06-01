@@ -55,6 +55,16 @@ class UserMountainLog(models.Model):
         ("autumn", "Autumn"),
     ]
 
+    CONDITIONS_CHOICES = [
+        ("clear", "Clear & sunny"),
+        ("good", "Good visibility"),
+        ("misty", "Misty / low cloud"),
+        ("rain", "Rain / wet"),
+        ("snow", "Snow / ice"),
+        ("winter", "Full winter conditions"),
+        ("storm", "Storm / poor conditions"),
+    ]
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -78,7 +88,6 @@ class UserMountainLog(models.Model):
     )
 
     # Stable UUID so all logs from one route session share an identifier
-    # even if the RouteLog is later deleted
     route_group_id_ref = models.UUIDField(
         null=True,
         blank=True,
@@ -102,6 +111,13 @@ class UserMountainLog(models.Model):
         max_length=10,
         choices=SEASON_CHOICES,
         blank=True,
+    )
+
+    conditions = models.CharField(
+        max_length=20,
+        choices=CONDITIONS_CHOICES,
+        blank=True,
+        help_text="Weather/visibility conditions on the day of the ascent.",
     )
 
     completed_date = models.DateField(

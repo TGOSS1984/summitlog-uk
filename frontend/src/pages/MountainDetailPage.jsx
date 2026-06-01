@@ -15,6 +15,7 @@ import { ConfirmModal } from "../components/ui/ConfirmModal";
 const emptyForm = {
   status: "not_started",
   season: "",
+  conditions: "",
   completed_date: "",
   route_taken: "",
   hike_distance_km: "",
@@ -25,20 +26,44 @@ const emptyForm = {
   uploaded_image: "",
 };
 
-function getCollectionNames(mountain) {
+// Conditions — emoji + label pairs for display
+const CONDITIONS_OPTIONS = [
+  { value: "clear",   label: "☀️ Clear & sunny" },
+  { value: "good",    label: "🌤️ Good visibility" },
+  { value: "misty",   label: "🌫️ Misty / low cloud" },
+  { value: "rain",    label: "🌧️ Rain / wet" },
+  { value: "snow",    label: "❄️ Snow / ice" },
+  { value: "winter",  label: "🏔️ Full winter conditions" },
+  { value: "storm",   label: "⛈️ Storm / poor conditions" },
+];
+
+// Map value → label for display in journal/history
+export const CONDITIONS_LABELS = Object.fromEntries(
+  CONDITIONS_OPTIONS.map((o) => [o.value, o.label])
+);
+
+function getCollectionMemberships(mountain) {
   if (mountain.collection_memberships?.length) {
     return mountain.collection_memberships
-      .map((membership) => membership.collection?.name)
-      .filter(Boolean)
-      .join(" / ");
+      .map((m) => ({ name: m.collection?.name, slug: m.collection?.slug }))
+      .filter((m) => m.name && m.slug);
   }
-  return mountain.collection?.name || "Unlisted";
+  if (mountain.collection?.name) {
+    return [{ name: mountain.collection.name, slug: mountain.collection.slug }];
+  }
+  return [];
+}
+
+function getCollectionNames(mountain) {
+  const memberships = getCollectionMemberships(mountain);
+  return memberships.map((m) => m.name).join(" / ") || "Unlisted";
 }
 
 function logToForm(log) {
   return {
     status: log.status || "not_started",
     season: log.season || "",
+    conditions: log.conditions || "",
     completed_date: log.completed_date || "",
     route_taken: log.route_taken || "",
     hike_distance_km: log.hike_distance_km || "",
@@ -262,6 +287,7 @@ function MountainDetailPage() {
         hike_duration_hours: form.hike_duration_hours || null,
         steps: form.steps || null,
         flights_climbed: form.flights_climbed || null,
+        conditions: form.conditions || "",
       };
       const savedLog = activeLogId
         ? await updateProgressLog(activeLogId, payload)
@@ -320,11 +346,9 @@ function MountainDetailPage() {
     spring: "🌸 Spring", autumn: "🍂 Autumn",
   };
 
-  // Compute counts from the local ascents array
   const completedAscents = ascents.filter((a) => a.status === "completed");
   const completedCount = completedAscents.length;
 
-  // Ascent history label — richer when user has multiple completed ascents
   function ascentHistoryLabel() {
     if (ascents.length === 0) return null;
     if (completedCount === 0) {
@@ -337,6 +361,12 @@ function MountainDetailPage() {
     }
     return `${ascents.length} ${ascents.length === 1 ? "ascent" : "ascents"} logged — summited ${completedCount} times`;
   }
+
+  // Dynamic date label — "Completed date" vs "Target date" based on status
+  const dateLabelText = form.status === "planned" ? "Target date" : "Completed date";
+
+  // Collection memberships for linked kicker
+  const collectionMemberships = getCollectionMemberships(mountain);
 
   return (
     <main>
@@ -354,23 +384,50 @@ function MountainDetailPage() {
         />
       )}
 
+      {/* Hero — collection names now link to their collection pages */}
       <section className="section section-dark mountain-detail-hero">
         <div className="container">
           <p className="section-kicker">
             <span className="kicker-line" />
-            {getCollectionNames(mountain)}
+            {collectionMemberships.length > 0 ? (
+              collectionMemberships.map((m, i) => (
+                <span key={m.slug}>
+                  {i > 0 && " / "}
+                  <Link
+                    to={`/collections/${m.slug}`}
+                    className="section-kicker__link"
+                  >
+                    {m.name}
+                  </Link>
+                </span>
+              ))
+            ) : (
+              "Unlisted"
+            )}
           </p>
           <h1>{mountain.name}</h1>
           <p>{mountain.summary}</p>
         </div>
       </section>
 
+      {/* Stat cards — Region now links to region page */}
       <section className="section section-light">
         <div className="container mountain-detail-grid">
           <div className="mountain-stat-card"><h3>Height</h3><strong>{mountain.height_m}m</strong></div>
           <div className="mountain-stat-card"><h3>Feet</h3><strong>{mountain.height_ft || "—"}</strong></div>
           <div className="mountain-stat-card"><h3>Prominence</h3><strong>{mountain.prominence_m || "—"}m</strong></div>
-          <div className="mountain-stat-card"><h3>Region</h3><strong>{mountain.region?.name}</strong></div>
+          <div className="mountain-stat-card">
+            <h3>Region</h3>
+            <strong>
+              {mountain.region?.slug ? (
+                <Link to={`/regions/${mountain.region.slug}`} className="stat-card__link">
+                  {mountain.region.name}
+                </Link>
+              ) : (
+                mountain.region?.name || "—"
+              )}
+            </strong>
+          </div>
         </div>
       </section>
 
@@ -430,28 +487,55 @@ function MountainDetailPage() {
                 </select>
               </label>
 
-              <label>
-                Season
-                <select name="season" value={form.season} onChange={handleChange}>
-                  <option value="">— Select season —</option>
-                  <option value="summer">Summer</option>
-                  <option value="winter">Winter</option>
-                  <option value="spring">Spring</option>
-                  <option value="autumn">Autumn</option>
-                </select>
-              </label>
+              <div className="tracking-form__row">
+                <label>
+                  Season
+                  <select name="season" value={form.season} onChange={handleChange}>
+                    <option value="">— Select season —</option>
+                    <option value="summer">Summer</option>
+                    <option value="winter">Winter</option>
+                    <option value="spring">Spring</option>
+                    <option value="autumn">Autumn</option>
+                  </select>
+                </label>
+
+                {/* Conditions — only shown for completed ascents */}
+                {form.status === "completed" && (
+                  <label>
+                    Conditions
+                    <select name="conditions" value={form.conditions} onChange={handleChange}>
+                      <option value="">— Select conditions —</option>
+                      {CONDITIONS_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </div>
 
               <label>
-                Completed date
+                {/* Dynamic label: "Target date" for planned, "Completed date" for completed */}
+                {dateLabelText}
                 {form.status === "completed" && !form.completed_date && (
                   <span className="field-hint field-hint--required">Required for completed ascents</span>
                 )}
-                <input type="date" name="completed_date" value={form.completed_date} onChange={handleChange} />
+                <input
+                  type="date"
+                  name="completed_date"
+                  value={form.completed_date}
+                  onChange={handleChange}
+                />
               </label>
 
               <label>
                 Route taken
-                <input type="text" name="route_taken" value={form.route_taken} onChange={handleChange} placeholder="e.g. Corridor Route from Seathwaite" />
+                <input
+                  type="text"
+                  name="route_taken"
+                  value={form.route_taken}
+                  onChange={handleChange}
+                  placeholder="e.g. Corridor Route from Seathwaite"
+                />
               </label>
 
               <div className="tracking-form__row">
@@ -466,7 +550,13 @@ function MountainDetailPage() {
 
               <label>
                 Notes
-                <textarea name="notes" value={form.notes} onChange={handleChange} rows="5" placeholder="Weather, route condition, memories, who you walked with..." />
+                <textarea
+                  name="notes"
+                  value={form.notes}
+                  onChange={handleChange}
+                  rows="5"
+                  placeholder="Weather, route condition, memories, who you walked with..."
+                />
               </label>
 
               <label>
@@ -475,7 +565,11 @@ function MountainDetailPage() {
               </label>
 
               {form.uploaded_image && (
-                <img className="tracking-form__preview" src={form.uploaded_image} alt={`${mountain.name} route upload`} />
+                <img
+                  className="tracking-form__preview"
+                  src={form.uploaded_image}
+                  alt={`${mountain.name} route upload`}
+                />
               )}
 
               <div className="tracking-form__actions">
@@ -483,7 +577,11 @@ function MountainDetailPage() {
                   {saveStatus === "saving" ? "Saving..." : activeLogId ? "Update ascent" : "Save ascent"}
                 </button>
                 {activeLogId && !showNewForm && (
-                  <button type="button" className="tracking-form__delete" onClick={() => setConfirmDelete(true)}>
+                  <button
+                    type="button"
+                    className="tracking-form__delete"
+                    onClick={() => setConfirmDelete(true)}
+                  >
                     Delete log
                   </button>
                 )}

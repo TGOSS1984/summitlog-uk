@@ -23,6 +23,7 @@ class UserMountainLogSerializer(serializers.ModelSerializer):
             "mountain_detail",
             "status",
             "season",
+            "conditions",
             "completed_date",
             "route_taken",
             "hike_distance_km",
@@ -88,6 +89,12 @@ class RouteLogSerializer(serializers.Serializer):
     completed_date = serializers.DateField()
     season = serializers.ChoiceField(
         choices=["summer", "winter", "spring", "autumn"],
+        allow_blank=True,
+        required=False,
+        default="",
+    )
+    conditions = serializers.ChoiceField(
+        choices=["clear", "good", "misty", "rain", "snow", "winter", "storm"],
         allow_blank=True,
         required=False,
         default="",
@@ -162,6 +169,7 @@ class RouteLogSerializer(serializers.Serializer):
                 status="completed",
                 completed_date=validated_data["completed_date"],
                 season=validated_data.get("season", ""),
+                conditions=validated_data.get("conditions", "") if is_primary else "",
                 # Stats only on primary summit
                 route_taken=validated_data.get("route_taken", "") if is_primary else "",
                 hike_distance_km=validated_data.get("hike_distance_km") if is_primary else None,

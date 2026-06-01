@@ -5841,3 +5841,27 @@ a.dashboard-region-card:hover {
   color: rgba(248, 250, 252, 0.3);
   margin-top: 0.5rem;
 }
+
+/* Collection kicker links in mountain detail hero */
+.section-kicker__link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(208, 170, 98, 0.4);
+  transition: border-color 160ms ease, color 160ms ease;
+}
+.section-kicker__link:hover {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+}
+
+/* Region link in stat card */
+.stat-card__link {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(4, 57, 59, 0.25);
+  transition: color 160ms ease, border-color 160ms ease;
+}
+.stat-card__link:hover {
+  color: var(--color-teal);
+  border-bottom-color: var(--color-teal);
+}
