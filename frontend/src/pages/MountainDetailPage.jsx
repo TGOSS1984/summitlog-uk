@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
+  TbShare2, TbExternalLink,
+} from "react-icons/tb";
+import {
   createProgressLog,
   deleteProgressLog,
   getCurrentUser,
@@ -26,7 +29,6 @@ const emptyForm = {
   uploaded_image: "",
 };
 
-// Conditions — emoji + label pairs for display
 const CONDITIONS_OPTIONS = [
   { value: "clear",   label: "☀️ Clear & sunny" },
   { value: "good",    label: "🌤️ Good visibility" },
@@ -37,7 +39,6 @@ const CONDITIONS_OPTIONS = [
   { value: "storm",   label: "⛈️ Storm / poor conditions" },
 ];
 
-// Map value → label for display in journal/history
 export const CONDITIONS_LABELS = Object.fromEntries(
   CONDITIONS_OPTIONS.map((o) => [o.value, o.label])
 );
@@ -52,11 +53,6 @@ function getCollectionMemberships(mountain) {
     return [{ name: mountain.collection.name, slug: mountain.collection.slug }];
   }
   return [];
-}
-
-function getCollectionNames(mountain) {
-  const memberships = getCollectionMemberships(mountain);
-  return memberships.map((m) => m.name).join(" / ") || "Unlisted";
 }
 
 function logToForm(log) {
@@ -81,8 +77,7 @@ function weatherDescription(code) {
     45: "Foggy", 48: "Icy fog",
     51: "Light drizzle", 53: "Drizzle", 55: "Heavy drizzle",
     61: "Light rain", 63: "Rain", 65: "Heavy rain",
-    71: "Light snow", 73: "Snow", 75: "Heavy snow",
-    77: "Snow grains",
+    71: "Light snow", 73: "Snow", 75: "Heavy snow", 77: "Snow grains",
     80: "Light showers", 81: "Showers", 82: "Heavy showers",
     85: "Snow showers", 86: "Heavy snow showers",
     95: "Thunderstorm", 96: "Thunderstorm with hail", 99: "Heavy thunderstorm",
@@ -102,6 +97,69 @@ function weatherEmoji(code) {
   return "🌤️";
 }
 
+// ── Wikipedia summary ────────────────────────────────────────────────────────
+
+function WikiSummary({ mountainName }) {
+  const [wikiData, setWikiData]   = useState(null);
+  const [expanded, setExpanded]   = useState(false);
+  const [loading,  setLoading]    = useState(true);
+
+  useEffect(() => {
+    if (!mountainName) return;
+    setLoading(true);
+    const wikiName = mountainName.replace(/\s*\[.*?\]\s*/g, "").trim();
+    fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiName)}`
+    )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.extract && data.type !== "disambiguation") {
+          setWikiData({
+            text: data.extract,
+            url:  data.content_urls?.desktop?.page,
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [mountainName]);
+
+  if (loading || !wikiData) return null;
+
+  const PREVIEW_LEN = 320;
+  const isLong  = wikiData.text.length > PREVIEW_LEN;
+  const display = expanded || !isLong
+    ? wikiData.text
+    : wikiData.text.slice(0, PREVIEW_LEN).trimEnd() + "…";
+
+  return (
+    <div className="mountain-wiki">
+      <p className="section-kicker"><span className="kicker-line" />About this mountain</p>
+      <p className="mountain-wiki__text">{display}</p>
+      <div className="mountain-wiki__footer">
+        {isLong && (
+          <button className="mountain-wiki__expand" onClick={() => setExpanded(!expanded)}>
+            {expanded ? "Show less" : "Read more"}
+          </button>
+        )}
+        {wikiData.url && (
+          <a
+            href={wikiData.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mountain-wiki__link"
+          >
+            <TbExternalLink size={13} strokeWidth={2} />
+            Wikipedia
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Weather widget ───────────────────────────────────────────────────────────
+
 function WeatherWidget({ latitude, longitude, mountainName }) {
   const [weather, setWeather] = useState(null);
   const [weatherStatus, setWeatherStatus] = useState("loading");
@@ -111,15 +169,15 @@ function WeatherWidget({ latitude, longitude, mountainName }) {
     async function fetchWeather() {
       try {
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max,temperature_2m_min,windspeed_10m_max,precipitation_sum&timezone=Europe%2FLondon&forecast_days=4`;
-        const res = await fetch(url);
+        const res  = await fetch(url);
         const data = await res.json();
         const days = data.daily.time.slice(0, 4).map((date, i) => ({
           date,
-          code: data.daily.weathercode[i],
+          code:    data.daily.weathercode[i],
           maxTemp: Math.round(data.daily.temperature_2m_max[i]),
           minTemp: Math.round(data.daily.temperature_2m_min[i]),
-          wind: Math.round(data.daily.windspeed_10m_max[i]),
-          rain: data.daily.precipitation_sum[i],
+          wind:    Math.round(data.daily.windspeed_10m_max[i]),
+          rain:    data.daily.precipitation_sum[i],
         }));
         setWeather(days);
         setWeatherStatus("success");
@@ -142,7 +200,7 @@ function WeatherWidget({ latitude, longitude, mountainName }) {
       <h3>Weather at {mountainName}</h3>
       <p className="weather-widget__sub">4-day forecast via Open-Meteo</p>
       {weatherStatus === "loading" && <p className="weather-widget__loading">Loading forecast...</p>}
-      {weatherStatus === "error" && <p className="weather-widget__loading">Forecast unavailable.</p>}
+      {weatherStatus === "error"   && <p className="weather-widget__loading">Forecast unavailable.</p>}
       {weatherStatus === "success" && weather && (
         <div className="weather-days">
           {weather.map((day, i) => (
@@ -180,20 +238,23 @@ function LoginPrompt({ mountainName }) {
   );
 }
 
+// ── Main page ────────────────────────────────────────────────────────────────
+
 function MountainDetailPage() {
   const { slug } = useParams();
   const { toasts, addToast, removeToast } = useToast();
 
-  const [mountain, setMountain] = useState(null);
-  const [ascents, setAscents] = useState([]);
-  const [activeLogId, setActiveLogId] = useState(null);
-  const [form, setForm] = useState(emptyForm);
-  const [pageStatus, setPageStatus] = useState("loading");
-  const [saveStatus, setSaveStatus] = useState("idle");
+  const [mountain,     setMountain]     = useState(null);
+  const [ascents,      setAscents]      = useState([]);
+  const [activeLogId,  setActiveLogId]  = useState(null);
+  const [form,         setForm]         = useState(emptyForm);
+  const [pageStatus,   setPageStatus]   = useState("loading");
+  const [saveStatus,   setSaveStatus]   = useState("idle");
   const [selectedImage, setSelectedImage] = useState(null);
-  const [showNewForm, setShowNewForm] = useState(false);
+  const [showNewForm,  setShowNewForm]  = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoggedIn,   setIsLoggedIn]   = useState(false);
+  const [shareCopied,  setShareCopied]  = useState(false);
 
   useEffect(() => {
     async function loadMountain() {
@@ -224,6 +285,31 @@ function MountainDetailPage() {
     }
     loadMountain();
   }, [slug]);
+
+  // ── Share handler ────────────────────────────────────────────────────────
+  function handleShare() {
+    const completedLog = ascents.find((a) => a.status === "completed");
+    const shareUrl = completedLog
+      ? `${window.location.origin}/share/log/${completedLog.id}`
+      : window.location.href;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        setShareCopied(true);
+        addToast(completedLog ? "Share link copied to clipboard!" : "Page link copied!", "success");
+        setTimeout(() => setShareCopied(false), 2500);
+      });
+    } else {
+      // Fallback for older browsers
+      const el = document.createElement("input");
+      el.value = shareUrl;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      addToast("Link copied!", "success");
+    }
+  }
 
   function handleChange(event) {
     const { name, value } = event.target;
@@ -282,12 +368,12 @@ function MountainDetailPage() {
       const payload = {
         ...formWithoutImage,
         mountain: mountain.id,
-        completed_date: form.completed_date || null,
-        hike_distance_km: form.hike_distance_km || null,
+        completed_date:      form.completed_date || null,
+        hike_distance_km:    form.hike_distance_km || null,
         hike_duration_hours: form.hike_duration_hours || null,
-        steps: form.steps || null,
-        flights_climbed: form.flights_climbed || null,
-        conditions: form.conditions || "",
+        steps:               form.steps || null,
+        flights_climbed:     form.flights_climbed || null,
+        conditions:          form.conditions || "",
       };
       const savedLog = activeLogId
         ? await updateProgressLog(activeLogId, payload)
@@ -313,6 +399,8 @@ function MountainDetailPage() {
       addToast("Unable to save. Make sure you are logged in.", "error");
     }
   }
+
+  // ── Loading / error states ───────────────────────────────────────────────
 
   if (pageStatus === "loading") {
     return (
@@ -347,7 +435,7 @@ function MountainDetailPage() {
   };
 
   const completedAscents = ascents.filter((a) => a.status === "completed");
-  const completedCount = completedAscents.length;
+  const completedCount   = completedAscents.length;
 
   function ascentHistoryLabel() {
     if (ascents.length === 0) return null;
@@ -362,11 +450,29 @@ function MountainDetailPage() {
     return `${ascents.length} ${ascents.length === 1 ? "ascent" : "ascents"} logged — summited ${completedCount} times`;
   }
 
-  // Dynamic date label — "Completed date" vs "Target date" based on status
-  const dateLabelText = form.status === "planned" ? "Target date" : "Completed date";
-
-  // Collection memberships for linked kicker
+  const dateLabelText        = form.status === "planned" ? "Target date" : "Completed date";
   const collectionMemberships = getCollectionMemberships(mountain);
+
+  // Build extended stat cards — show rank and subregion if present
+  const statCards = [
+    { label: "Height",     value: `${mountain.height_m}m` },
+    { label: "Feet",       value: mountain.height_ft || "—" },
+    { label: "Prominence", value: mountain.prominence_m ? `${mountain.prominence_m}m` : "—" },
+    {
+      label: "Region",
+      value: mountain.region?.slug
+        ? <Link to={`/regions/${mountain.region.slug}`} className="stat-card__link">{mountain.region.name}</Link>
+        : mountain.region?.name || "—",
+    },
+    // Rank — shown if rank_in_collection and collection name available
+    ...(mountain.rank_in_collection && collectionMemberships[0]
+      ? [{ label: collectionMemberships[0].name, value: `#${mountain.rank_in_collection}` }]
+      : []),
+    // Subregion — shown if present
+    ...(mountain.subregion?.name
+      ? [{ label: "Sub-region", value: mountain.subregion.name }]
+      : []),
+  ];
 
   return (
     <main>
@@ -384,7 +490,7 @@ function MountainDetailPage() {
         />
       )}
 
-      {/* Hero — collection names now link to their collection pages */}
+      {/* Hero */}
       <section className="section section-dark mountain-detail-hero">
         <div className="container">
           <p className="section-kicker">
@@ -393,52 +499,62 @@ function MountainDetailPage() {
               collectionMemberships.map((m, i) => (
                 <span key={m.slug}>
                   {i > 0 && " / "}
-                  <Link
-                    to={`/collections/${m.slug}`}
-                    className="section-kicker__link"
-                  >
-                    {m.name}
-                  </Link>
+                  <Link to={`/collections/${m.slug}`} className="section-kicker__link">{m.name}</Link>
                 </span>
               ))
             ) : (
               "Unlisted"
             )}
           </p>
-          <h1>{mountain.name}</h1>
+          <div className="mountain-detail-hero__title-row">
+            <h1>{mountain.name}</h1>
+            {/* Share button — copies share URL or page URL to clipboard */}
+            <button
+              className={`mountain-share-btn${shareCopied ? " mountain-share-btn--copied" : ""}`}
+              onClick={handleShare}
+              title={completedAscents.length > 0 ? "Share your ascent" : "Share this mountain"}
+            >
+              <TbShare2 size={16} strokeWidth={2} />
+              {shareCopied ? "Copied!" : "Share"}
+            </button>
+          </div>
           <p>{mountain.summary}</p>
         </div>
       </section>
 
-      {/* Stat cards — Region now links to region page */}
+      {/* Expanded stat cards */}
       <section className="section section-light">
         <div className="container mountain-detail-grid">
-          <div className="mountain-stat-card"><h3>Height</h3><strong>{mountain.height_m}m</strong></div>
-          <div className="mountain-stat-card"><h3>Feet</h3><strong>{mountain.height_ft || "—"}</strong></div>
-          <div className="mountain-stat-card"><h3>Prominence</h3><strong>{mountain.prominence_m || "—"}m</strong></div>
-          <div className="mountain-stat-card">
-            <h3>Region</h3>
-            <strong>
-              {mountain.region?.slug ? (
-                <Link to={`/regions/${mountain.region.slug}`} className="stat-card__link">
-                  {mountain.region.name}
-                </Link>
-              ) : (
-                mountain.region?.name || "—"
-              )}
-            </strong>
-          </div>
+          {statCards.map((card) => (
+            <div className="mountain-stat-card" key={card.label}>
+              <h3>{card.label}</h3>
+              <strong>{card.value}</strong>
+            </div>
+          ))}
         </div>
       </section>
 
+      {/* Wikipedia summary */}
+      <section className="section section-light" style={{ paddingTop: 0 }}>
+        <div className="container">
+          <WikiSummary mountainName={mountain.name} />
+        </div>
+      </section>
+
+      {/* Weather */}
       {mountain.latitude && mountain.longitude && (
         <section className="section section-light" style={{ paddingTop: 0 }}>
           <div className="container">
-            <WeatherWidget latitude={mountain.latitude} longitude={mountain.longitude} mountainName={mountain.name} />
+            <WeatherWidget
+              latitude={mountain.latitude}
+              longitude={mountain.longitude}
+              mountainName={mountain.name}
+            />
           </div>
         </section>
       )}
 
+      {/* Tracking panel */}
       <section className="section section-dark">
         <div className="container tracking-panel">
           <div>
@@ -448,9 +564,7 @@ function MountainDetailPage() {
 
             {isLoggedIn && ascents.length > 0 && (
               <div className="ascent-history">
-                <p className="ascent-history__label">
-                  {ascentHistoryLabel()}
-                </p>
+                <p className="ascent-history__label">{ascentHistoryLabel()}</p>
                 <div className="ascent-history__list">
                   {ascents.map((a) => (
                     <button
@@ -498,8 +612,6 @@ function MountainDetailPage() {
                     <option value="autumn">Autumn</option>
                   </select>
                 </label>
-
-                {/* Conditions — only shown for completed ascents */}
                 {form.status === "completed" && (
                   <label>
                     Conditions
@@ -514,28 +626,16 @@ function MountainDetailPage() {
               </div>
 
               <label>
-                {/* Dynamic label: "Target date" for planned, "Completed date" for completed */}
                 {dateLabelText}
                 {form.status === "completed" && !form.completed_date && (
                   <span className="field-hint field-hint--required">Required for completed ascents</span>
                 )}
-                <input
-                  type="date"
-                  name="completed_date"
-                  value={form.completed_date}
-                  onChange={handleChange}
-                />
+                <input type="date" name="completed_date" value={form.completed_date} onChange={handleChange} />
               </label>
 
               <label>
                 Route taken
-                <input
-                  type="text"
-                  name="route_taken"
-                  value={form.route_taken}
-                  onChange={handleChange}
-                  placeholder="e.g. Corridor Route from Seathwaite"
-                />
+                <input type="text" name="route_taken" value={form.route_taken} onChange={handleChange} placeholder="e.g. Corridor Route from Seathwaite" />
               </label>
 
               <div className="tracking-form__row">
@@ -550,13 +650,7 @@ function MountainDetailPage() {
 
               <label>
                 Notes
-                <textarea
-                  name="notes"
-                  value={form.notes}
-                  onChange={handleChange}
-                  rows="5"
-                  placeholder="Weather, route condition, memories, who you walked with..."
-                />
+                <textarea name="notes" value={form.notes} onChange={handleChange} rows="5" placeholder="Weather, route condition, memories, who you walked with..." />
               </label>
 
               <label>
@@ -565,11 +659,7 @@ function MountainDetailPage() {
               </label>
 
               {form.uploaded_image && (
-                <img
-                  className="tracking-form__preview"
-                  src={form.uploaded_image}
-                  alt={`${mountain.name} route upload`}
-                />
+                <img className="tracking-form__preview" src={form.uploaded_image} alt={`${mountain.name} route upload`} />
               )}
 
               <div className="tracking-form__actions">
@@ -577,11 +667,7 @@ function MountainDetailPage() {
                   {saveStatus === "saving" ? "Saving..." : activeLogId ? "Update ascent" : "Save ascent"}
                 </button>
                 {activeLogId && !showNewForm && (
-                  <button
-                    type="button"
-                    className="tracking-form__delete"
-                    onClick={() => setConfirmDelete(true)}
-                  >
+                  <button type="button" className="tracking-form__delete" onClick={() => setConfirmDelete(true)}>
                     Delete log
                   </button>
                 )}
@@ -595,3 +681,4 @@ function MountainDetailPage() {
 }
 
 export default MountainDetailPage;
+

@@ -6556,3 +6556,232 @@ a.dashboard-region-card:hover {
   border-radius: 2.5px;
   flex-shrink: 0;
 }
+
+/* ── Mountain detail hero — title row with share button ── */
+.mountain-detail-hero__title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-sm);
+}
+
+.mountain-share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  appearance: none;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  color: rgba(248,250,252,0.8);
+  padding: 0.5rem 1rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-top: 0.6rem;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.mountain-share-btn:hover {
+  background: rgba(208,170,98,0.12);
+  border-color: rgba(208,170,98,0.4);
+  color: var(--color-accent);
+}
+
+.mountain-share-btn--copied {
+  background: rgba(4,57,59,0.3);
+  border-color: var(--color-teal);
+  color: var(--color-teal-soft);
+}
+
+/* ── Wikipedia summary ── */
+.mountain-wiki {
+  background: #ffffff;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-soft);
+}
+
+.mountain-wiki__text {
+  color: var(--color-text);
+  line-height: 1.75;
+  margin-top: var(--space-sm);
+}
+
+.mountain-wiki__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--border-dark);
+}
+
+.mountain-wiki__expand {
+  appearance: none;
+  border: 1px solid var(--border-dark);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-teal-deep);
+  padding: 0.3rem 0.8rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms ease;
+}
+
+.mountain-wiki__expand:hover { background: rgba(4,57,59,0.06); }
+
+.mountain-wiki__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-text-soft);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: color 140ms ease;
+}
+
+.mountain-wiki__link:hover { color: var(--color-teal-deep); }
+
+/* ── Share page card ── */
+.share-card {
+  background: #ffffff;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  box-shadow: var(--shadow-large);
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.share-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.share-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-bg-dark);
+  background: var(--color-accent);
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+}
+
+.share-card__copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  appearance: none;
+  border: 1px solid var(--border-dark);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-soft);
+  padding: 0.35rem 0.8rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.share-card__copy:hover { background: rgba(4,57,59,0.06); color: var(--color-teal-deep); }
+.share-card__copy--copied { color: var(--color-teal); border-color: var(--color-teal); }
+
+.share-card__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  padding: var(--space-md);
+  background: var(--color-bg-light);
+  border-radius: var(--radius-md);
+}
+
+.share-card__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  min-width: 80px;
+  color: var(--color-teal-deep);
+}
+
+.share-card__stat strong {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.share-card__stat span {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-soft);
+}
+
+.share-card__conditions {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+  margin-bottom: var(--space-sm);
+}
+
+.share-card__route {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.88rem;
+  color: var(--color-text-soft);
+  font-style: italic;
+  margin-bottom: var(--space-md);
+}
+
+.share-card__image {
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
+}
+
+.share-card__notes {
+  border-left: 3px solid rgba(208,170,98,0.4);
+  padding-left: var(--space-md);
+  color: var(--color-text);
+  font-size: 0.92rem;
+  line-height: 1.75;
+  margin-bottom: var(--space-lg);
+}
+
+.share-card__cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  flex-wrap: wrap;
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border-dark);
+}
+
+.share-card__cta p {
+  color: var(--color-text-soft);
+  font-size: 0.88rem;
+}

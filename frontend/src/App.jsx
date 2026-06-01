@@ -13,6 +13,7 @@ import MountainDetailPage from "./pages/MountainDetailPage";
 import MountainsPage from "./pages/MountainsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import RegionDetailPage from "./pages/RegionDetailPage";
+import SharePage from "./pages/SharePage";
 
 const router = createBrowserRouter([
   {
@@ -32,6 +33,7 @@ const router = createBrowserRouter([
       { path: "log-route",              element: <LogRoutePage /> },
       { path: "log-route/:id/edit",     element: <LogRoutePage /> },
       { path: "*",                      element: <NotFoundPage /> },
+      { path: "/share/log/:id",         element: <SharePage /> },
     ],
   },
 ]);
