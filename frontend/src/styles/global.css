@@ -5997,3 +5997,36 @@ a.dashboard-region-card:hover {
 .journal-entry__action-btn--delete:hover {
   background: rgba(163, 45, 45, 0.08);
 }
+
+/* Route entry in dashboard activity timeline */
+.dashboard-timeline-item--route {
+  border-left: 3px solid var(--color-accent);
+  padding-left: calc(var(--space-md) - 3px);
+}
+
+.dashboard-timeline-route-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  color: var(--color-bg-dark);
+  flex-shrink: 0;
+}
+
+/* Route name badge on individual logs that belong to a route */
+.dashboard-timeline-route-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  background: rgba(208, 170, 98, 0.1);
+  border-radius: 999px;
+  padding: 0.1rem 0.45rem;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}

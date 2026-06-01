@@ -9,10 +9,10 @@ import {
   TbMountain, TbRoute, TbRuler, TbStairs, TbWalk,
   TbTrophy, TbFlag, TbStar,
   TbTargetArrow, TbUser,
-  TbCalendar, TbArrowUp, TbRepeat,
+  TbCalendar, TbArrowUp, TbRepeat, TbMap2,
 } from "react-icons/tb";
 
-import { getCollections, getMountains, getProgressLogs, getCurrentUser, exportLogs } from "../lib/api";
+import { getCollections, getMountains, getProgressLogs, getRouteLogs, getCurrentUser, exportLogs } from "../lib/api";
 
 const DASHBOARD_COLLECTIONS = [
   { name: "Wainwrights", slug: "wainwrights", expectedTotal: 214 },
@@ -30,6 +30,7 @@ const CHART_COLORS = {
 const STAT_ICONS = {
   "Completed":       { icon: TbMountain,    color: "var(--color-teal-deep)" },
   "Planned":         { icon: TbFlag,         color: "var(--color-accent)" },
+  "Routes logged":   { icon: TbMap2,         color: "var(--color-accent)" },
   "Distance":        { icon: TbRoute,        color: "var(--color-teal)" },
   "Height total":    { icon: TbRuler,        color: "var(--color-accent)" },
   "Steps":           { icon: TbWalk,         color: "var(--color-teal)" },
@@ -116,11 +117,11 @@ function generateDemoStats() {
   ].map((r) => ({ ...r, percent: Math.round((r.completed / r.total) * 100) }));
 
   const demoLogs = [
-    { id: 1, mountain_detail: { name: "Scafell Pike", slug: "scafell-pike", height_m: 978,  region: { name: "Lake District" } }, status: "completed", completed_date: "2024-08-14", hike_distance_km: 12.4, steps: 24000, hike_duration_hours: 6.5 },
-    { id: 2, mountain_detail: { name: "Helvellyn",    slug: "helvellyn",    height_m: 950,  region: { name: "Lake District" } }, status: "completed", completed_date: "2024-07-22", hike_distance_km: 9.8,  steps: 19500, hike_duration_hours: 5.2 },
-    { id: 3, mountain_detail: { name: "Ben Nevis",    slug: "ben-nevis",    height_m: 1345, region: { name: "Scotland" } },      status: "planned",   completed_date: null,         hike_distance_km: null, steps: null,  hike_duration_hours: null },
-    { id: 4, mountain_detail: { name: "Snowdon",      slug: "snowdon",      height_m: 1085, region: { name: "Wales" } },         status: "completed", completed_date: "2024-06-10", hike_distance_km: 8.2,  steps: 16800, hike_duration_hours: 4.8 },
-    { id: 5, mountain_detail: { name: "Skiddaw",      slug: "skiddaw",      height_m: 931,  region: { name: "Lake District" } }, status: "completed", completed_date: "2024-05-30", hike_distance_km: 7.6,  steps: 15200, hike_duration_hours: 4.1 },
+    { id: 1, mountain_detail: { name: "Scafell Pike", slug: "scafell-pike", height_m: 978,  region: { name: "Lake District" } }, status: "completed", completed_date: "2024-08-14", hike_distance_km: 12.4, steps: 24000, hike_duration_hours: 6.5, route_name: null },
+    { id: 2, mountain_detail: { name: "Helvellyn",    slug: "helvellyn",    height_m: 950,  region: { name: "Lake District" } }, status: "completed", completed_date: "2024-07-22", hike_distance_km: 9.8,  steps: 19500, hike_duration_hours: 5.2, route_name: null },
+    { id: 3, mountain_detail: { name: "Ben Nevis",    slug: "ben-nevis",    height_m: 1345, region: { name: "Scotland" } },      status: "planned",   completed_date: null,         hike_distance_km: null, steps: null,  hike_duration_hours: null, route_name: null },
+    { id: 4, mountain_detail: { name: "Snowdon",      slug: "snowdon",      height_m: 1085, region: { name: "Wales" } },         status: "completed", completed_date: "2024-06-10", hike_distance_km: 8.2,  steps: 16800, hike_duration_hours: 4.8, route_name: null },
+    { id: 5, mountain_detail: { name: "Skiddaw",      slug: "skiddaw",      height_m: 931,  region: { name: "Lake District" } }, status: "completed", completed_date: "2024-05-30", hike_distance_km: 7.6,  steps: 15200, hike_duration_hours: 4.1, route_name: null },
   ];
 
   const personalBests = {
@@ -140,7 +141,6 @@ function generateDemoStats() {
     { name: "Skiddaw",      slug: "skiddaw",      count: 2 },
   ];
 
-  // Demo scatter — realistic UK mountain height/distance spread
   const scatterData = [
     { x: 978,  y: 12.4, name: "Scafell Pike" },
     { x: 950,  y: 9.8,  name: "Helvellyn" },
@@ -160,12 +160,19 @@ function generateDemoStats() {
     { x: 736,  y: 7.8,  name: "Dale Head" },
   ];
 
+  // Demo route logs
+  const recentRoutes = [
+    { id: 1, name: "Fairfield Horseshoe",        completed_date: "2024-08-01", mountains_count: 8 },
+    { id: 2, name: "Helvellyn via Striding Edge", completed_date: "2024-07-10", mountains_count: 3 },
+  ];
+
   return {
     completed, planned, totalVisible: 800, totalDistance, totalHeight, totalSteps, totalFlightsClimbed,
     collectionStats, statusChartData, collectionChartData, completionTimelineData,
     recentLogs: demoLogs, nextObjective: demoLogs.find((l) => l.status === "planned") || null,
     photoLogs: [], elevationPercent, achievements, achievedBadges, achievementPercent,
     regionStats, personalBests, mostSummited, scatterData,
+    routeCount: recentRoutes.length, recentRoutes,
   };
 }
 
@@ -333,8 +340,8 @@ function HeightVsDistanceChart({ data }) {
   if (!data || data.length === 0) return null;
 
   const avgDistance = data.length
-  ? Math.round((data.reduce((s, d) => s + d.y, 0) / data.length) * 10) / 10
-  : 0;
+    ? Math.round((data.reduce((s, d) => s + d.y, 0) / data.length) * 10) / 10
+    : 0;
 
   const avgHeight = data.length
     ? Math.round(data.reduce((s, d) => s + d.x, 0) / data.length)
@@ -393,7 +400,6 @@ function HeightVsDistanceChart({ data }) {
               );
             }}
           />
-          {/* Average distance reference line */}
           <ReferenceLine
             y={avgDistance}
             stroke="var(--color-accent)"
@@ -407,7 +413,6 @@ function HeightVsDistanceChart({ data }) {
               fill: "var(--color-accent)",
             }}
           />
-          {/* Average height reference line — vertical */}
           <ReferenceLine
             x={avgHeight}
             stroke="var(--color-teal)"
@@ -520,6 +525,7 @@ function DashboardPage() {
   const [mountains, setMountains] = useState([]);
   const [collections, setCollections] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [routeLogs, setRouteLogs] = useState([]);  // ← NEW
   const [user, setUser] = useState(null);
   const [status, setStatus] = useState("loading");
   const loaded = status === "success" || status === "demo";
@@ -541,39 +547,40 @@ function DashboardPage() {
   }
 
   useEffect(() => {
-  async function loadDashboard() {
-    // Step 1 — check auth first; if this fails, user is not logged in → demo mode
-    let currentUser = null;
-    try {
-      const userData = await getCurrentUser();
-      currentUser = userData;
-      setUser(userData.user || userData);
-    } catch {
-      setStatus("demo");
-      return;
-    }
+    async function loadDashboard() {
+      // Step 1 — auth check
+      try {
+        const userData = await getCurrentUser();
+        setUser(userData.user || userData);
+      } catch {
+        setStatus("demo");
+        return;
+      }
 
-    // Step 2 — load data; if this fails we still show a real (empty) dashboard
-    // rather than misleading demo data, because we know the user is logged in
-    try {
-      const [mountainData, collectionData, logData] = await Promise.all([
-        getMountains(), getCollections(), getProgressLogs(),
-      ]);
-      setMountains(Array.isArray(mountainData) ? mountainData : mountainData.results || []);
-      setCollections(Array.isArray(collectionData) ? collectionData : []);
-      setLogs(Array.isArray(logData) ? logData : logData.results || []);
-      setStatus("success");
-    } catch (error) {
-      console.error(error);
-      // User is authenticated but data fetch failed (e.g. missing migration)
-      // Show real empty dashboard instead of demo
-      setLogs([]);
-      setMountains([]);
-      setCollections([]);
-      setStatus("success");
+      // Step 2 — main data
+      try {
+        const [mountainData, collectionData, logData] = await Promise.all([
+          getMountains(), getCollections(), getProgressLogs(),
+        ]);
+        setMountains(Array.isArray(mountainData) ? mountainData : mountainData.results || []);
+        setCollections(Array.isArray(collectionData) ? collectionData : []);
+        setLogs(Array.isArray(logData) ? logData : logData.results || []);
+        setStatus("success");
+      } catch (error) {
+        console.error(error);
+        setLogs([]);
+        setMountains([]);
+        setCollections([]);
+        setStatus("success");
+      }
+
+      // Step 3 — route logs (non-blocking, fail silently)
+      try {
+        const routeData = await getRouteLogs();
+        setRouteLogs(Array.isArray(routeData) ? routeData : []);
+      } catch { /* no routes yet — not an error */ }
     }
-  }
-  loadDashboard();
+    loadDashboard();
   }, []);
 
   const stats = useMemo(() => {
@@ -640,7 +647,6 @@ function DashboardPage() {
 
     const personalBests = computePersonalBests(logs, mountains);
 
-    // Most summited — only mountains done more than once
     const completionCountByName = completedLogs.reduce((acc, l) => {
       const name = l.mountain_detail?.name;
       const slug = l.mountain_detail?.slug;
@@ -655,7 +661,6 @@ function DashboardPage() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
 
-    // Height vs distance scatter — completed logs with both values
     const scatterData = completedLogs
       .filter((l) => l.mountain_detail?.height_m && l.hike_distance_km)
       .map((l) => ({
@@ -664,18 +669,34 @@ function DashboardPage() {
         name: l.mountain_detail.name,
       }));
 
+    // ── Route stats ──
+    const routeCount   = routeLogs.length;
+    const recentRoutes = [...routeLogs]
+      .sort((a, b) => new Date(b.completed_date) - new Date(a.completed_date))
+      .slice(0, 3);
+
     return {
       completed: completedLogs.length, planned: plannedLogs.length, totalVisible: mountains.length,
       totalDistance, totalHeight, totalSteps, totalFlightsClimbed,
       collectionStats, statusChartData, collectionChartData, recentLogs, nextObjective,
       photoLogs, elevationPercent, achievements, achievedBadges, achievementPercent,
       regionStats, completionTimelineData, personalBests, mostSummited, scatterData,
+      routeCount, recentRoutes,
     };
-  }, [collections, logs, mountains, status]);
+  }, [collections, logs, mountains, status, routeLogs]);
 
   const userName = user?.username || user?.user?.username || user?.first_name || null;
-
   const showBottomRow = (stats.mostSummited?.length > 0) || (stats.scatterData?.length > 0);
+
+  // Interleaved activity feed — individual logs + route entries sorted by date
+  const activityFeed = useMemo(() => {
+    const logEntries   = (stats.recentLogs   || []).map((l) => ({ type: "log",   date: l.completed_date || l.updated_at, data: l }));
+    const routeEntries = (stats.recentRoutes || []).map((r) => ({ type: "route", date: r.completed_date,                data: r }));
+    const all = [...logEntries, ...routeEntries].sort((a, b) => new Date(b.date) - new Date(a.date));
+    return showAllLogs ? all : all.slice(0, MAX_VISIBLE);
+  }, [stats.recentLogs, stats.recentRoutes, showAllLogs]);
+
+  const totalActivityCount = (stats.recentLogs?.length || 0) + (stats.recentRoutes?.length || 0);
 
   return (
     <main className="dashboard-page">
@@ -727,6 +748,10 @@ function DashboardPage() {
               <div className="dashboard-stat-grid">
                 <StatCard label="Completed"       rawValue={stats.completed}                        sub="summits logged"           loaded={loaded} />
                 <StatCard label="Planned"         rawValue={stats.planned}                          sub="future objectives"        loaded={loaded} />
+                {/* Routes logged — only shown when user has at least one route */}
+                {stats.routeCount > 0 && (
+                  <StatCard label="Routes logged" rawValue={stats.routeCount}                       sub="multi-mountain days"      loaded={loaded} />
+                )}
                 <StatCard label="Distance"        rawValue={`${stats.totalDistance.toFixed(1)}km`}  sub="personally logged"        loaded={loaded} />
                 <StatCard label="Height total"    rawValue={`${Math.round(stats.totalHeight)}m`}    sub="summit height completed"  loaded={loaded} />
                 <StatCard label="Steps"           rawValue={stats.totalSteps}                       sub="steps logged"             loaded={loaded} />
@@ -850,23 +875,51 @@ function DashboardPage() {
                   <p className="section-kicker">Recent activity</p>
                   <h3>Latest mountain logs</h3>
                   <div className="dashboard-timeline">
-                    {stats.recentLogs.length === 0 && <p>No recent activity yet.</p>}
-                    {stats.recentLogs.slice(0, showAllLogs ? undefined : MAX_VISIBLE).map((log) => (
-                      <Link
-                        to={log.mountain_detail?.slug ? `/mountains/${log.mountain_detail.slug}` : "#"}
-                        className="dashboard-timeline-item"
-                        key={log.id}
-                      >
-                        <span>{log.status === "completed" ? "✓" : "○"}</span>
-                        <div>
-                          <strong>{log.mountain_detail?.name}</strong>
-                          <small>{log.status} / {formatDate(log.completed_date)}</small>
-                        </div>
-                      </Link>
-                    ))}
-                    {stats.recentLogs.length > MAX_VISIBLE && (
+                    {activityFeed.length === 0 && <p>No recent activity yet.</p>}
+                    {activityFeed.map((item) => {
+                      // Route entry
+                      if (item.type === "route") {
+                        const route = item.data;
+                        return (
+                          <Link
+                            to="/journal"
+                            className="dashboard-timeline-item dashboard-timeline-item--route"
+                            key={`route-${route.id}`}
+                          >
+                            <span className="dashboard-timeline-route-icon">
+                              <TbRoute size={11} strokeWidth={2.5} />
+                            </span>
+                            <div>
+                              <strong>{route.name}</strong>
+                              <small>Route · {route.mountains_count} summits · {formatDate(route.completed_date)}</small>
+                            </div>
+                          </Link>
+                        );
+                      }
+                      // Individual log entry
+                      const log = item.data;
+                      return (
+                        <Link
+                          to={log.mountain_detail?.slug ? `/mountains/${log.mountain_detail.slug}` : "#"}
+                          className="dashboard-timeline-item"
+                          key={log.id}
+                        >
+                          <span>{log.status === "completed" ? "✓" : "○"}</span>
+                          <div>
+                            <strong>
+                              {log.mountain_detail?.name}
+                              {log.route_name && (
+                                <span className="dashboard-timeline-route-badge">{log.route_name}</span>
+                              )}
+                            </strong>
+                            <small>{log.status} / {formatDate(log.completed_date)}</small>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                    {totalActivityCount > MAX_VISIBLE && (
                       <button className="dashboard-show-more" onClick={() => setShowAllLogs(!showAllLogs)}>
-                        {showAllLogs ? "Show less" : `Show ${stats.recentLogs.length - MAX_VISIBLE} more`}
+                        {showAllLogs ? "Show less" : `Show ${totalActivityCount - MAX_VISIBLE} more`}
                       </button>
                     )}
                   </div>
