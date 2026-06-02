@@ -7335,3 +7335,135 @@ a.dashboard-region-card:hover {
   font-size: 0.78rem;
   color: var(--color-teal-deep);
 }
+
+/* ── Collection milestone banner ── */
+@keyframes milestone-dot-float {
+  0%   { transform: translateY(0) scale(1);   opacity: 0.7; }
+  50%  { transform: translateY(-18px) scale(1.2); opacity: 1; }
+  100% { transform: translateY(0) scale(1);   opacity: 0.7; }
+}
+
+.collection-milestone {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(208,170,98,0.12), rgba(4,57,59,0.08));
+  border: 1px solid rgba(208,170,98,0.35);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-xl);
+  box-shadow: 0 4px 32px rgba(208,170,98,0.12);
+}
+
+.collection-milestone__confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.collection-milestone__dot {
+  position: absolute;
+  border-radius: 50%;
+  animation: milestone-dot-float linear infinite;
+}
+
+.collection-milestone__dismiss {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  appearance: none;
+  border: none;
+  background: rgba(4,57,59,0.08);
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-soft);
+  cursor: pointer;
+  transition: background 140ms ease;
+  flex-shrink: 0;
+}
+
+.collection-milestone__dismiss:hover {
+  background: rgba(4,57,59,0.15);
+  color: var(--color-teal-deep);
+}
+
+.collection-milestone__inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+  padding-right: var(--space-xl);
+}
+
+.collection-milestone__trophy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(208,170,98,0.15);
+  border: 2px solid rgba(208,170,98,0.3);
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.collection-milestone__text {
+  flex: 1;
+  min-width: 220px;
+}
+
+.collection-milestone__text h2 {
+  font-size: 1.6rem;
+  margin: var(--space-sm) 0;
+  color: var(--color-teal-deep);
+}
+
+.collection-milestone__text p {
+  color: var(--color-text-soft);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.collection-milestone__actions {
+  flex-shrink: 0;
+}
+
+.collection-milestone__share-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  appearance: none;
+  border: 2px solid var(--color-accent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-teal-deep);
+  padding: 0.6rem 1.2rem;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+  white-space: nowrap;
+}
+
+.collection-milestone__share-btn:hover {
+  background: var(--color-accent);
+  color: var(--color-bg-dark);
+}
+
+.collection-milestone__share-btn--copied {
+  background: var(--color-teal);
+  border-color: var(--color-teal);
+  color: #ffffff;
+}
+
+@media (max-width: 640px) {
+  .collection-milestone__inner { flex-direction: column; align-items: flex-start; }
+  .collection-milestone__trophy { width: 52px; height: 52px; }
+}

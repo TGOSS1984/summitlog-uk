@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getCollections, getMountains, getProgressLogs, getCollectionNote, saveCollectionNote, deleteCollectionNote } from "../lib/api";
-import { TbCheck, TbFlag, TbMountain, TbRepeat, TbNotes, TbTrash, TbDeviceFloppy } from "react-icons/tb";
+import {
+  TbCheck, TbFlag, TbMountain, TbRepeat, TbNotes, TbTrash,
+  TbDeviceFloppy, TbTrophy, TbShare2, TbX,
+} from "react-icons/tb";
 
 function getCollectionRank(mountain, collectionSlug) {
   const membership = mountain.collection_memberships?.find(
@@ -40,6 +43,89 @@ function RowSkeleton() {
   );
 }
 
+// ── Milestone banner ─────────────────────────────────────────────────────────
+
+// Confetti dot positions — fixed so they don't rerender
+const CONFETTI_DOTS = [
+  { left: "8%",  top: "20%", size: 8,  color: "var(--color-accent)",    delay: "0s",    dur: "3.2s" },
+  { left: "18%", top: "60%", size: 5,  color: "var(--color-teal)",      delay: "0.4s",  dur: "2.8s" },
+  { left: "30%", top: "30%", size: 6,  color: "rgba(208,170,98,0.6)",   delay: "0.8s",  dur: "3.5s" },
+  { left: "45%", top: "70%", size: 4,  color: "var(--color-teal-soft)", delay: "0.2s",  dur: "4s"   },
+  { left: "60%", top: "25%", size: 7,  color: "var(--color-accent)",    delay: "1s",    dur: "2.6s" },
+  { left: "72%", top: "55%", size: 5,  color: "var(--color-teal)",      delay: "0.6s",  dur: "3.1s" },
+  { left: "85%", top: "35%", size: 6,  color: "rgba(208,170,98,0.5)",   delay: "0.3s",  dur: "3.8s" },
+  { left: "92%", top: "65%", size: 4,  color: "var(--color-teal-soft)", delay: "1.2s",  dur: "2.9s" },
+];
+
+function MilestoneBanner({ collection, stats, onDismiss }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleShare() {
+    const text = `🏔️ I just completed all ${stats.total} ${collection.name}! Logged on SummitLog UK.\n${window.location.href}`;
+    navigator.clipboard?.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  }
+
+  return (
+    <div className="collection-milestone" role="alert">
+
+      {/* Animated background dots */}
+      <div className="collection-milestone__confetti" aria-hidden="true">
+        {CONFETTI_DOTS.map((dot, i) => (
+          <span
+            key={i}
+            className="collection-milestone__dot"
+            style={{
+              left:            dot.left,
+              top:             dot.top,
+              width:           dot.size,
+              height:          dot.size,
+              background:      dot.color,
+              animationDelay:  dot.delay,
+              animationDuration: dot.dur,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Dismiss */}
+      <button className="collection-milestone__dismiss" onClick={onDismiss} aria-label="Dismiss">
+        <TbX size={16} strokeWidth={2.5} />
+      </button>
+
+      {/* Content */}
+      <div className="collection-milestone__inner">
+        <div className="collection-milestone__trophy" aria-hidden="true">
+          <TbTrophy size={40} strokeWidth={1.2} />
+        </div>
+        <div className="collection-milestone__text">
+          <p className="section-kicker" style={{ color: "var(--color-accent)" }}>
+            <span className="kicker-line" style={{ background: "var(--color-accent)" }} />
+            Collection complete
+          </p>
+          <h2>All {stats.total} {collection.name} completed!</h2>
+          <p>
+            That's an extraordinary achievement. Every single summit in this collection
+            is now logged — share it with the world.
+          </p>
+        </div>
+        <div className="collection-milestone__actions">
+          <button
+            type="button"
+            className={`collection-milestone__share-btn${copied ? " collection-milestone__share-btn--copied" : ""}`}
+            onClick={handleShare}
+          >
+            <TbShare2 size={15} strokeWidth={2} />
+            {copied ? "Copied to clipboard!" : "Share this achievement"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Collection notes ─────────────────────────────────────────────────────────
 
 function CollectionNotes({ collectionId, collectionSlug, isLoggedIn }) {
@@ -51,7 +137,6 @@ function CollectionNotes({ collectionId, collectionSlug, isLoggedIn }) {
   const [saveMsg,   setSaveMsg]   = useState(null);
   const saveMsgTimer = useRef(null);
 
-  // Load existing note on mount
   useEffect(() => {
     if (!isLoggedIn || !collectionId) return;
     getCollectionNote(collectionId)
@@ -74,7 +159,7 @@ function CollectionNotes({ collectionId, collectionSlug, isLoggedIn }) {
   }
 
   async function handleSave() {
-    if (body.trim() === savedBody.trim()) return; // nothing changed
+    if (body.trim() === savedBody.trim()) return;
     setSaving(true);
     try {
       const result = await saveCollectionNote(collectionId, collectionSlug, body.trim());
@@ -136,7 +221,6 @@ function CollectionNotes({ collectionId, collectionSlug, isLoggedIn }) {
           )}
         </div>
       </div>
-
       <textarea
         className="collection-notes__textarea"
         value={body}
@@ -146,7 +230,6 @@ function CollectionNotes({ collectionId, collectionSlug, isLoggedIn }) {
         rows={5}
         disabled={saving}
       />
-
       <div className="collection-notes__actions">
         <button
           type="button"
@@ -177,13 +260,14 @@ function CollectionNotes({ collectionId, collectionSlug, isLoggedIn }) {
 
 function CollectionDetailPage() {
   const { slug } = useParams();
-  const [collections,  setCollections]  = useState([]);
-  const [mountains,    setMountains]    = useState([]);
-  const [logs,         setLogs]         = useState([]);
-  const [status,       setStatus]       = useState("loading");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [sortOrder,    setSortOrder]    = useState("rank");
-  const [isLoggedIn,   setIsLoggedIn]   = useState(false);
+  const [collections,    setCollections]    = useState([]);
+  const [mountains,      setMountains]      = useState([]);
+  const [logs,           setLogs]           = useState([]);
+  const [status,         setStatus]         = useState("loading");
+  const [statusFilter,   setStatusFilter]   = useState("all");
+  const [sortOrder,      setSortOrder]      = useState("rank");
+  const [isLoggedIn,     setIsLoggedIn]     = useState(false);
+  const [showMilestone,  setShowMilestone]  = useState(false);
 
   useEffect(() => {
     async function loadCollection() {
@@ -223,18 +307,10 @@ function CollectionDetailPage() {
 
   const orderedMountains = useMemo(() => {
     const sorted = [...mountains];
-    if (sortOrder === "most_completed") {
-      return sorted.sort((a, b) => (completionCountById[b.id] || 0) - (completionCountById[a.id] || 0));
-    }
-    if (sortOrder === "height_desc") {
-      return sorted.sort((a, b) => Number(b.height_m || 0) - Number(a.height_m || 0));
-    }
-    if (sortOrder === "height_asc") {
-      return sorted.sort((a, b) => Number(a.height_m || 0) - Number(b.height_m || 0));
-    }
-    if (sortOrder === "name") {
-      return sorted.sort((a, b) => a.name.localeCompare(b.name));
-    }
+    if (sortOrder === "most_completed") return sorted.sort((a, b) => (completionCountById[b.id] || 0) - (completionCountById[a.id] || 0));
+    if (sortOrder === "height_desc")    return sorted.sort((a, b) => Number(b.height_m || 0) - Number(a.height_m || 0));
+    if (sortOrder === "height_asc")     return sorted.sort((a, b) => Number(a.height_m || 0) - Number(b.height_m || 0));
+    if (sortOrder === "name")           return sorted.sort((a, b) => a.name.localeCompare(b.name));
     return sorted.sort((a, b) => {
       const rankA = Number(getCollectionRank(a, slug)) || 9999;
       const rankB = Number(getCollectionRank(b, slug)) || 9999;
@@ -256,6 +332,22 @@ function CollectionDetailPage() {
     const percent      = total ? Math.round((completed / total) * 100) : 0;
     return { completed, planned, total, percent };
   }, [collection, logs, mountains]);
+
+  // Show milestone banner when 100% complete and not previously dismissed this session
+  useEffect(() => {
+    if (!isLoggedIn || stats.percent !== 100 || !collection) return;
+    const dismissKey = `milestone-dismissed-${slug}`;
+    if (!sessionStorage.getItem(dismissKey)) {
+      setShowMilestone(true);
+    }
+  }, [stats.percent, isLoggedIn, collection, slug]);
+
+  function handleDismissMilestone() {
+    sessionStorage.setItem(`milestone-dismissed-${slug}`, "1");
+    setShowMilestone(false);
+  }
+
+  // ── Loading / error states ─────────────────────────────────────────────────
 
   if (status === "loading") {
     return (
@@ -334,6 +426,16 @@ function CollectionDetailPage() {
 
       <section className="section section-light">
         <div className="container">
+
+          {/* Milestone banner — 100% complete */}
+          {showMilestone && collection && (
+            <MilestoneBanner
+              collection={collection}
+              stats={stats}
+              onDismiss={handleDismissMilestone}
+            />
+          )}
+
           <div className="collection-overview-grid">
             <article className="collection-mini-stat">
               <div className="collection-mini-stat__icon collection-mini-stat__icon--completed">
@@ -358,7 +460,6 @@ function CollectionDetailPage() {
             </article>
           </div>
 
-          {/* Toolbar */}
           <div className="collection-list-toolbar">
             <p className="collection-list-count">
               {statusFilter === "all"
@@ -398,10 +499,10 @@ function CollectionDetailPage() {
               <TbMountain size={48} strokeWidth={1} />
               <h2>No mountains match this filter</h2>
               <p>
-                {statusFilter === "completed" && "You haven't completed any mountains in this collection yet."}
-                {statusFilter === "planned"   && "You haven't planned any mountains in this collection yet."}
+                {statusFilter === "completed"   && "You haven't completed any mountains in this collection yet."}
+                {statusFilter === "planned"     && "You haven't planned any mountains in this collection yet."}
                 {statusFilter === "not_started" && "All mountains in this collection have been logged."}
-                {statusFilter === "all"       && "No mountains found in this collection."}
+                {statusFilter === "all"         && "No mountains found in this collection."}
               </p>
               {statusFilter !== "all" && (
                 <button className="button-secondary" onClick={() => setStatusFilter("all")}>
@@ -438,7 +539,6 @@ function CollectionDetailPage() {
             </div>
           )}
 
-          {/* Personal notes — logged-in users only */}
           <CollectionNotes
             collectionId={collection.id}
             collectionSlug={collection.slug}
