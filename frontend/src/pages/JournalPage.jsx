@@ -4,8 +4,12 @@ import {
   TbMountain, TbCalendar, TbRoute, TbWalk,
   TbStairs, TbRepeat, TbEdit, TbTrash, TbX,
   TbFlag, TbChevronRight, TbCloud,
+  TbListCheck, TbSquare, TbSquareCheck, TbCheck,
 } from "react-icons/tb";
-import { getProgressLogs, getCollections, getRouteLogs, deleteRouteLog, deleteProgressLog } from "../lib/api";
+import {
+  getProgressLogs, getCollections, getRouteLogs,
+  deleteRouteLog, deleteProgressLog, updateProgressLog,
+} from "../lib/api";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
 
 function formatDate(d) {
@@ -41,8 +45,6 @@ const STATUS_LABELS = { completed: "Completed", planned: "Planned", not_started:
 const SEASON_LABELS = { summer: "☀️ Summer", winter: "❄️ Winter", spring: "🌸 Spring", autumn: "🍂 Autumn" };
 
 // ── Historical weather chip ──────────────────────────────────────────────────
-// Fetches Open-Meteo archive for the specific date of the ascent.
-// Renders nothing if no coordinates or date, or if fetch fails.
 
 function weatherEmojiFromCode(code) {
   if (code === 0 || code === 1) return "☀️";
@@ -62,9 +64,7 @@ function HistoricalWeatherChip({ lat, lon, date }) {
 
   useEffect(() => {
     if (!lat || !lon || !date) { setLoaded(true); return; }
-    // Only fetch for dates in the past (archive API doesn't serve future dates)
     if (new Date(date) >= new Date()) { setLoaded(true); return; }
-
     fetch(
       `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}` +
       `&start_date=${date}&end_date=${date}` +
@@ -85,11 +85,55 @@ function HistoricalWeatherChip({ lat, lon, date }) {
   }, [lat, lon, date]);
 
   if (!loaded || !data) return null;
-
   return (
     <span className="journal-weather-chip" title={`Weather on ${date}`}>
       {weatherEmojiFromCode(data.code)} {data.maxTemp}°/{data.minTemp}°
     </span>
+  );
+}
+
+// ── Bulk action bar ──────────────────────────────────────────────────────────
+
+function BulkActionBar({ selectedCount, onApply, onCancel, applying }) {
+  const [newStatus, setNewStatus] = useState("completed");
+  return (
+    <div className="journal-bulk-bar">
+      <span className="journal-bulk-bar__count">
+        <TbListCheck size={16} strokeWidth={2} />
+        {selectedCount} selected
+      </span>
+      <div className="journal-bulk-bar__controls">
+        <span className="journal-bulk-bar__label">Change status to</span>
+        <select
+          value={newStatus}
+          onChange={(e) => setNewStatus(e.target.value)}
+          className="journal-bulk-bar__select"
+          disabled={applying}
+        >
+          <option value="completed">Completed</option>
+          <option value="planned">Planned</option>
+          <option value="not_started">Not started</option>
+        </select>
+        <button
+          type="button"
+          className="journal-bulk-bar__apply"
+          onClick={() => onApply(newStatus)}
+          disabled={applying}
+        >
+          {applying ? "Updating…" : "Apply"}
+        </button>
+      </div>
+      <button
+        type="button"
+        className="journal-bulk-bar__cancel"
+        onClick={onCancel}
+        disabled={applying}
+        aria-label="Cancel selection"
+      >
+        <TbX size={16} strokeWidth={2.5} />
+        Cancel
+      </button>
+    </div>
   );
 }
 
@@ -108,18 +152,47 @@ function JournalEntrySkeleton() {
 
 // ── Individual mountain log entry ────────────────────────────────────────────
 
-function JournalEntry({ log, completionCount, onDelete }) {
+function JournalEntry({ log, completionCount, onDelete, selectMode, isSelected, onToggleSelect }) {
   const mountain = log.mountain_detail;
   const lat = mountain?.latitude;
   const lon = mountain?.longitude;
 
+  function handleClick(e) {
+    if (!selectMode) return;
+    // Don't intercept clicks on action buttons
+    if (e.target.closest(".journal-entry__actions")) return;
+    e.preventDefault();
+    onToggleSelect(log.id);
+  }
+
   return (
-    <article className="journal-entry">
+    <article
+      className={`journal-entry${selectMode ? " journal-entry--selectable" : ""}${isSelected ? " journal-entry--selected" : ""}`}
+      onClick={handleClick}
+    >
+      {/* Checkbox — visible in select mode */}
+      {selectMode && (
+        <button
+          type="button"
+          className="journal-entry__checkbox"
+          onClick={(e) => { e.stopPropagation(); onToggleSelect(log.id); }}
+          aria-label={isSelected ? "Deselect" : "Select"}
+        >
+          {isSelected
+            ? <TbSquareCheck size={20} strokeWidth={2} />
+            : <TbSquare size={20} strokeWidth={1.8} />}
+        </button>
+      )}
+
       <div className="journal-entry__header">
         <div className="journal-entry__title-row">
-          <Link to={`/mountains/${mountain?.slug}`} className="journal-entry__name">
-            {mountain?.name || "Unknown mountain"}
-          </Link>
+          {selectMode ? (
+            <span className="journal-entry__name">{mountain?.name || "Unknown mountain"}</span>
+          ) : (
+            <Link to={`/mountains/${mountain?.slug}`} className="journal-entry__name">
+              {mountain?.name || "Unknown mountain"}
+            </Link>
+          )}
           <span className={`journal-entry__status journal-entry__status--${log.status}`}>
             {STATUS_LABELS[log.status] || log.status}
           </span>
@@ -133,7 +206,6 @@ function JournalEntry({ log, completionCount, onDelete }) {
           {mountain?.region?.name && <span className="journal-entry__region">{mountain.region.name}</span>}
           {log.season && <span className="journal-entry__season">{SEASON_LABELS[log.season] || log.season}</span>}
           {mountain?.height_m && <span className="journal-entry__height">{mountain.height_m}m</span>}
-          {/* Historical weather chip — only for completed logs with a date */}
           {log.status === "completed" && log.completed_date && (
             <HistoricalWeatherChip lat={lat} lon={lon} date={log.completed_date} />
           )}
@@ -152,28 +224,31 @@ function JournalEntry({ log, completionCount, onDelete }) {
       {log.notes && <p className="journal-entry__notes">{log.notes}</p>}
       {log.uploaded_image && <img className="journal-entry__image" src={log.uploaded_image} alt={`${mountain?.name} summit photo`} />}
 
-      <div className="journal-entry__actions">
-        <Link
-          to={`/mountains/${mountain?.slug}`}
-          className="journal-entry__action-btn journal-entry__action-btn--edit"
-        >
-          <TbEdit size={13} strokeWidth={2} />Edit
-        </Link>
-        <button
-          type="button"
-          className="journal-entry__action-btn journal-entry__action-btn--delete"
-          onClick={() => onDelete(log)}
-        >
-          <TbTrash size={13} strokeWidth={2} />Delete
-        </button>
-      </div>
+      {/* Actions hidden in select mode */}
+      {!selectMode && (
+        <div className="journal-entry__actions">
+          <Link
+            to={`/mountains/${mountain?.slug}`}
+            className="journal-entry__action-btn journal-entry__action-btn--edit"
+          >
+            <TbEdit size={13} strokeWidth={2} />Edit
+          </Link>
+          <button
+            type="button"
+            className="journal-entry__action-btn journal-entry__action-btn--delete"
+            onClick={() => onDelete(log)}
+          >
+            <TbTrash size={13} strokeWidth={2} />Delete
+          </button>
+        </div>
+      )}
     </article>
   );
 }
 
 // ── Route group entry ────────────────────────────────────────────────────────
 
-function RouteEntry({ routeId, routeName, routeDate, routeStatus, logs, completionCountById, onDeleteRoute }) {
+function RouteEntry({ routeId, routeName, routeDate, routeStatus, logs, onDeleteRoute }) {
   const [expanded, setExpanded] = useState(true);
   const primaryLog = logs.find((l) => l.is_route_primary) || logs[0];
   const isPlanned  = routeStatus === "planned";
@@ -245,7 +320,6 @@ function RouteEntry({ routeId, routeName, routeDate, routeStatus, logs, completi
 
 function UpcomingRoutesStrip({ routes }) {
   if (!routes || routes.length === 0) return null;
-
   return (
     <div className="journal-upcoming-routes">
       <div className="journal-upcoming-routes__header">
@@ -255,8 +329,8 @@ function UpcomingRoutesStrip({ routes }) {
       </div>
       <div className="journal-upcoming-routes__list">
         {routes.map((route) => {
-          const until     = daysUntil(route.completed_date);
-          const daysLeft  = route.completed_date
+          const until    = daysUntil(route.completed_date);
+          const daysLeft = route.completed_date
             ? Math.round((new Date(route.completed_date) - new Date()) / 86400000)
             : null;
           const isImminent = daysLeft !== null && daysLeft <= 7;
@@ -289,18 +363,23 @@ function UpcomingRoutesStrip({ routes }) {
 
 function JournalPage() {
   const navigate = useNavigate();
-  const [logs,            setLogs]            = useState([]);
-  const [collections,     setCollections]     = useState([]);
-  const [plannedRoutes,   setPlannedRoutes]   = useState([]);
-  const [status,          setStatus]          = useState("loading");
-  const [filterStatus,    setFilterStatus]    = useState("all");
-  const [filterSeason,    setFilterSeason]    = useState("all");
+  const [logs,             setLogs]             = useState([]);
+  const [collections,      setCollections]      = useState([]);
+  const [plannedRoutes,    setPlannedRoutes]    = useState([]);
+  const [status,           setStatus]           = useState("loading");
+  const [filterStatus,     setFilterStatus]     = useState("all");
+  const [filterSeason,     setFilterSeason]     = useState("all");
   const [filterCollection, setFilterCollection] = useState("all");
-  const [filterDateFrom,  setFilterDateFrom]  = useState("");
-  const [filterDateTo,    setFilterDateTo]    = useState("");
-  const [search,          setSearch]          = useState("");
+  const [filterDateFrom,   setFilterDateFrom]   = useState("");
+  const [filterDateTo,     setFilterDateTo]     = useState("");
+  const [search,           setSearch]           = useState("");
   const [deleteRouteTarget, setDeleteRouteTarget] = useState(null);
   const [deleteLogTarget,   setDeleteLogTarget]   = useState(null);
+
+  // Bulk select state
+  const [selectMode,   setSelectMode]   = useState(false);
+  const [selectedIds,  setSelectedIds]  = useState(new Set());
+  const [applying,     setApplying]     = useState(false);
 
   const hasDateFilter = filterDateFrom || filterDateTo;
   function clearDateFilter() { setFilterDateFrom(""); setFilterDateTo(""); }
@@ -324,12 +403,10 @@ function JournalPage() {
     }
     load();
 
-    // Planned routes — non-blocking, fail silently
     async function loadPlannedRoutes() {
       try {
         const data = await getRouteLogs("planned");
         const list = Array.isArray(data) ? data : [];
-        // Sort soonest first, no-date routes last
         list.sort((a, b) => {
           if (!a.completed_date && !b.completed_date) return 0;
           if (!a.completed_date) return 1;
@@ -337,10 +414,52 @@ function JournalPage() {
           return new Date(a.completed_date) - new Date(b.completed_date);
         });
         setPlannedRoutes(list);
-      } catch { /* not a fatal error */ }
+      } catch { /* non-fatal */ }
     }
     loadPlannedRoutes();
   }, [navigate]);
+
+  // ── Bulk selection helpers ─────────────────────────────────────────────────
+
+  function handleToggleSelect(logId) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(logId)) next.delete(logId);
+      else next.add(logId);
+      return next;
+    });
+  }
+
+  function handleEnterSelectMode() {
+    setSelectMode(true);
+    setSelectedIds(new Set());
+  }
+
+  function handleCancelSelectMode() {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  }
+
+  async function handleBulkApply(newStatus) {
+    if (selectedIds.size === 0) return;
+    setApplying(true);
+    const ids = Array.from(selectedIds);
+    try {
+      await Promise.all(ids.map((id) => updateProgressLog(id, { status: newStatus })));
+      // Update logs in local state
+      setLogs((prev) =>
+        prev.map((l) => selectedIds.has(l.id) ? { ...l, status: newStatus } : l)
+      );
+      setSelectMode(false);
+      setSelectedIds(new Set());
+    } catch (err) {
+      alert(err.message || "Some updates failed. Please try again.");
+    } finally {
+      setApplying(false);
+    }
+  }
+
+  // ── Route / log delete ─────────────────────────────────────────────────────
 
   function handleDeleteRoute(routeId, routeName, count) {
     setDeleteRouteTarget({ id: routeId, name: routeName, count });
@@ -372,6 +491,8 @@ function JournalPage() {
       setDeleteLogTarget(null);
     }
   }
+
+  // ── Derived values ─────────────────────────────────────────────────────────
 
   const completionCountById = useMemo(() => {
     return logs.reduce((acc, log) => {
@@ -417,7 +538,7 @@ function JournalPage() {
   }, {});
 
   function groupMonthLogs(monthLogs) {
-    const routeGroups = {};
+    const routeGroups    = {};
     const individualLogs = [];
     for (const log of monthLogs) {
       if (log.route_group) {
@@ -426,7 +547,7 @@ function JournalPage() {
             routeId:     log.route_group,
             routeName:   log.route_name || "Unnamed route",
             routeDate:   log.completed_date,
-            routeStatus: "completed", // logs in the timeline are completed
+            routeStatus: "completed",
             logs:        [],
           };
         }
@@ -435,7 +556,7 @@ function JournalPage() {
         individualLogs.push(log);
       }
     }
-    const routeEntries     = Object.values(routeGroups).map((g) => ({ type: "route",      date: g.routeDate,                              data: g }));
+    const routeEntries      = Object.values(routeGroups).map((g) => ({ type: "route",      date: g.routeDate,                                   data: g }));
     const individualEntries = individualLogs.map((l)             => ({ type: "individual", date: l.completed_date || l.updated_at || l.created_at, data: l }));
     return [...routeEntries, ...individualEntries].sort((a, b) => new Date(b.date) - new Date(a.date));
   }
@@ -509,25 +630,48 @@ function JournalPage() {
 
           {status === "success" && (
             <>
-              <div className="journal-stats">
-                <div className="journal-stat"><strong>{logs.length}</strong><span>Total logs</span></div>
-                <div className="journal-stat"><strong>{completedCount}</strong><span>Completed</span></div>
-                <div className="journal-stat"><strong>{plannedCount}</strong><span>Planned</span></div>
-                {routeCount > 0 && (
-                  <div className="journal-stat journal-stat--route">
-                    <strong>{routeCount}</strong>
-                    <span>Route{routeCount !== 1 ? "s" : ""} logged</span>
-                  </div>
+              {/* Stats row + select mode toggle */}
+              <div className="journal-stats-row">
+                <div className="journal-stats">
+                  <div className="journal-stat"><strong>{logs.length}</strong><span>Total logs</span></div>
+                  <div className="journal-stat"><strong>{completedCount}</strong><span>Completed</span></div>
+                  <div className="journal-stat"><strong>{plannedCount}</strong><span>Planned</span></div>
+                  {routeCount > 0 && (
+                    <div className="journal-stat journal-stat--route">
+                      <strong>{routeCount}</strong>
+                      <span>Route{routeCount !== 1 ? "s" : ""} logged</span>
+                    </div>
+                  )}
+                  {repeatSummitCount > 0 && (
+                    <div className="journal-stat journal-stat--repeat">
+                      <strong>{repeatSummitCount}</strong>
+                      <span>Repeat summits</span>
+                    </div>
+                  )}
+                </div>
+                {logs.length > 0 && !selectMode && (
+                  <button
+                    type="button"
+                    className="journal-select-btn"
+                    onClick={handleEnterSelectMode}
+                    title="Select entries to bulk update status"
+                  >
+                    <TbListCheck size={15} strokeWidth={2} />
+                    Select
+                  </button>
                 )}
-                {repeatSummitCount > 0 && (
-                  <div className="journal-stat journal-stat--repeat">
-                    <strong>{repeatSummitCount}</strong>
-                    <span>Repeat summits</span>
-                  </div>
+                {selectMode && (
+                  <button
+                    type="button"
+                    className="journal-select-btn journal-select-btn--active"
+                    onClick={handleCancelSelectMode}
+                  >
+                    <TbX size={15} strokeWidth={2.5} />
+                    Cancel
+                  </button>
                 )}
               </div>
 
-              {/* Upcoming planned routes */}
               <UpcomingRoutesStrip routes={plannedRoutes} />
 
               <div className="journal-filters">
@@ -633,6 +777,9 @@ function JournalPage() {
                               log={entry.data}
                               completionCount={completionCountById[entry.data.mountain] || 0}
                               onDelete={handleDeleteLog}
+                              selectMode={selectMode}
+                              isSelected={selectedIds.has(entry.data.id)}
+                              onToggleSelect={handleToggleSelect}
                             />
                           )
                         )}
@@ -645,6 +792,16 @@ function JournalPage() {
           )}
         </div>
       </section>
+
+      {/* Floating bulk action bar */}
+      {selectMode && selectedIds.size > 0 && (
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          onApply={handleBulkApply}
+          onCancel={handleCancelSelectMode}
+          applying={applying}
+        />
+      )}
     </main>
   );
 }
