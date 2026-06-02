@@ -703,12 +703,10 @@ text-decoration:none;
 color:inherit;
 }
 
-.mountain-detail-grid{
-
-display:grid;
-grid-template-columns:repeat(4,1fr);
-gap:var(--space-lg);
-
+.mountain-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-md);
 }
 
 .mountain-stat-card{

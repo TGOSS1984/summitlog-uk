@@ -21,7 +21,9 @@ const SEASON_LABELS = {
 
 function formatDate(d) {
   if (!d) return null;
-  return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  return new Date(d).toLocaleDateString("en-GB", {
+    day: "numeric", month: "long", year: "numeric",
+  });
 }
 
 function SharePage() {
@@ -33,7 +35,7 @@ function SharePage() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(`/api/progress/share/log/${id}/`);
+        const res  = await fetch(`/api/progress/share/log/${id}/`);
         if (!res.ok) throw new Error("not found");
         const data = await res.json();
         setLog(data);
@@ -44,6 +46,21 @@ function SharePage() {
     }
     load();
   }, [id]);
+
+  // Set document title once log is loaded
+  useEffect(() => {
+    if (status === "success" && log?.mountain_detail?.name) {
+      const mountain = log.mountain_detail;
+      const date     = log.completed_date
+        ? ` — ${new Date(log.completed_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`
+        : "";
+      document.title = `${mountain.name}${date} · SummitLog UK`;
+    } else if (status === "error") {
+      document.title = "Ascent not found · SummitLog UK";
+    }
+    // Reset to default when unmounting
+    return () => { document.title = "SummitLog UK"; };
+  }, [status, log]);
 
   function handleCopy() {
     navigator.clipboard?.writeText(window.location.href).then(() => {
@@ -97,17 +114,27 @@ function SharePage() {
             Summit ascent
           </p>
           <h1>{mountain?.name}</h1>
-          {mountain?.summary && <p style={{ color: "rgba(248,250,252,0.72)", marginTop: "0.75rem" }}>{mountain.summary}</p>}
+          {mountain?.summary && (
+            <p style={{ color: "rgba(248,250,252,0.72)", marginTop: "0.75rem" }}>
+              {mountain.summary}
+            </p>
+          )}
         </div>
       </section>
 
-      {/* Stat cards */}
+      {/* Stat cards — includes mountain height prominently */}
       <section className="section section-light">
         <div className="container mountain-detail-grid">
           <div className="mountain-stat-card">
             <h3>Height</h3>
             <strong>{mountain?.height_m}m</strong>
           </div>
+          {mountain?.height_ft && (
+            <div className="mountain-stat-card">
+              <h3>Feet</h3>
+              <strong>{mountain.height_ft}ft</strong>
+            </div>
+          )}
           <div className="mountain-stat-card">
             <h3>Region</h3>
             <strong>{mountain?.region?.name || "—"}</strong>
@@ -115,7 +142,7 @@ function SharePage() {
           {log.completed_date && (
             <div className="mountain-stat-card">
               <h3>Summited</h3>
-              <strong style={{ fontSize: "1.1rem" }}>{formatDate(log.completed_date)}</strong>
+              <strong style={{ fontSize: "1rem" }}>{formatDate(log.completed_date)}</strong>
             </div>
           )}
           {log.season && (
@@ -146,7 +173,7 @@ function SharePage() {
               </button>
             </div>
 
-            {/* Stats row */}
+            {/* Stats */}
             {(log.hike_distance_km || log.hike_duration_hours || log.steps || log.flights_climbed) && (
               <div className="share-card__stats">
                 {log.hike_distance_km && (
@@ -180,14 +207,12 @@ function SharePage() {
               </div>
             )}
 
-            {/* Conditions */}
             {log.conditions && (
               <div className="share-card__conditions">
                 {CONDITIONS_LABELS[log.conditions] || log.conditions}
               </div>
             )}
 
-            {/* Route */}
             {log.route_taken && (
               <p className="share-card__route">
                 <TbRoute size={14} strokeWidth={1.8} />
@@ -195,7 +220,6 @@ function SharePage() {
               </p>
             )}
 
-            {/* Photo */}
             {log.uploaded_image && (
               <img
                 className="share-card__image"
@@ -204,12 +228,10 @@ function SharePage() {
               />
             )}
 
-            {/* Notes — only if they have content */}
             {log.notes && (
               <blockquote className="share-card__notes">{log.notes}</blockquote>
             )}
 
-            {/* CTA */}
             <div className="share-card__cta">
               <p>Track your own UK mountain adventures</p>
               <Link to="/" className="button-primary">Explore SummitLog UK</Link>
