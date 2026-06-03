@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-  TbShare2, TbExternalLink,
+  TbShare2, TbExternalLink, TbMap2, TbCompass, TbFileCode,
 } from "react-icons/tb";
 import {
   createProgressLog,
   deleteProgressLog,
   getCurrentUser,
   getMountain,
+  getMountains,
   getProgressLogs,
   updateProgressLog,
   updateProgressLogWithImage,
@@ -57,19 +58,83 @@ function getCollectionMemberships(mountain) {
 
 function logToForm(log) {
   return {
-    status: log.status || "not_started",
-    season: log.season || "",
-    conditions: log.conditions || "",
-    completed_date: log.completed_date || "",
-    route_taken: log.route_taken || "",
-    hike_distance_km: log.hike_distance_km || "",
+    status:              log.status              || "not_started",
+    season:              log.season              || "",
+    conditions:          log.conditions          || "",
+    completed_date:      log.completed_date      || "",
+    route_taken:         log.route_taken         || "",
+    hike_distance_km:    log.hike_distance_km    || "",
     hike_duration_hours: log.hike_duration_hours || "",
-    steps: log.steps || "",
-    flights_climbed: log.flights_climbed || "",
-    notes: log.notes || "",
-    uploaded_image: log.uploaded_image || "",
+    steps:               log.steps               || "",
+    flights_climbed:     log.flights_climbed     || "",
+    notes:               log.notes               || "",
+    uploaded_image:      log.uploaded_image      || "",
   };
 }
+
+// ── Haversine distance (km) ──────────────────────────────────────────────────
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R    = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a    =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── GPX file parser ──────────────────────────────────────────────────────────
+// Parses a .gpx file client-side and returns distance_km, duration_hours,
+// and a steps estimate. Returns null if parsing fails or no track points found.
+
+function parseGpxFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const doc    = new DOMParser().parseFromString(e.target.result, "text/xml");
+        const trkpts = Array.from(doc.querySelectorAll("trkpt"));
+        if (trkpts.length < 2) { resolve(null); return; }
+
+        // Total distance
+        let totalKm = 0;
+        for (let i = 1; i < trkpts.length; i++) {
+          totalKm += haversineKm(
+            parseFloat(trkpts[i - 1].getAttribute("lat")),
+            parseFloat(trkpts[i - 1].getAttribute("lon")),
+            parseFloat(trkpts[i].getAttribute("lat")),
+            parseFloat(trkpts[i].getAttribute("lon")),
+          );
+        }
+
+        // Duration from <time> elements
+        const times = trkpts
+          .map((pt) => pt.querySelector("time")?.textContent)
+          .filter(Boolean);
+        let durationHours = null;
+        if (times.length >= 2) {
+          const ms = new Date(times[times.length - 1]) - new Date(times[0]);
+          durationHours = ms > 0 ? Math.round((ms / 3600000) * 10) / 10 : null;
+        }
+
+        // Steps estimate — roughly 1300 steps/km for hiking
+        const steps = Math.round(totalKm * 1300);
+
+        resolve({
+          distance_km:    Math.round(totalKm * 100) / 100,
+          duration_hours: durationHours,
+          steps,
+        });
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsText(file);
+  });
+}
+
+// ── Weather helpers ──────────────────────────────────────────────────────────
 
 function weatherDescription(code) {
   const codes = {
@@ -100,38 +165,24 @@ function weatherEmoji(code) {
 // ── Wikipedia summary ────────────────────────────────────────────────────────
 
 function WikiSummary({ mountainName }) {
-  const [wikiData, setWikiData]   = useState(null);
-  const [expanded, setExpanded]   = useState(false);
-  const [loading,  setLoading]    = useState(true);
+  const [wikiData, setWikiData] = useState(null);
+  const [expanded, setExpanded] = useState(false);
+  const [loading,  setLoading]  = useState(true);
 
   useEffect(() => {
     if (!mountainName) return;
-
-    // Strip bracketed suffixes before querying Wikipedia
     const wikiName = mountainName.replace(/\s*\[.*?\]\s*/g, "").trim();
     const cacheKey = `wiki-${wikiName}`;
-
-    // Serve from sessionStorage if already fetched this session
-    const cached = sessionStorage.getItem(cacheKey);
+    const cached   = sessionStorage.getItem(cacheKey);
     if (cached) {
-      try {
-        setWikiData(JSON.parse(cached));
-        setLoading(false);
-        return;
-      } catch { /* corrupted cache — fall through to fetch */ }
+      try { setWikiData(JSON.parse(cached)); setLoading(false); return; } catch {}
     }
-
     setLoading(true);
-    fetch(
-      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiName)}`
-    )
+    fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiName)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.extract && data.type !== "disambiguation") {
-          const result = {
-            text: data.extract,
-            url:  data.content_urls?.desktop?.page,
-          };
+          const result = { text: data.extract, url: data.content_urls?.desktop?.page };
           setWikiData(result);
           sessionStorage.setItem(cacheKey, JSON.stringify(result));
         }
@@ -159,14 +210,8 @@ function WikiSummary({ mountainName }) {
           </button>
         )}
         {wikiData.url && (
-          <a
-            href={wikiData.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mountain-wiki__link"
-          >
-            <TbExternalLink size={13} strokeWidth={2} />
-            Wikipedia
+          <a href={wikiData.url} target="_blank" rel="noopener noreferrer" className="mountain-wiki__link">
+            <TbExternalLink size={13} strokeWidth={2} /> Wikipedia
           </a>
         )}
       </div>
@@ -184,19 +229,17 @@ function WeatherWidget({ latitude, longitude, mountainName }) {
     if (!latitude || !longitude) { setWeatherStatus("unavailable"); return; }
     async function fetchWeather() {
       try {
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max,temperature_2m_min,windspeed_10m_max,precipitation_sum&timezone=Europe%2FLondon&forecast_days=4`;
+        const url  = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weathercode,temperature_2m_max,temperature_2m_min,windspeed_10m_max,precipitation_sum&timezone=Europe%2FLondon&forecast_days=4`;
         const res  = await fetch(url);
         const data = await res.json();
         const days = data.daily.time.slice(0, 4).map((date, i) => ({
-          date,
-          code:    data.daily.weathercode[i],
+          date, code: data.daily.weathercode[i],
           maxTemp: Math.round(data.daily.temperature_2m_max[i]),
           minTemp: Math.round(data.daily.temperature_2m_min[i]),
           wind:    Math.round(data.daily.windspeed_10m_max[i]),
           rain:    data.daily.precipitation_sum[i],
         }));
-        setWeather(days);
-        setWeatherStatus("success");
+        setWeather(days); setWeatherStatus("success");
       } catch { setWeatherStatus("error"); }
     }
     fetchWeather();
@@ -224,16 +267,89 @@ function WeatherWidget({ latitude, longitude, mountainName }) {
               <p className="weather-day__label">{formatDay(day.date, i)}</p>
               <span className="weather-day__icon">{weatherEmoji(day.code)}</span>
               <p className="weather-day__desc">{weatherDescription(day.code)}</p>
-              <p className="weather-day__temp">
-                <strong>{day.maxTemp}°</strong>
-                <span>{day.minTemp}°</span>
-              </p>
+              <p className="weather-day__temp"><strong>{day.maxTemp}°</strong><span>{day.minTemp}°</span></p>
               <div className="weather-day__details">
-                <span>💨 {day.wind} km/h</span>
-                <span>🌧 {day.rain}mm</span>
+                <span>💨 {day.wind} km/h</span><span>🌧 {day.rain}mm</span>
               </div>
             </div>
           ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Plan your ascent ─────────────────────────────────────────────────────────
+// External route planning links + nearby summits in the same region.
+
+function PlanYourAscent({ mountain, nearbyMountains }) {
+  const { latitude, longitude, name, region } = mountain;
+  const isScotland = region?.name?.toLowerCase().includes("scotland");
+
+  const osUrl = latitude && longitude
+    ? `https://explore.osmaps.com/?lat=${latitude}&lon=${longitude}&zoom=14&style=Standard`
+    : null;
+  const komootUrl       = `https://www.komoot.com/discover?q=${encodeURIComponent(name + " " + (region?.name || ""))}`;
+  const walkHighlandsUrl = isScotland
+    ? `https://www.walkhighlands.co.uk/walk-search.php?q=${encodeURIComponent(name)}`
+    : null;
+
+  const hasLinks   = osUrl || komootUrl || walkHighlandsUrl;
+  const hasNearby  = nearbyMountains && nearbyMountains.length > 0;
+  if (!hasLinks && !hasNearby) return null;
+
+  return (
+    <div className="mountain-plan">
+      <p className="section-kicker"><span className="kicker-line" />Plan your ascent</p>
+      <h3>Route discovery</h3>
+      <p>Find routes and trail guides for {name} using these tools.</p>
+
+      {hasLinks && (
+        <div className="mountain-plan__links">
+          {osUrl && (
+            <a href={osUrl} target="_blank" rel="noopener noreferrer" className="mountain-plan__link">
+              <span className="mountain-plan__link-icon"><TbMap2 size={18} strokeWidth={1.5} /></span>
+              <span className="mountain-plan__link-body">
+                <strong>OS Maps</strong>
+                <small>Official Ordnance Survey mapping at this location</small>
+              </span>
+              <TbExternalLink size={13} strokeWidth={2} className="mountain-plan__link-ext" />
+            </a>
+          )}
+          <a href={komootUrl} target="_blank" rel="noopener noreferrer" className="mountain-plan__link">
+            <span className="mountain-plan__link-icon"><TbCompass size={18} strokeWidth={1.5} /></span>
+            <span className="mountain-plan__link-body">
+              <strong>Komoot</strong>
+              <small>Community routes and trail guides</small>
+            </span>
+            <TbExternalLink size={13} strokeWidth={2} className="mountain-plan__link-ext" />
+          </a>
+          {walkHighlandsUrl && (
+            <a href={walkHighlandsUrl} target="_blank" rel="noopener noreferrer" className="mountain-plan__link">
+              <span className="mountain-plan__link-icon">🏔️</span>
+              <span className="mountain-plan__link-body">
+                <strong>WalkHighlands</strong>
+                <small>Scottish walking guides and route descriptions</small>
+              </span>
+              <TbExternalLink size={13} strokeWidth={2} className="mountain-plan__link-ext" />
+            </a>
+          )}
+        </div>
+      )}
+
+      {hasNearby && (
+        <div className="mountain-nearby">
+          <p className="mountain-nearby__label">
+            Other summits in {region?.name} — combine into a route
+          </p>
+          <div className="mountain-nearby__grid">
+            {nearbyMountains.map((m) => (
+              <Link to={`/mountains/${m.slug}`} key={m.id} className="mountain-nearby__item">
+                <strong>{m.name}</strong>
+                <span>{m.height_m}m</span>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -260,28 +376,28 @@ function MountainDetailPage() {
   const { slug } = useParams();
   const { toasts, addToast, removeToast } = useToast();
 
-  const [mountain,     setMountain]     = useState(null);
-  const [ascents,      setAscents]      = useState([]);
-  const [activeLogId,  setActiveLogId]  = useState(null);
-  const [form,         setForm]         = useState(emptyForm);
-  const [pageStatus,   setPageStatus]   = useState("loading");
-  const [saveStatus,   setSaveStatus]   = useState("idle");
-  const [selectedImage, setSelectedImage] = useState(null);
-  const [showNewForm,  setShowNewForm]  = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [isLoggedIn,   setIsLoggedIn]   = useState(false);
-  const [shareCopied,  setShareCopied]  = useState(false);
+  const [mountain,        setMountain]        = useState(null);
+  const [ascents,         setAscents]         = useState([]);
+  const [activeLogId,     setActiveLogId]     = useState(null);
+  const [form,            setForm]            = useState(emptyForm);
+  const [pageStatus,      setPageStatus]      = useState("loading");
+  const [saveStatus,      setSaveStatus]      = useState("idle");
+  const [selectedImage,   setSelectedImage]   = useState(null);
+  const [showNewForm,     setShowNewForm]     = useState(false);
+  const [confirmDelete,   setConfirmDelete]   = useState(false);
+  const [isLoggedIn,      setIsLoggedIn]      = useState(false);
+  const [shareCopied,     setShareCopied]     = useState(false);
+  const [nearbyMountains, setNearbyMountains] = useState([]);
+  const [gpxHint,         setGpxHint]         = useState(null); // "Filled from GPX" or error
 
+  // Load mountain + user data
   useEffect(() => {
     async function loadMountain() {
       try {
         const mountainData = await getMountain(slug);
         setMountain(mountainData);
         try {
-          const [userData, logs] = await Promise.all([
-            getCurrentUser(),
-            getProgressLogs(),
-          ]);
+          const [userData, logs] = await Promise.all([getCurrentUser(), getProgressLogs()]);
           setIsLoggedIn(!!userData?.user);
           const mountainLogs = logs.filter((log) => log.mountain === mountainData.id);
           setAscents(mountainLogs);
@@ -290,9 +406,7 @@ function MountainDetailPage() {
             setActiveLogId(latest.id);
             setForm(logToForm(latest));
           }
-        } catch {
-          setIsLoggedIn(false);
-        }
+        } catch { setIsLoggedIn(false); }
         setPageStatus("success");
       } catch (error) {
         console.error(error);
@@ -302,28 +416,76 @@ function MountainDetailPage() {
     loadMountain();
   }, [slug]);
 
-  // ── Share handler ────────────────────────────────────────────────────────
+  // Fetch nearby mountains once the mountain data is loaded
+  useEffect(() => {
+    if (!mountain?.region?.slug) return;
+    getMountains({ region__slug: mountain.region.slug, page_size: 20 })
+      .then((data) => {
+        const list = (Array.isArray(data) ? data : data.results || [])
+          .filter((m) => m.slug !== mountain.slug);
+
+        // Sort by proximity if both have coordinates, otherwise by height desc
+        const sorted = mountain.latitude && mountain.longitude
+          ? list.sort((a, b) => {
+              const da = (a.latitude && a.longitude)
+                ? haversineKm(Number(mountain.latitude), Number(mountain.longitude), Number(a.latitude), Number(a.longitude))
+                : Infinity;
+              const db = (b.latitude && b.longitude)
+                ? haversineKm(Number(mountain.latitude), Number(mountain.longitude), Number(b.latitude), Number(b.longitude))
+                : Infinity;
+              return da - db;
+            })
+          : list.sort((a, b) => Number(b.height_m || 0) - Number(a.height_m || 0));
+
+        setNearbyMountains(sorted.slice(0, 6));
+      })
+      .catch(() => {}); // non-fatal
+  }, [mountain]);
+
+  // ── Share ──────────────────────────────────────────────────────────────────
+
   function handleShare() {
     const completedLog = ascents.find((a) => a.status === "completed");
-    const shareUrl = completedLog
+    const shareUrl     = completedLog
       ? `${window.location.origin}/share/log/${completedLog.id}`
       : window.location.href;
 
     if (navigator.clipboard) {
       navigator.clipboard.writeText(shareUrl).then(() => {
         setShareCopied(true);
-        addToast(completedLog ? "Share link copied to clipboard!" : "Page link copied!", "success");
+        addToast(completedLog ? "Share link copied!" : "Page link copied!", "success");
         setTimeout(() => setShareCopied(false), 2500);
       });
     } else {
-      // Fallback for older browsers
       const el = document.createElement("input");
       el.value = shareUrl;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand("copy");
-      document.body.removeChild(el);
+      document.body.appendChild(el); el.select(); document.execCommand("copy"); document.body.removeChild(el);
       addToast("Link copied!", "success");
+    }
+  }
+
+  // ── GPX auto-fill ──────────────────────────────────────────────────────────
+
+  async function handleGpxChange(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    setGpxHint("Parsing GPX…");
+    try {
+      const parsed = await parseGpxFile(file);
+      if (!parsed) { setGpxHint("No track points found in GPX file."); return; }
+      setForm((f) => ({
+        ...f,
+        hike_distance_km:    parsed.distance_km    !== null ? String(parsed.distance_km)    : f.hike_distance_km,
+        hike_duration_hours: parsed.duration_hours !== null ? String(parsed.duration_hours) : f.hike_duration_hours,
+        steps:               parsed.steps          !== null ? String(parsed.steps)          : f.steps,
+      }));
+      const parts = [`${parsed.distance_km}km`];
+      if (parsed.duration_hours) parts.push(`${parsed.duration_hours}hrs`);
+      parts.push(`~${parsed.steps.toLocaleString()} steps`);
+      setGpxHint(`✓ Filled from GPX — ${parts.join(" · ")}`);
+      setTimeout(() => setGpxHint(null), 6000);
+    } catch {
+      setGpxHint("Could not parse GPX file. Check the format and try again.");
     }
   }
 
@@ -332,24 +494,16 @@ function MountainDetailPage() {
     setForm((current) => ({ ...current, [name]: value }));
   }
 
-  function handleImageChange(event) {
-    setSelectedImage(event.target.files[0] || null);
-  }
+  function handleImageChange(event) { setSelectedImage(event.target.files[0] || null); }
 
   function handleSelectAscent(log) {
-    setActiveLogId(log.id);
-    setForm(logToForm(log));
-    setSelectedImage(null);
-    setSaveStatus("idle");
-    setShowNewForm(false);
+    setActiveLogId(log.id); setForm(logToForm(log)); setSelectedImage(null);
+    setSaveStatus("idle"); setShowNewForm(false); setGpxHint(null);
   }
 
   function handleNewAscent() {
-    setActiveLogId(null);
-    setForm(emptyForm);
-    setSelectedImage(null);
-    setSaveStatus("idle");
-    setShowNewForm(true);
+    setActiveLogId(null); setForm(emptyForm); setSelectedImage(null);
+    setSaveStatus("idle"); setShowNewForm(true); setGpxHint(null);
   }
 
   async function handleDeleteConfirmed() {
@@ -358,38 +512,30 @@ function MountainDetailPage() {
       await deleteProgressLog(activeLogId);
       const updated = ascents.filter((a) => a.id !== activeLogId);
       setAscents(updated);
-      if (updated.length > 0) {
-        setActiveLogId(updated[0].id);
-        setForm(logToForm(updated[0]));
-      } else {
-        setActiveLogId(null);
-        setForm(emptyForm);
-      }
+      if (updated.length > 0) { setActiveLogId(updated[0].id); setForm(logToForm(updated[0])); }
+      else { setActiveLogId(null); setForm(emptyForm); }
       setShowNewForm(false);
       addToast("Ascent log deleted.", "info");
-    } catch {
-      addToast("Could not delete log. Try again.", "error");
-    }
+    } catch { addToast("Could not delete log. Try again.", "error"); }
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
     if (form.status === "completed" && !form.completed_date) {
-      addToast("Please add a completed date for completed ascents.", "error");
-      return;
+      addToast("Please add a completed date for completed ascents.", "error"); return;
     }
     try {
       setSaveStatus("saving");
       const { uploaded_image, ...formWithoutImage } = form;
       const payload = {
         ...formWithoutImage,
-        mountain: mountain.id,
-        completed_date:      form.completed_date || null,
-        hike_distance_km:    form.hike_distance_km || null,
+        mountain:            mountain.id,
+        completed_date:      form.completed_date      || null,
+        hike_distance_km:    form.hike_distance_km    || null,
         hike_duration_hours: form.hike_duration_hours || null,
-        steps:               form.steps || null,
-        flights_climbed:     form.flights_climbed || null,
-        conditions:          form.conditions || "",
+        steps:               form.steps               || null,
+        flights_climbed:     form.flights_climbed     || null,
+        conditions:          form.conditions          || "",
       };
       const savedLog = activeLogId
         ? await updateProgressLog(activeLogId, payload)
@@ -405,10 +551,8 @@ function MountainDetailPage() {
         if (exists) return current.map((a) => (a.id === finalLog.id ? finalLog : a));
         return [finalLog, ...current];
       });
-      setActiveLogId(finalLog.id);
-      setForm(logToForm(finalLog));
-      setShowNewForm(false);
-      setSaveStatus("idle");
+      setActiveLogId(finalLog.id); setForm(logToForm(finalLog));
+      setShowNewForm(false); setSaveStatus("idle");
       addToast(activeLogId ? "Ascent updated successfully." : "Ascent saved successfully.", "success");
     } catch {
       setSaveStatus("idle");
@@ -445,31 +589,19 @@ function MountainDetailPage() {
     );
   }
 
-  const seasonLabels = {
-    summer: "☀️ Summer", winter: "❄️ Winter",
-    spring: "🌸 Spring", autumn: "🍂 Autumn",
-  };
-
-  const completedAscents = ascents.filter((a) => a.status === "completed");
-  const completedCount   = completedAscents.length;
+  const seasonLabels      = { summer: "☀️ Summer", winter: "❄️ Winter", spring: "🌸 Spring", autumn: "🍂 Autumn" };
+  const completedAscents  = ascents.filter((a) => a.status === "completed");
+  const completedCount    = completedAscents.length;
+  const dateLabelText     = form.status === "planned" ? "Target date" : "Completed date";
+  const collectionMemberships = getCollectionMemberships(mountain);
 
   function ascentHistoryLabel() {
     if (ascents.length === 0) return null;
-    if (completedCount === 0) {
-      return ascents.length === 1 ? "1 ascent logged" : `${ascents.length} ascents logged`;
-    }
-    if (completedCount === 1) {
-      return ascents.length === 1
-        ? "Summited once"
-        : `${ascents.length} ascents logged — summited once`;
-    }
+    if (completedCount === 0) return ascents.length === 1 ? "1 ascent logged" : `${ascents.length} ascents logged`;
+    if (completedCount === 1) return ascents.length === 1 ? "Summited once" : `${ascents.length} ascents logged — summited once`;
     return `${ascents.length} ${ascents.length === 1 ? "ascent" : "ascents"} logged — summited ${completedCount} times`;
   }
 
-  const dateLabelText        = form.status === "planned" ? "Target date" : "Completed date";
-  const collectionMemberships = getCollectionMemberships(mountain);
-
-  // Build extended stat cards — show rank and subregion if present
   const statCards = [
     { label: "Height",     value: `${mountain.height_m}m` },
     { label: "Feet",       value: mountain.height_ft || "—" },
@@ -480,13 +612,8 @@ function MountainDetailPage() {
         ? <Link to={`/regions/${mountain.region.slug}`} className="stat-card__link">{mountain.region.name}</Link>
         : mountain.region?.name || "—",
     },
-    // Rank — shown if rank_in_collection and collection name available
     ...(mountain.rank_in_collection && collectionMemberships[0]
       ? [{ label: collectionMemberships[0].name, value: `#${mountain.rank_in_collection}` }]
-      : []),
-    // Subregion — shown if present
-    ...(mountain.subregion?.name
-      ? [{ label: "Sub-region", value: mountain.subregion.name }]
       : []),
   ];
 
@@ -513,18 +640,14 @@ function MountainDetailPage() {
             <span className="kicker-line" />
             {collectionMemberships.length > 0 ? (
               collectionMemberships.map((m, i) => (
-                <span key={m.slug}>
-                  {i > 0 && " / "}
+                <span key={m.slug}>{i > 0 && " / "}
                   <Link to={`/collections/${m.slug}`} className="section-kicker__link">{m.name}</Link>
                 </span>
               ))
-            ) : (
-              "Unlisted"
-            )}
+            ) : "Unlisted"}
           </p>
           <div className="mountain-detail-hero__title-row">
             <h1>{mountain.name}</h1>
-            {/* Share button — copies share URL or page URL to clipboard */}
             <button
               className={`mountain-share-btn${shareCopied ? " mountain-share-btn--copied" : ""}`}
               onClick={handleShare}
@@ -538,7 +661,7 @@ function MountainDetailPage() {
         </div>
       </section>
 
-      {/* Expanded stat cards */}
+      {/* Stat cards */}
       <section className="section section-light">
         <div className="container mountain-detail-grid">
           {statCards.map((card) => (
@@ -550,7 +673,7 @@ function MountainDetailPage() {
         </div>
       </section>
 
-      {/* Wikipedia summary */}
+      {/* Wikipedia */}
       <section className="section section-light" style={{ paddingTop: 0 }}>
         <div className="container">
           <WikiSummary mountainName={mountain.name} />
@@ -561,14 +684,17 @@ function MountainDetailPage() {
       {mountain.latitude && mountain.longitude && (
         <section className="section section-light" style={{ paddingTop: 0 }}>
           <div className="container">
-            <WeatherWidget
-              latitude={mountain.latitude}
-              longitude={mountain.longitude}
-              mountainName={mountain.name}
-            />
+            <WeatherWidget latitude={mountain.latitude} longitude={mountain.longitude} mountainName={mountain.name} />
           </div>
         </section>
       )}
+
+      {/* Plan your ascent — route discovery */}
+      <section className="section section-light" style={{ paddingTop: 0 }}>
+        <div className="container">
+          <PlanYourAscent mountain={mountain} nearbyMountains={nearbyMountains} />
+        </div>
+      </section>
 
       {/* Tracking panel */}
       <section className="section section-dark">
@@ -654,6 +780,21 @@ function MountainDetailPage() {
                 <input type="text" name="route_taken" value={form.route_taken} onChange={handleChange} placeholder="e.g. Corridor Route from Seathwaite" />
               </label>
 
+              {/* GPX upload — auto-fills distance, duration, steps */}
+              <div className="tracking-form__gpx">
+                <label className="tracking-form__gpx-label">
+                  <TbFileCode size={15} strokeWidth={2} />
+                  Import from GPX
+                  <span className="field-hint">Auto-fills distance, duration and steps</span>
+                  <input type="file" accept=".gpx,application/gpx+xml" onChange={handleGpxChange} className="tracking-form__gpx-input" />
+                </label>
+                {gpxHint && (
+                  <p className={`tracking-form__gpx-hint${gpxHint.startsWith("✓") ? " tracking-form__gpx-hint--success" : " tracking-form__gpx-hint--error"}`}>
+                    {gpxHint}
+                  </p>
+                )}
+              </div>
+
               <div className="tracking-form__row">
                 <label>Distance km<input type="number" step="0.1" name="hike_distance_km" value={form.hike_distance_km} onChange={handleChange} /></label>
                 <label>Duration hours<input type="number" step="0.1" name="hike_duration_hours" value={form.hike_duration_hours} onChange={handleChange} /></label>
@@ -697,4 +838,5 @@ function MountainDetailPage() {
 }
 
 export default MountainDetailPage;
+
 

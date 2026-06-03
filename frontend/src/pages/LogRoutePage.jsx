@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   TbMountain, TbRoute, TbSearch, TbX, TbCheck,
   TbArrowUp, TbStar, TbChevronRight, TbPlus, TbEdit, TbTrash,
-  TbFlag,
+  TbFlag, TbFileCode,
 } from "react-icons/tb";
 import {
   createRouteLog, deleteRouteLog, getCurrentUser,
@@ -12,7 +12,58 @@ import {
 import { ToastContainer, useToast } from "../components/ui/Toast";
 import { ConfirmModal } from "../components/ui/ConfirmModal";
 
-// ── Mountain search (create mode only) ──────────────────────────────────────
+// ── GPX parser (shared with MountainDetailPage) ──────────────────────────────
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R    = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a    =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function parseGpxFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const doc    = new DOMParser().parseFromString(e.target.result, "text/xml");
+        const trkpts = Array.from(doc.querySelectorAll("trkpt"));
+        if (trkpts.length < 2) { resolve(null); return; }
+
+        let totalKm = 0;
+        for (let i = 1; i < trkpts.length; i++) {
+          totalKm += haversineKm(
+            parseFloat(trkpts[i - 1].getAttribute("lat")),
+            parseFloat(trkpts[i - 1].getAttribute("lon")),
+            parseFloat(trkpts[i].getAttribute("lat")),
+            parseFloat(trkpts[i].getAttribute("lon")),
+          );
+        }
+
+        const times = trkpts.map((pt) => pt.querySelector("time")?.textContent).filter(Boolean);
+        let durationHours = null;
+        if (times.length >= 2) {
+          const ms = new Date(times[times.length - 1]) - new Date(times[0]);
+          durationHours = ms > 0 ? Math.round((ms / 3600000) * 10) / 10 : null;
+        }
+
+        resolve({
+          distance_km:    Math.round(totalKm * 100) / 100,
+          duration_hours: durationHours,
+          steps:          Math.round(totalKm * 1300),
+        });
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsText(file);
+  });
+}
+
+// ── Mountain search ──────────────────────────────────────────────────────────
 
 function MountainSearch({ onAdd, selectedIds }) {
   const [query,     setQuery]     = useState("");
@@ -117,9 +168,7 @@ function SelectedMountainList({ mountains, primaryId, onSetPrimary, onRemove, re
                 </button>
               </div>
             )}
-            {readOnly && isPrimary && (
-              <span className="route-mountain-item__primary-label">Primary</span>
-            )}
+            {readOnly && isPrimary && <span className="route-mountain-item__primary-label">Primary</span>}
           </li>
         );
       })}
@@ -142,22 +191,21 @@ function LogRoutePage() {
 
   const { toasts, addToast, removeToast } = useToast();
 
-  const [isLoggedIn,     setIsLoggedIn]     = useState(null);
-  const [loading,        setLoading]        = useState(isEditMode);
-  const [form,           setForm]           = useState(emptyForm);
-  const [mountains,      setMountains]      = useState([]);
-  const [primaryId,      setPrimaryId]      = useState(null);
-  const [saveStatus,     setSaveStatus]     = useState("idle");
-  const [confirmDelete,  setConfirmDelete]  = useState(false);
+  const [isLoggedIn,    setIsLoggedIn]    = useState(null);
+  const [loading,       setLoading]       = useState(isEditMode);
+  const [form,          setForm]          = useState(emptyForm);
+  const [mountains,     setMountains]     = useState([]);
+  const [primaryId,     setPrimaryId]     = useState(null);
+  const [saveStatus,    setSaveStatus]    = useState("idle");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [gpxHint,       setGpxHint]       = useState(null);
 
-  // Auth check
   useEffect(() => {
     getCurrentUser()
       .then((data) => setIsLoggedIn(!!data?.user))
       .catch(() => setIsLoggedIn(false));
   }, []);
 
-  // Edit mode — load existing route
   useEffect(() => {
     if (!isEditMode) return;
     async function loadRoute() {
@@ -181,9 +229,7 @@ function LogRoutePage() {
       } catch {
         addToast("Unable to load route. It may have been deleted.", "error");
         navigate("/journal", { replace: true });
-      } finally {
-        setLoading(false);
-      }
+      } finally { setLoading(false); }
     }
     loadRoute();
   }, [id, isEditMode]);
@@ -191,6 +237,29 @@ function LogRoutePage() {
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
+  }
+
+  // ── GPX auto-fill for cumulative stats ─────────────────────────────────────
+
+  async function handleGpxChange(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    setGpxHint("Parsing GPX…");
+    try {
+      const parsed = await parseGpxFile(file);
+      if (!parsed) { setGpxHint("No track points found in GPX file."); return; }
+      setForm((f) => ({
+        ...f,
+        hike_distance_km:    parsed.distance_km    !== null ? String(parsed.distance_km)    : f.hike_distance_km,
+        hike_duration_hours: parsed.duration_hours !== null ? String(parsed.duration_hours) : f.hike_duration_hours,
+        steps:               parsed.steps          !== null ? String(parsed.steps)          : f.steps,
+      }));
+      const parts = [`${parsed.distance_km}km`];
+      if (parsed.duration_hours) parts.push(`${parsed.duration_hours}hrs`);
+      parts.push(`~${parsed.steps.toLocaleString()} steps`);
+      setGpxHint(`✓ Filled from GPX — ${parts.join(" · ")}`);
+      setTimeout(() => setGpxHint(null), 6000);
+    } catch { setGpxHint("Could not parse GPX file."); }
   }
 
   function handleAddMountain(mountain) {
@@ -208,9 +277,7 @@ function LogRoutePage() {
       if (primaryId === mountId && updated.length > 0) {
         const highest = updated.reduce((h, m) => (Number(m.height_m) > Number(h.height_m || 0) ? m : h), updated[0]);
         setPrimaryId(highest.id);
-      } else if (updated.length === 0) {
-        setPrimaryId(null);
-      }
+      } else if (updated.length === 0) { setPrimaryId(null); }
       return updated;
     });
   }
@@ -218,11 +285,8 @@ function LogRoutePage() {
   async function handleSubmit(e) {
     e.preventDefault();
     if (!form.name.trim()) { addToast("Give your route a name.", "error"); return; }
-
-    // Date required for completed routes only
     if (form.status === "completed" && !form.completed_date) {
-      addToast("Add the date you completed this route.", "error");
-      return;
+      addToast("Add the date you completed this route.", "error"); return;
     }
 
     if (isEditMode) {
@@ -285,18 +349,12 @@ function LogRoutePage() {
       const result = await deleteRouteLog(id);
       addToast(result.detail || "Route deleted.", "info");
       setTimeout(() => navigate("/journal"), 1200);
-    } catch (err) {
-      addToast(err.message || "Unable to delete route.", "error");
-    }
+    } catch (err) { addToast(err.message || "Unable to delete route.", "error"); }
   }
 
-  // ── Derived values ─────────────────────────────────────────────────────────
-
-  const isPlanned        = form.status === "planned";
-  const dateLabelText    = isPlanned ? "Target date" : "Date completed";
-  const dateRequired     = !isPlanned;
-
-  // ── Loading / auth states ──────────────────────────────────────────────────
+  const isPlanned     = form.status === "planned";
+  const dateLabelText = isPlanned ? "Target date" : "Date completed";
+  const dateRequired  = !isPlanned;
 
   if (isLoggedIn === null || loading) {
     return <main><div className="skeleton-hero" /></main>;
@@ -331,7 +389,7 @@ function LogRoutePage() {
     );
   }
 
-  const selectedIds    = new Set(mountains.map((m) => m.id));
+  const selectedIds     = new Set(mountains.map((m) => m.id));
   const primaryMountain = mountains.find((m) => m.id === primaryId);
 
   return (
@@ -358,9 +416,7 @@ function LogRoutePage() {
             {isEditMode ? "Edit route" : "Log a route"}
           </p>
           <h1 className="page-hero__h1">
-            <span className="page-hero__h1-top">
-              {isEditMode ? "Edit your" : "Multi-mountain"}
-            </span>
+            <span className="page-hero__h1-top">{isEditMode ? "Edit your" : "Multi-mountain"}</span>
             <span className="page-hero__h1-bottom">
               {isEditMode ? `${form.name || "Route"}.` : "Route log."}
             </span>
@@ -373,15 +429,12 @@ function LogRoutePage() {
             </p>
           )}
           {isEditMode && (
-            <p>
-              Update the route name, status, date and cumulative stats.
-              The mountain list cannot be changed after logging.
-            </p>
+            <p>Update the route name, status, date and cumulative stats. The mountain list cannot be changed after logging.</p>
           )}
         </div>
       </section>
 
-      {/* How it works — create mode only */}
+      {/* How it works */}
       {!isEditMode && (
         <div className="route-explainer-strip">
           <div className="container">
@@ -389,8 +442,8 @@ function LogRoutePage() {
               {[
                 { n: 1, title: "Name your route",  desc: "Give the walk a name. Planned or completed." },
                 { n: 2, title: "Add mountains",    desc: "Search and add every summit you'll cross." },
-                { n: 3, title: "Set primary",       desc: "Highest peak carries your total stats." },
-                { n: 4, title: "Save it",           desc: "All summits logged or planned at once." },
+                { n: 3, title: "Set primary",      desc: "Highest peak carries your total stats." },
+                { n: 4, title: "Save it",          desc: "All summits logged or planned at once." },
               ].map((step, i, arr) => (
                 <>
                   <div key={step.n} className="route-explainer__step">
@@ -425,7 +478,6 @@ function LogRoutePage() {
                 : "Fill in the route name and status, then build your summit list on the right. Cumulative stats are stored on the primary summit only."}
             </p>
 
-            {/* Primary summit context */}
             {primaryMountain && (
               <div className="ascent-history" style={{ marginTop: "var(--space-xl)" }}>
                 <p className="ascent-history__label">
@@ -442,7 +494,6 @@ function LogRoutePage() {
               </div>
             )}
 
-            {/* Planned route hint */}
             {isPlanned && !isEditMode && (
               <div className="route-planned-hint">
                 <TbFlag size={14} strokeWidth={2} />
@@ -453,7 +504,6 @@ function LogRoutePage() {
               </div>
             )}
 
-            {/* Delete button — edit mode only */}
             {isEditMode && (
               <button
                 type="button"
@@ -467,53 +517,37 @@ function LogRoutePage() {
             )}
           </div>
 
-          {/* RIGHT — glass card form */}
+          {/* RIGHT */}
           <form className="tracking-form glass-card route-tracking-form" onSubmit={handleSubmit}>
 
             <label>
               Route name
               {!form.name && <span className="field-hint field-hint--required">Required</span>}
-              <input
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={handleChange}
-                placeholder="e.g. Fairfield Horseshoe"
-              />
+              <input type="text" name="name" value={form.name} onChange={handleChange} placeholder="e.g. Fairfield Horseshoe" />
             </label>
 
             <label>
               Description
-              <textarea
-                name="description"
-                value={form.description}
-                onChange={handleChange}
-                rows={2}
-                placeholder="Optional notes about this route…"
-              />
+              <textarea name="description" value={form.description} onChange={handleChange} rows={2} placeholder="Optional notes about this route…" />
             </label>
 
-            {/* ── Status toggle — Planned vs Completed ── */}
+            {/* Status toggle */}
             <div>
-              <span style={{ display: "block", fontWeight: 700, color: "rgba(248,250,252,0.8)", marginBottom: "0.5rem" }}>
-                Status
-              </span>
+              <span style={{ display: "block", fontWeight: 700, color: "rgba(248,250,252,0.8)", marginBottom: "0.5rem" }}>Status</span>
               <div className="route-status-toggle">
                 <button
                   type="button"
                   className={`route-status-toggle__btn${form.status === "completed" ? " route-status-toggle__btn--active" : ""}`}
                   onClick={() => setForm((f) => ({ ...f, status: "completed" }))}
                 >
-                  <TbCheck size={14} strokeWidth={2.5} />
-                  Completed
+                  <TbCheck size={14} strokeWidth={2.5} /> Completed
                 </button>
                 <button
                   type="button"
                   className={`route-status-toggle__btn route-status-toggle__btn--planned${form.status === "planned" ? " route-status-toggle__btn--active route-status-toggle__btn--active-planned" : ""}`}
                   onClick={() => setForm((f) => ({ ...f, status: "planned" }))}
                 >
-                  <TbFlag size={14} strokeWidth={2} />
-                  Planned
+                  <TbFlag size={14} strokeWidth={2} /> Planned
                 </button>
               </div>
             </div>
@@ -524,15 +558,8 @@ function LogRoutePage() {
                 {dateRequired && !form.completed_date && (
                   <span className="field-hint field-hint--required">Required</span>
                 )}
-                {!dateRequired && (
-                  <span className="field-hint">Optional — use as target date</span>
-                )}
-                <input
-                  type="date"
-                  name="completed_date"
-                  value={form.completed_date}
-                  onChange={handleChange}
-                />
+                {!dateRequired && <span className="field-hint">Optional — use as target date</span>}
+                <input type="date" name="completed_date" value={form.completed_date} onChange={handleChange} />
               </label>
               <label>
                 Season
@@ -548,23 +575,15 @@ function LogRoutePage() {
 
             <label>
               Route taken
-              <input
-                type="text"
-                name="route_taken"
-                value={form.route_taken}
-                onChange={handleChange}
-                placeholder="e.g. Rydal → Fairfield → Dove Crag → Ambleside"
-              />
+              <input type="text" name="route_taken" value={form.route_taken} onChange={handleChange} placeholder="e.g. Rydal → Fairfield → Dove Crag → Ambleside" />
             </label>
 
-            {/* Mountain builder — create mode only */}
+            {/* Mountain builder */}
             {!isEditMode && (
               <div className="route-inline-builder">
                 <p className="route-inline-builder__label">
                   Mountains on this route
-                  {mountains.length > 0 && (
-                    <span className="route-inline-builder__count">{mountains.length} added</span>
-                  )}
+                  {mountains.length > 0 && <span className="route-inline-builder__count">{mountains.length} added</span>}
                 </p>
                 {mountains.length < 2 && (
                   <p className="route-inline-builder__hint">
@@ -573,17 +592,10 @@ function LogRoutePage() {
                   </p>
                 )}
                 <MountainSearch onAdd={handleAddMountain} selectedIds={selectedIds} />
-                <SelectedMountainList
-                  mountains={mountains}
-                  primaryId={primaryId}
-                  onSetPrimary={setPrimaryId}
-                  onRemove={handleRemoveMountain}
-                  readOnly={false}
-                />
+                <SelectedMountainList mountains={mountains} primaryId={primaryId} onSetPrimary={setPrimaryId} onRemove={handleRemoveMountain} readOnly={false} />
               </div>
             )}
 
-            {/* Mountain list — edit mode read-only */}
             {isEditMode && mountains.length > 0 && (
               <div className="route-inline-builder">
                 <p className="route-inline-builder__label">
@@ -593,17 +605,11 @@ function LogRoutePage() {
                 <p className="route-inline-builder__hint" style={{ borderLeftColor: "rgba(255,255,255,0.15)" }}>
                   The mountain list cannot be changed after logging. Delete and re-log if needed.
                 </p>
-                <SelectedMountainList
-                  mountains={mountains}
-                  primaryId={primaryId}
-                  onSetPrimary={() => {}}
-                  onRemove={() => {}}
-                  readOnly={true}
-                />
+                <SelectedMountainList mountains={mountains} primaryId={primaryId} onSetPrimary={() => {}} onRemove={() => {}} readOnly={true} />
               </div>
             )}
 
-            {/* Cumulative stats — shown always but labelled differently for planned */}
+            {/* Cumulative stats */}
             <p className="route-stats-heading">
               <span className="kicker-line" />
               {isPlanned ? "Estimated stats" : "Cumulative stats"}
@@ -613,6 +619,21 @@ function LogRoutePage() {
                 ? "Optional — fill in estimates if you have them, or add later once completed."
                 : "Totals for the whole route — stored on the primary summit only."}
             </p>
+
+            {/* GPX upload — auto-fills cumulative stats */}
+            <div className="tracking-form__gpx">
+              <label className="tracking-form__gpx-label">
+                <TbFileCode size={15} strokeWidth={2} />
+                Import from GPX
+                <span className="field-hint">Auto-fills distance, duration and steps</span>
+                <input type="file" accept=".gpx,application/gpx+xml" onChange={handleGpxChange} className="tracking-form__gpx-input" />
+              </label>
+              {gpxHint && (
+                <p className={`tracking-form__gpx-hint${gpxHint.startsWith("✓") ? " tracking-form__gpx-hint--success" : " tracking-form__gpx-hint--error"}`}>
+                  {gpxHint}
+                </p>
+              )}
+            </div>
 
             <div className="tracking-form__row">
               <label>Distance km<input type="number" step="0.1" name="hike_distance_km" value={form.hike_distance_km} onChange={handleChange} placeholder="e.g. 15.2" /></label>
@@ -625,23 +646,13 @@ function LogRoutePage() {
 
             <label>
               Notes
-              <textarea
-                name="notes"
-                value={form.notes}
-                onChange={handleChange}
-                rows={4}
-                placeholder="Weather, conditions, who you walked with…"
-              />
+              <textarea name="notes" value={form.notes} onChange={handleChange} rows={4} placeholder="Weather, conditions, who you walked with…" />
             </label>
 
             <div className="tracking-form__actions">
               <button
                 type="submit"
-                disabled={
-                  saveStatus === "saving"  ||
-                  saveStatus === "success" ||
-                  (!isEditMode && mountains.length < 2)
-                }
+                disabled={saveStatus === "saving" || saveStatus === "success" || (!isEditMode && mountains.length < 2)}
                 title={!isEditMode && mountains.length < 2 ? "Add at least 2 mountains" : undefined}
               >
                 {saveStatus === "saving"  && (isEditMode ? "Saving…" : isPlanned ? "Planning route…" : "Logging route…")}
@@ -654,9 +665,7 @@ function LogRoutePage() {
                       ? <><TbFlag size={15} strokeWidth={2} /> Plan {mountains.length} summit{mountains.length !== 1 ? "s" : ""}</>
                       : <><TbFlag size={15} strokeWidth={2} /> Plan route</>
                   ) : (
-                    mountains.length > 0
-                      ? `Log ${mountains.length} summit${mountains.length !== 1 ? "s" : ""}`
-                      : "Log route"
+                    mountains.length > 0 ? `Log ${mountains.length} summit${mountains.length !== 1 ? "s" : ""}` : "Log route"
                   )
                 )}
               </button>
@@ -677,4 +686,3 @@ function LogRoutePage() {
 }
 
 export default LogRoutePage;
-

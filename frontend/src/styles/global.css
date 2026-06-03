@@ -7791,3 +7791,140 @@ a.dashboard-region-card:hover {
   color: var(--color-text-soft);
   margin-bottom: var(--space-sm);
 }
+
+/* ── Plan your ascent section ── */
+.mountain-plan {
+  background: #ffffff;
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: var(--shadow-soft);
+}
+
+.mountain-plan h3 { margin: var(--space-sm) 0; font-size: 1.1rem; }
+.mountain-plan > p { color: var(--color-text-soft); font-size: 0.9rem; margin-bottom: var(--space-lg); }
+
+.mountain-plan__links {
+  display: grid;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.mountain-plan__link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 0.75rem 1rem;
+  background: var(--color-bg-light);
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: inherit;
+  transition: background 140ms ease, border-color 140ms ease;
+}
+
+.mountain-plan__link:hover {
+  background: rgba(4, 57, 59, 0.05);
+  border-color: var(--color-teal);
+}
+
+.mountain-plan__link-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(4, 57, 59, 0.07);
+  color: var(--color-teal-deep);
+  flex-shrink: 0;
+  font-size: 1.1rem;
+}
+
+.mountain-plan__link-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.mountain-plan__link-body strong {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--color-teal-deep);
+}
+
+.mountain-plan__link-body small {
+  font-size: 0.76rem;
+  color: var(--color-text-soft);
+}
+
+.mountain-plan__link-ext {
+  color: var(--color-text-soft);
+  flex-shrink: 0;
+}
+
+.mountain-nearby__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-soft);
+  margin-bottom: var(--space-sm);
+}
+
+.mountain-nearby__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-sm);
+}
+
+.mountain-nearby__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 0.5rem 0.75rem;
+  background: var(--color-bg-light);
+  border: 1px solid var(--border-dark);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: inherit;
+  transition: background 140ms ease;
+}
+
+.mountain-nearby__item:hover { background: rgba(4, 57, 59, 0.06); }
+.mountain-nearby__item strong { font-size: 0.85rem; color: var(--color-teal-deep); }
+.mountain-nearby__item span   { font-size: 0.75rem; color: var(--color-text-soft); white-space: nowrap; }
+
+/* ── GPX upload in tracking form ── */
+.tracking-form__gpx { margin-bottom: var(--space-sm); }
+
+.tracking-form__gpx-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: rgba(248, 250, 252, 0.7);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  transition: border-color 140ms ease, color 140ms ease;
+}
+
+.tracking-form__gpx-label:hover {
+  border-color: rgba(208, 170, 98, 0.5);
+  color: var(--color-accent);
+}
+
+.tracking-form__gpx-input { display: none; }
+
+.tracking-form__gpx-hint {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.tracking-form__gpx-hint--success { color: #6fcf97; }
+.tracking-form__gpx-hint--error   { color: #eb5757; }
