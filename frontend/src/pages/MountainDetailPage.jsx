@@ -106,18 +106,34 @@ function WikiSummary({ mountainName }) {
 
   useEffect(() => {
     if (!mountainName) return;
-    setLoading(true);
+
+    // Strip bracketed suffixes before querying Wikipedia
     const wikiName = mountainName.replace(/\s*\[.*?\]\s*/g, "").trim();
+    const cacheKey = `wiki-${wikiName}`;
+
+    // Serve from sessionStorage if already fetched this session
+    const cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        setWikiData(JSON.parse(cached));
+        setLoading(false);
+        return;
+      } catch { /* corrupted cache — fall through to fetch */ }
+    }
+
+    setLoading(true);
     fetch(
       `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiName)}`
     )
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.extract && data.type !== "disambiguation") {
-          setWikiData({
+          const result = {
             text: data.extract,
             url:  data.content_urls?.desktop?.page,
-          });
+          };
+          setWikiData(result);
+          sessionStorage.setItem(cacheKey, JSON.stringify(result));
         }
       })
       .catch(() => {})
