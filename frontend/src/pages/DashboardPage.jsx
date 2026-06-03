@@ -10,6 +10,7 @@ import {
   TbTrophy, TbFlag, TbStar,
   TbTargetArrow, TbUser,
   TbCalendar, TbArrowUp, TbRepeat, TbMap2, TbChevronRight,
+  TbX, TbFlame, TbMapPin,
 } from "react-icons/tb";
 
 import { getCollections, getMountains, getProgressLogs, getRouteLogs, getCurrentUser, exportLogs } from "../lib/api";
@@ -128,8 +129,6 @@ function countEarnedBadges(tieredAchievements) {
 }
 
 // ── Heatmap data builder ─────────────────────────────────────────────────────
-// Accepts an array of objects with a `completed_date` string field.
-// Returns 52 weeks of day cells + month labels for SVG rendering.
 
 function buildHeatmapData(logs) {
   const activityByDate = {};
@@ -142,9 +141,8 @@ function buildHeatmapData(logs) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Start on Monday 52 weeks ago
   const startDate = new Date(today);
-  const dow = startDate.getDay(); // 0=Sun
+  const dow = startDate.getDay();
   const daysToLastMonday = dow === 0 ? 6 : dow - 1;
   startDate.setDate(startDate.getDate() - daysToLastMonday - 51 * 7);
 
@@ -159,7 +157,6 @@ function buildHeatmapData(logs) {
       const dateStr  = date.toISOString().slice(0, 10);
       const isFuture = date > today;
       week.push({ date: dateStr, count: activityByDate[dateStr] || 0, isFuture });
-      // First occurrence of each month in the Mon column
       if (d === 0 && date.getDate() <= 7) {
         monthLabels.push({ week: w, label: date.toLocaleString("en-GB", { month: "short" }) });
       }
@@ -170,6 +167,241 @@ function buildHeatmapData(logs) {
   const totalAscents = Object.values(activityByDate).reduce((s, v) => s + v, 0);
   const activeDays   = Object.keys(activityByDate).length;
   return { weeks, monthLabels, totalAscents, activeDays };
+}
+
+// ── Deep stats computation ───────────────────────────────────────────────────
+// Computes streak, best month, best year, top region, year breakdown.
+
+function getISOWeekKey(dateStr) {
+  const d = new Date(dateStr);
+  const dayOfWeek = d.getDay() || 7;
+  d.setDate(d.getDate() + 4 - dayOfWeek);
+  const yearStart = new Date(d.getFullYear(), 0, 1);
+  const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return `${d.getFullYear()}-${String(weekNo).padStart(2, "0")}`;
+}
+
+function computeDeepStats(completedLogs) {
+  if (!completedLogs || completedLogs.length === 0) return null;
+  const datedLogs = completedLogs.filter((l) => l.completed_date);
+  if (datedLogs.length === 0) return null;
+
+  // Best month
+  const byMonth = {};
+  datedLogs.forEach((l) => {
+    const key = l.completed_date.slice(0, 7);
+    byMonth[key] = (byMonth[key] || 0) + 1;
+  });
+  const bestMonthEntry = Object.entries(byMonth).sort((a, b) => b[1] - a[1])[0];
+  const bestMonth = bestMonthEntry
+    ? { label: new Date(bestMonthEntry[0] + "-01").toLocaleDateString("en-GB", { month: "long", year: "numeric" }), count: bestMonthEntry[1] }
+    : null;
+
+  // Best year + year breakdown
+  const byYear = {};
+  datedLogs.forEach((l) => {
+    const year = l.completed_date.slice(0, 4);
+    byYear[year] = (byYear[year] || 0) + 1;
+  });
+  const yearBreakdown = Object.entries(byYear)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([year, count]) => ({ year, count }));
+  const bestYearEntry = Object.entries(byYear).sort((a, b) => b[1] - a[1])[0];
+  const bestYear = bestYearEntry ? { year: bestYearEntry[0], count: bestYearEntry[1] } : null;
+
+  // Longest weekly streak (consecutive ISO weeks)
+  const activeWeeks  = Array.from(new Set(datedLogs.map((l) => getISOWeekKey(l.completed_date)))).sort();
+  let maxStreak = activeWeeks.length > 0 ? 1 : 0;
+  let curStreak = activeWeeks.length > 0 ? 1 : 0;
+  for (let i = 1; i < activeWeeks.length; i++) {
+    const [py, pw] = activeWeeks[i - 1].split("-").map(Number);
+    const [cy, cw] = activeWeeks[i].split("-").map(Number);
+    const consecutive =
+      (cy === py && cw === pw + 1) ||
+      (cy === py + 1 && pw >= 52 && cw === 1);
+    if (consecutive) {
+      curStreak++;
+      maxStreak = Math.max(maxStreak, curStreak);
+    } else {
+      curStreak = 1;
+    }
+  }
+
+  // Top region
+  const byRegion = {};
+  datedLogs.forEach((l) => {
+    const region = l.mountain_detail?.region?.name;
+    if (region) byRegion[region] = (byRegion[region] || 0) + 1;
+  });
+  const topRegionEntry = Object.entries(byRegion).sort((a, b) => b[1] - a[1])[0];
+  const topRegion = topRegionEntry ? { name: topRegionEntry[0], count: topRegionEntry[1] } : null;
+
+  return { bestMonth, bestYear, longestStreak: maxStreak, topRegion, yearBreakdown };
+}
+
+// ── Achievement notifications hook ──────────────────────────────────────────
+// On first ever load: silently populates localStorage (no toast flood).
+// On subsequent loads: only notifies for badges newly earned since last visit.
+
+const BADGE_STORAGE_KEY = "summitlog-earned-badges";
+
+function useAchievementNotifications(achievements, isDemo) {
+  const [queue,   setQueue]   = useState([]);
+  const [current, setCurrent] = useState(null);
+
+  useEffect(() => {
+    if (isDemo || !achievements || achievements.length === 0) return;
+
+    let stored     = {};
+    let isFirstLoad = false;
+    try {
+      const raw = localStorage.getItem(BADGE_STORAGE_KEY);
+      if (raw) { stored = JSON.parse(raw); }
+      else      { isFirstLoad = true; }
+    } catch {}
+
+    const newBadges = [];
+    achievements.forEach((ach) => {
+      ach.tiers.forEach((tier, i) => {
+        const key = `${ach.id}-${i}`;
+        if (i <= ach.activeTierIndex && !stored[key]) {
+          if (!isFirstLoad) {
+            newBadges.push({ key, achTitle: ach.title, tierLabel: tier.label, icon: ach.icon });
+          }
+          stored[key] = true;
+        }
+      });
+    });
+
+    localStorage.setItem(BADGE_STORAGE_KEY, JSON.stringify(stored));
+    if (newBadges.length > 0) setQueue((q) => [...q, ...newBadges]);
+  }, [achievements, isDemo]);
+
+  // Dequeue one at a time
+  useEffect(() => {
+    if (!current && queue.length > 0) {
+      setCurrent(queue[0]);
+      setQueue((q) => q.slice(1));
+    }
+  }, [current, queue]);
+
+  function dismiss() { setCurrent(null); }
+  return { current, dismiss };
+}
+
+// ── Achievement notification toast ──────────────────────────────────────────
+
+function AchievementNotification({ badge, onDismiss }) {
+  useEffect(() => {
+    if (!badge) return;
+    const timer = setTimeout(onDismiss, 5000);
+    return () => clearTimeout(timer);
+  }, [badge, onDismiss]);
+
+  if (!badge) return null;
+
+  const Icon      = badge.icon || TbTrophy;
+  const tierColor = TIER_COLORS[badge.tierLabel] || "var(--color-accent)";
+
+  return (
+    <div className="achievement-notification" role="alert" aria-live="polite">
+      <div className="achievement-notification__icon" style={{ background: tierColor }}>
+        <Icon size={20} strokeWidth={2} />
+      </div>
+      <div className="achievement-notification__text">
+        <strong>Achievement unlocked!</strong>
+        <p>{badge.tierLabel} · {badge.achTitle}</p>
+      </div>
+      <button
+        type="button"
+        className="achievement-notification__close"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+      >
+        <TbX size={14} strokeWidth={2.5} />
+      </button>
+    </div>
+  );
+}
+
+// ── Personal stats depth panel ───────────────────────────────────────────────
+
+function PersonalStatsDepthPanel({ deepStats, isDemo }) {
+  if (!deepStats) return null;
+  const { bestMonth, bestYear, longestStreak, topRegion, yearBreakdown } = deepStats;
+  const hasCards = longestStreak > 0 || bestMonth || bestYear || topRegion;
+  const hasChart = yearBreakdown && yearBreakdown.length > 1;
+  if (!hasCards && !hasChart) return null;
+
+  return (
+    <div className="dashboard-deep-stats">
+      <div className="dashboard-deep-stats__header">
+        <p className="section-kicker"><span className="kicker-line" />Your stats in depth</p>
+        <h2>Personal records</h2>
+        <p>Streaks, best months and your year-by-year breakdown.</p>
+      </div>
+
+      {hasCards && (
+        <div className="dashboard-deep-stats__grid">
+          {longestStreak > 0 && (
+            <article className="dashboard-deep-stat-card">
+              <div className="dashboard-deep-stat-card__icon">
+                <TbFlame size={22} strokeWidth={1.5} style={{ color: "#e85d04" }} />
+              </div>
+              <p>Longest active streak</p>
+              <strong>{longestStreak} {longestStreak === 1 ? "week" : "weeks"}</strong>
+              <span>consecutive weeks with an ascent</span>
+            </article>
+          )}
+          {bestMonth && (
+            <article className="dashboard-deep-stat-card">
+              <div className="dashboard-deep-stat-card__icon">
+                <TbCalendar size={22} strokeWidth={1.5} style={{ color: "var(--color-teal)" }} />
+              </div>
+              <p>Best month</p>
+              <strong>{bestMonth.count} summit{bestMonth.count !== 1 ? "s" : ""}</strong>
+              <span>{bestMonth.label}</span>
+            </article>
+          )}
+          {bestYear && (
+            <article className="dashboard-deep-stat-card">
+              <div className="dashboard-deep-stat-card__icon">
+                <TbMountain size={22} strokeWidth={1.5} style={{ color: "var(--color-teal-deep)" }} />
+              </div>
+              <p>Best year</p>
+              <strong>{bestYear.count} summit{bestYear.count !== 1 ? "s" : ""}</strong>
+              <span>in {bestYear.year}</span>
+            </article>
+          )}
+          {topRegion && (
+            <article className="dashboard-deep-stat-card">
+              <div className="dashboard-deep-stat-card__icon">
+                <TbMapPin size={22} strokeWidth={1.5} style={{ color: "var(--color-accent)" }} />
+              </div>
+              <p>Favourite region</p>
+              <strong>{topRegion.name}</strong>
+              <span>{topRegion.count} ascent{topRegion.count !== 1 ? "s" : ""}</span>
+            </article>
+          )}
+        </div>
+      )}
+
+      {hasChart && (
+        <div className="dashboard-deep-stats__chart">
+          <p className="dashboard-deep-stats__chart-label">Summits per year</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={yearBreakdown} margin={{ top: 8, right: 16, bottom: 4, left: 4 }} barCategoryGap="35%">
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(4,57,59,0.1)" />
+              <XAxis dataKey="year" tick={{ fontSize: 11, fill: "#243b3a", fontWeight: 700 }} axisLine={false} tickLine={false} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#667573" }} axisLine={false} tickLine={false} />
+              <Tooltip formatter={(value) => [value, "Summits"]} cursor={{ fill: "rgba(4,57,59,0.05)" }} />
+              <Bar dataKey="count" fill="var(--color-teal)" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -264,7 +496,6 @@ function generateDemoStats() {
     { x: 899,  y: 11.4, name: "Bow Fell" },        { x: 736,  y: 7.8,  name: "Dale Head" },
   ];
 
-  // Demo upcoming planned — fixed future dates so they always look realistic
   const now = new Date();
   const upcomingPlanned = [
     { id: 101, mountain_detail: { name: "Ben Nevis",    slug: "ben-nevis",    height_m: 1345, region: { name: "Scotland" }       }, status: "planned", completed_date: new Date(now.getTime() + 12  * 86400000).toISOString().slice(0, 10) },
@@ -272,7 +503,6 @@ function generateDemoStats() {
     { id: 103, mountain_detail: { name: "Snowdon",      slug: "snowdon",      height_m: 1085, region: { name: "Wales" }          }, status: "planned", completed_date: new Date(now.getTime() + 52  * 86400000).toISOString().slice(0, 10) },
   ];
 
-  // Demo heatmap — spread 40 ascents randomly across the past year
   const baseNow = new Date();
   const demoHeatmapLogs = [];
   for (let i = 0; i < 40; i++) {
@@ -281,6 +511,19 @@ function generateDemoStats() {
     d.setDate(d.getDate() - daysAgo);
     demoHeatmapLogs.push({ completed_date: d.toISOString().slice(0, 10) });
   }
+
+  // Demo deep stats — realistic fixed values
+  const demoDeepStats = {
+    longestStreak: 8,
+    bestMonth:     { label: "August 2024", count: 12 },
+    bestYear:      { year: "2024", count: 28 },
+    topRegion:     { name: "Lake District", count: 18 },
+    yearBreakdown: [
+      { year: "2022", count: 4 },
+      { year: "2023", count: 11 },
+      { year: "2024", count: 28 },
+    ],
+  };
 
   return {
     completed, planned, totalVisible: 800, totalDistance, totalHeight, totalSteps, totalFlightsClimbed,
@@ -292,6 +535,7 @@ function generateDemoStats() {
     routeCount: recentRoutes.length, recentRoutes,
     upcomingPlanned,
     heatmapLogs: demoHeatmapLogs,
+    deepStats: demoDeepStats,
   };
 }
 
@@ -459,17 +703,12 @@ function ComingUpPanel({ upcomingPlanned, isDemo }) {
 
 function ActivityHeatmap({ logs }) {
   const { weeks, monthLabels, totalAscents, activeDays } = buildHeatmapData(logs);
-
   if (totalAscents === 0) return null;
 
-  const CELL = 12;
-  const GAP  = 3;
-  const STEP = CELL + GAP;
-  const LEFT_PAD = 28;
-  const TOP_PAD  = 20;
+  const CELL = 12; const GAP = 3; const STEP = CELL + GAP;
+  const LEFT_PAD = 28; const TOP_PAD = 20;
   const svgW = LEFT_PAD + 52 * STEP;
   const svgH = TOP_PAD  +  7 * STEP;
-
   const DAY_LABELS = ["Mon", "", "Wed", "", "Fri", "", ""];
 
   function cellColor(count, isFuture) {
@@ -485,59 +724,21 @@ function ActivityHeatmap({ logs }) {
       <div className="activity-heatmap__header">
         <p className="section-kicker"><span className="kicker-line" />Activity</p>
         <h2>Ascent calendar</h2>
-        <p>
-          {activeDays} active {activeDays === 1 ? "day" : "days"} · {totalAscents} {totalAscents === 1 ? "ascent" : "ascents"} in the past year
-        </p>
+        <p>{activeDays} active {activeDays === 1 ? "day" : "days"} · {totalAscents} {totalAscents === 1 ? "ascent" : "ascents"} in the past year</p>
       </div>
       <div className="activity-heatmap__scroll">
-        <svg
-          viewBox={`0 0 ${svgW} ${svgH}`}
-          className="activity-heatmap__svg"
-          aria-label="Ascent activity heatmap"
-          role="img"
-        >
-          {/* Month labels */}
+        <svg viewBox={`0 0 ${svgW} ${svgH}`} className="activity-heatmap__svg" aria-label="Ascent activity heatmap" role="img">
           {monthLabels.map(({ week, label }) => (
-            <text
-              key={`${week}-${label}`}
-              x={LEFT_PAD + week * STEP}
-              y={12}
-              fontSize="9"
-              fontWeight="700"
-              fill="#8b9493"
-              fontFamily="DM Sans, sans-serif"
-            >
-              {label}
-            </text>
+            <text key={`${week}-${label}`} x={LEFT_PAD + week * STEP} y={12} fontSize="9" fontWeight="700" fill="#8b9493" fontFamily="DM Sans, sans-serif">{label}</text>
           ))}
-          {/* Day labels */}
           {DAY_LABELS.map((label, di) =>
             label ? (
-              <text
-                key={di}
-                x={LEFT_PAD - 5}
-                y={TOP_PAD + di * STEP + CELL * 0.82}
-                fontSize="8"
-                fill="#8b9493"
-                textAnchor="end"
-                fontFamily="DM Sans, sans-serif"
-              >
-                {label}
-              </text>
+              <text key={di} x={LEFT_PAD - 5} y={TOP_PAD + di * STEP + CELL * 0.82} fontSize="8" fill="#8b9493" textAnchor="end" fontFamily="DM Sans, sans-serif">{label}</text>
             ) : null
           )}
-          {/* Cells */}
           {weeks.map((week, wi) =>
             week.map((day, di) => (
-              <rect
-                key={day.date}
-                x={LEFT_PAD + wi * STEP}
-                y={TOP_PAD + di * STEP}
-                width={CELL}
-                height={CELL}
-                rx={2.5}
-                fill={cellColor(day.count, day.isFuture)}
-              >
+              <rect key={day.date} x={LEFT_PAD + wi * STEP} y={TOP_PAD + di * STEP} width={CELL} height={CELL} rx={2.5} fill={cellColor(day.count, day.isFuture)}>
                 <title>{day.date}: {day.count} {day.count === 1 ? "ascent" : "ascents"}</title>
               </rect>
             ))
@@ -787,8 +988,8 @@ function DashboardPage() {
       return months;
     }, {});
     const completionTimelineData = Object.entries(monthlyCompletionData)
-    .map(([month, completed]) => ({ month, completed }))
-    .sort((a, b) => new Date(`1 ${a.month}`) - new Date(`1 ${b.month}`));
+      .map(([month, completed]) => ({ month, completed }))
+      .sort((a, b) => new Date(`1 ${a.month}`) - new Date(`1 ${b.month}`));
 
     const recentLogs    = [...logs].sort((a, b) => new Date(b.completed_date || b.updated_at || b.created_at) - new Date(a.completed_date || a.updated_at || a.created_at)).slice(0, 4);
     const nextObjective = plannedLogs[0] || null;
@@ -819,14 +1020,13 @@ function DashboardPage() {
     const earnedBadgeCount   = countEarnedBadges(achievements);
     const achievementPercent = TOTAL_POSSIBLE_BADGES > 0 ? Math.round((earnedBadgeCount / TOTAL_POSSIBLE_BADGES) * 100) : 0;
 
-    // Coming up — planned logs with target date, soonest first, max 6
     const upcomingPlanned = plannedLogs
       .filter((l) => l.completed_date)
       .sort((a, b) => new Date(a.completed_date) - new Date(b.completed_date))
       .slice(0, 6);
 
-    // Heatmap data uses completed logs directly
     const heatmapLogs = completedLogs;
+    const deepStats   = computeDeepStats(completedLogs);
 
     return {
       completed: completedLogs.length, planned: plannedLogs.length, totalVisible: mountains.length,
@@ -842,9 +1042,15 @@ function DashboardPage() {
       }),
       completionTimelineData, personalBests, mostSummited, scatterData,
       routeCount, recentRoutes,
-      upcomingPlanned, heatmapLogs,
+      upcomingPlanned, heatmapLogs, deepStats,
     };
   }, [collections, logs, mountains, status, routeLogs]);
+
+  // Achievement notifications — fires toasts for newly earned badges
+  const { current: currentBadge, dismiss: dismissBadge } = useAchievementNotifications(
+    stats.achievements,
+    isDemo,
+  );
 
   const userName      = user?.username || user?.user?.username || user?.first_name || null;
   const showBottomRow = (stats.mostSummited?.length > 0) || (stats.scatterData?.length > 0);
@@ -860,6 +1066,9 @@ function DashboardPage() {
 
   return (
     <main className="dashboard-page">
+      {/* Achievement toast notification */}
+      <AchievementNotification badge={currentBadge} onDismiss={dismissBadge} />
+
       <section className="section section-dark dashboard-hero">
         <div className="container">
           <p className="section-kicker"><span className="kicker-line" />Dashboard</p>
@@ -948,7 +1157,6 @@ function DashboardPage() {
                 </article>
               </div>
 
-              {/* ── Coming up panel — planned summits with target dates ── */}
               {stats.upcomingPlanned?.length > 0 && (
                 <ComingUpPanel upcomingPlanned={stats.upcomingPlanned} isDemo={isDemo} />
               )}
@@ -1071,10 +1279,13 @@ function DashboardPage() {
                 </article>
               </div>
 
-              {/* ── Activity heatmap ── */}
+              {/* Activity heatmap */}
               {stats.heatmapLogs && <ActivityHeatmap logs={stats.heatmapLogs} />}
 
-              {/* ── Tiered achievements ── */}
+              {/* Personal stats in depth */}
+              <PersonalStatsDepthPanel deepStats={stats.deepStats} isDemo={isDemo} />
+
+              {/* Tiered achievements */}
               <div className="dashboard-achievement-panel">
                 <div className="dashboard-achievement-summary">
                   <div>
