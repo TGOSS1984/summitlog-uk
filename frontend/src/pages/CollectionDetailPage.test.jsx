@@ -22,6 +22,9 @@ vi.mock('../lib/api', () => ({
   getCollections: vi.fn(),
   getMountains: vi.fn(),
   getProgressLogs: vi.fn(),
+  getCollectionNote: vi.fn().mockResolvedValue([]),
+  saveCollectionNote: vi.fn().mockResolvedValue({ id: 1, body: '', updated_at: null }),
+  deleteCollectionNote: vi.fn().mockResolvedValue(true),
 }))
 
 // ---------------------------------------------------------------------------
