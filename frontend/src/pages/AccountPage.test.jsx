@@ -27,6 +27,18 @@ vi.mock('../lib/api', () => ({
   logoutUser: vi.fn(),
   registerUser: vi.fn(),
   updateUserProfile: vi.fn(),
+  getNotificationPreferences: vi.fn().mockResolvedValue({
+    id: 1,
+    email_reminders_enabled: false,
+    reminder_days_before: 3,
+    updated_at: null,
+  }),
+  updateNotificationPreferences: vi.fn().mockResolvedValue({
+    id: 1,
+    email_reminders_enabled: true,
+    reminder_days_before: 3,
+    updated_at: null,
+  }),
 }))
 
 // ---------------------------------------------------------------------------
