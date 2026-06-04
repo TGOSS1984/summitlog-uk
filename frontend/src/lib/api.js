@@ -239,3 +239,16 @@ export async function deleteCollectionNote(noteId) {
   }
   return true;
 }
+
+export async function getNotificationPreferences() {
+  return request("/progress/notifications/");
+}
+
+export async function updateNotificationPreferences(payload) {
+  const csrfToken = await getCsrfToken();
+  return request("/progress/notifications/", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+    body: JSON.stringify(payload),
+  });
+}

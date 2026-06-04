@@ -7928,3 +7928,97 @@ a.dashboard-region-card:hover {
 
 .tracking-form__gpx-hint--success { color: #6fcf97; }
 .tracking-form__gpx-hint--error   { color: #eb5757; }
+
+/* ── Notification preferences panel ── */
+.account-notifications {
+  margin-top: var(--space-lg);
+  padding: var(--space-md);
+  background: rgba(4, 57, 59, 0.08);
+  border: 1px solid rgba(4, 57, 59, 0.15);
+  border-radius: var(--radius-md);
+}
+
+.account-notifications__header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: var(--space-sm);
+  color: rgba(248, 250, 252, 0.9);
+}
+
+.account-notifications__header strong {
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex: 1;
+}
+
+.account-notifications__save-msg {
+  font-size: 0.72rem;
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.account-notifications__desc {
+  font-size: 0.76rem;
+  color: rgba(248, 250, 252, 0.55);
+  margin-bottom: var(--space-md);
+  line-height: 1.5;
+}
+
+.account-notifications__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.account-notifications__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  appearance: none;
+  border: 1px solid rgba(248, 250, 252, 0.2);
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.08);
+  color: rgba(248, 250, 252, 0.6);
+  padding: 0.3rem 0.8rem 0.3rem 0.4rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.account-notifications__toggle-knob {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(248, 250, 252, 0.3);
+  transition: background 140ms ease;
+}
+
+.account-notifications__toggle--on {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.account-notifications__toggle--on .account-notifications__toggle-knob {
+  background: var(--color-accent);
+}
+
+.account-notifications__days {
+  border: 1px solid rgba(248, 250, 252, 0.15);
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.06);
+  color: rgba(248, 250, 252, 0.8);
+  padding: 0.3rem 0.6rem;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.account-notifications__days option {
+  background: var(--color-teal-deep);
+  color: #ffffff;
+}

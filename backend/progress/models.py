@@ -235,3 +235,44 @@ class UserCollectionNote(models.Model):
 
     def __str__(self):
         return f"{self.user} — note on collection {self.collection_id_ref}"
+
+
+class NotificationPreference(models.Model):
+    """
+    Per-user notification preferences.
+    Created on first access via get_or_create — never manually instantiated.
+    One row per user; update via the PATCH /api/progress/notifications/ endpoint.
+    """
+
+    DAYS_CHOICES = [
+        (1, "1 day before"),
+        (2, "2 days before"),
+        (3, "3 days before"),
+        (7, "1 week before"),
+    ]
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notification_preference",
+    )
+
+    email_reminders_enabled = models.BooleanField(
+        default=False,
+        help_text="Send email reminders for upcoming planned summits.",
+    )
+
+    reminder_days_before = models.PositiveIntegerField(
+        default=3,
+        help_text=(
+            "How many days before the planned date to send the reminder. "
+            "Validated to be one of 1, 2, 3, or 7."
+        ),
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        status = "on" if self.email_reminders_enabled else "off"
+        return f"{self.user} — reminders {status} ({self.reminder_days_before}d before)"

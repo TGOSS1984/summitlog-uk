@@ -8,10 +8,12 @@ import {
   registerUser,
   updateUserProfile,
   getCsrfToken,
+  getNotificationPreferences,
+  updateNotificationPreferences,
 } from "../lib/api";
 import {
   TbBook, TbPhoto, TbLayoutDashboard,
-  TbUpload, TbCheck, TbX, TbAlertTriangle, TbFileSpreadsheet,
+  TbUpload, TbCheck, TbX, TbAlertTriangle, TbFileSpreadsheet, TbBell,
 } from "react-icons/tb";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
@@ -198,6 +200,93 @@ function CsvImportPanel() {
           <p>Status values: completed, planned, not started</p>
         </div>
       </details>
+    </div>
+  );
+}
+
+// ── Notification preferences panel ──────────────────────────────────────────
+
+function NotificationsPanel({ userEmail }) {
+  const [prefs,   setPrefs]   = useState(null);
+  const [saving,  setSaving]  = useState(false);
+  const [saveMsg, setSaveMsg] = useState(null);
+  const saveMsgTimer = useRef(null);
+
+  useEffect(() => {
+    getNotificationPreferences()
+      .then((data) => setPrefs(data))
+      .catch(() => {}); // non-fatal — panel stays hidden if endpoint unavailable
+  }, []);
+
+  function showSaved() {
+    setSaveMsg("Saved");
+    clearTimeout(saveMsgTimer.current);
+    saveMsgTimer.current = setTimeout(() => setSaveMsg(null), 2000);
+  }
+
+  async function handleToggle() {
+    if (!prefs || saving) return;
+    setSaving(true);
+    try {
+      const result = await updateNotificationPreferences({
+        email_reminders_enabled: !prefs.email_reminders_enabled,
+      });
+      setPrefs(result);
+      showSaved();
+    } catch { /* non-fatal */ } finally { setSaving(false); }
+  }
+
+  async function handleDaysChange(e) {
+    if (!prefs || saving) return;
+    setSaving(true);
+    try {
+      const result = await updateNotificationPreferences({
+        reminder_days_before: Number(e.target.value),
+      });
+      setPrefs(result);
+      showSaved();
+    } catch { /* non-fatal */ } finally { setSaving(false); }
+  }
+
+  if (!prefs) return null;
+
+  return (
+    <div className="account-notifications">
+      <div className="account-notifications__header">
+        <TbBell size={15} strokeWidth={2} />
+        <strong>Email reminders</strong>
+        {saveMsg && <span className="account-notifications__save-msg">{saveMsg}</span>}
+      </div>
+      <p className="account-notifications__desc">
+        {prefs.email_reminders_enabled
+          ? `Reminders will be sent to ${userEmail}.`
+          : "Get an email before your planned summits are due."}
+      </p>
+      <div className="account-notifications__controls">
+        <button
+          type="button"
+          className={`account-notifications__toggle${prefs.email_reminders_enabled ? " account-notifications__toggle--on" : ""}`}
+          onClick={handleToggle}
+          disabled={saving}
+          aria-label={prefs.email_reminders_enabled ? "Disable email reminders" : "Enable email reminders"}
+        >
+          <span className="account-notifications__toggle-knob" />
+          {prefs.email_reminders_enabled ? "On" : "Off"}
+        </button>
+        {prefs.email_reminders_enabled && (
+          <select
+            value={prefs.reminder_days_before}
+            onChange={handleDaysChange}
+            disabled={saving}
+            className="account-notifications__days"
+          >
+            <option value={1}>1 day before</option>
+            <option value={2}>2 days before</option>
+            <option value={3}>3 days before</option>
+            <option value={7}>1 week before</option>
+          </select>
+        )}
+      </div>
     </div>
   );
 }
@@ -407,6 +496,9 @@ function AccountPage() {
                     {profileSaveStatus === "saved" && (
                       <p style={{ color: "var(--color-accent)", marginTop: "0.5rem" }}>Profile updated.</p>
                     )}
+
+                    {/* Email reminder notifications */}
+                    <NotificationsPanel userEmail={user.email} />
 
                     {/* Import toggle */}
                     <button

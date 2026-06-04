@@ -12,8 +12,9 @@ from rest_framework.views import APIView
 
 from mountains.models import Mountain
 
-from .models import RouteLog, UserCollectionNote, UserMountainLog
+from .models import NotificationPreference, RouteLog, UserCollectionNote, UserMountainLog
 from .serializers import (
+    NotificationPreferenceSerializer,
     RouteLogResponseSerializer,
     RouteLogSerializer,
     ShareLogSerializer,
@@ -339,6 +340,33 @@ class UserCollectionNoteDetailView(APIView):
             return Response({"detail": "Note not found."}, status=status.HTTP_404_NOT_FOUND)
         note.delete()
         return Response({"detail": "Note deleted."}, status=status.HTTP_200_OK)
+
+
+# ── Notification preferences ─────────────────────────────────────────────────
+
+class NotificationPreferenceView(APIView):
+    """
+    GET  /api/progress/notifications/
+        Returns the user's current notification preferences.
+        Creates a default record (reminders off, 3 days) if none exists yet.
+
+    PATCH /api/progress/notifications/
+        Updates email_reminders_enabled and/or reminder_days_before.
+        Accepts partial payloads — only supplied fields are changed.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        pref, _ = NotificationPreference.objects.get_or_create(user=request.user)
+        return Response(NotificationPreferenceSerializer(pref).data)
+
+    def patch(self, request):
+        pref, _ = NotificationPreference.objects.get_or_create(user=request.user)
+        serializer = NotificationPreferenceSerializer(pref, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.save()
+        return Response(serializer.data)
 
 
 # ── Route log CRUD ───────────────────────────────────────────────────────────

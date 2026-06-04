@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from mountains.serializers import MountainSerializer
 
-from .models import RouteLog, UserCollectionNote, UserMountainLog
+from .models import NotificationPreference, RouteLog, UserCollectionNote, UserMountainLog
 
 
 class UserMountainLogSerializer(serializers.ModelSerializer):
@@ -123,6 +123,20 @@ class UserCollectionNoteSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
+
+
+# ── Notification preference serializer ──────────────────────────────────────
+
+class NotificationPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NotificationPreference
+        fields = ["id", "email_reminders_enabled", "reminder_days_before", "updated_at"]
+        read_only_fields = ["id", "updated_at"]
+
+    def validate_reminder_days_before(self, value):
+        if value not in (1, 2, 3, 7):
+            raise serializers.ValidationError("Choose 1, 2, 3, or 7 days.")
+        return value
 
 
 # ── Route serializers ────────────────────────────────────────────────────────
