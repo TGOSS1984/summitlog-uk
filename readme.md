@@ -145,13 +145,15 @@ A major focus throughout development was creating something that feels like a pr
 - **Interactive map** — see all your completed, planned and not-started peaks on a single map with colour-coded markers
 - **My ascents toggle** — filter the map to just your logged mountains
 - **Mountain journal** — a chronological diary of every logged ascent with filters by status, season, collection and search
+- **Route discovery** — each mountain detail page links to OS Maps (coordinates pre-loaded), Komoot route search and WalkHighlands (Scottish peaks), alongside a nearby summits grid for the same region
 
 ### For Reflection
 
 - **Dashboard** — charts showing completion by status (pie), collection progress (bar) and completions over time (line)
-- **Achievement system** — badges for milestones like First Summit, Distance Walker, High Climber
+- **Achievement system** — badges for milestones like First Summit, Distance Walker, High Climber; toast notifications fire whenever a new badge tier is earned
 - **Gallery** — a masonry grid of all uploaded summit photos with lightbox viewer
 - **Export** — download completed summits as CSV or GPX for use in other apps
+- **Personal stats in depth** — longest active streak, best month, best year, most summited region and a year-by-year chart
 
 ### Preview Mode
 
@@ -207,7 +209,10 @@ The design system uses CSS custom properties for a consistent visual language:
 
 - Stat cards: height, feet, prominence, region
 - 4-day weather forecast (Open-Meteo, no API key required)
+- Wikipedia summary — auto-fetched from the Wikipedia API with a read more/less toggle and a link to the full article; cached in `sessionStorage` to avoid re-fetching on back navigation; bracket suffixes stripped from mountain names before querying
 - Track ascent with full form: status, season, date, route, distance, duration, steps, flights, notes, photo
+- GPX file import — upload a `.gpx` file from a Garmin, phone or Strava export to auto-populate distance, duration and steps; parsed entirely client-side using `DOMParser` with no upload to the server; steps estimated at 1300/km
+- Plan your ascent section — route discovery panel with an OS Maps deep-link pre-loaded to the mountain's coordinates, a Komoot route search, and a WalkHighlands link for Scottish peaks; includes a nearby summits grid showing the closest mountains in the same region sorted by proximity
 - Multiple ascents per mountain with history switcher
 - Login prompt for unauthenticated users
 
@@ -217,8 +222,12 @@ The design system uses CSS custom properties for a consistent visual language:
 - Personal bests section (only shown when real data exists)
 - Charts: status pie chart, collection bar chart, completions over time line chart
 - Elevation milestone tracker with custom SVG ridge
+- Activity heatmap — 52-week ascent calendar showing frequency per day with colour intensity, month labels and a legend
+- Coming up panel — planned summits with a target date, sorted soonest first; entries within 7 days highlighted as imminent
 - Recent activity timeline (clickable — links to mountain detail)
-- Achievement panel with progress bars
+- Achievement panel with progress bars and tier badges (Bronze / Silver / Gold)
+- Achievement notifications — a slide-in toast fires whenever a new badge tier is earned; the first-ever load silently populates the seen-badge store in `localStorage` so no flood of toasts; disabled entirely in demo mode
+- Personal stats in depth — longest consecutive weekly streak (ISO weeks), best month, best year, favourite region by ascent count and a year-by-year bar chart; renders only when sufficient completed log data exists
 - Region completion cards (clickable — link to region pages)
 - Collection progress cards (clickable — link to collection pages)
 - Saved logs with clickable arrow cards
@@ -238,6 +247,9 @@ The design system uses CSS custom properties for a consistent visual language:
 - Chronological diary grouped by month
 - Filters: status, season, collection, search
 - Entry shows: mountain name, region, height, season badge, stats strip, route, notes, photo
+- Historical weather chips — for completed ascents with a date, fetches the actual recorded conditions via the Open-Meteo archive API and shows an emoji + temperature range (max/min) inline in each entry
+- Upcoming planned routes strip — shows planned multi-mountain routes sorted by target date with a countdown label (e.g. "12 days", "Tomorrow") and an imminent highlight for routes within 7 days
+- Bulk status update — a "Select" button enters select mode; checkboxes appear on all individual entries; a floating action bar slides up from the bottom showing the selected count, a status dropdown (Completed / Planned / Not started) and an Apply button; fires parallel PATCHes to the existing endpoint and updates local state on success; route group entries are excluded from bulk selection
 - Skeleton loading and redirect for unauthenticated users
 
 ### Gallery
@@ -256,6 +268,17 @@ The design system uses CSS custom properties for a consistent visual language:
 - Mountain list with rank badges (gold for top 3)
 - Status-coded left border on mountain rows
 - Region detail pages with mini stat cards
+- Sort options — rank (default), height high-to-low, height low-to-high, name A–Z, most completed
+- Repeat summit count badges — mountains summited more than once show a repeat count chip (×2, ×3 etc.)
+- Personal collection notes — logged-in users can write and save a freeform note per collection (autosaves on blur, last-saved timestamp shown); one note per user per collection stored via the backend
+- Completion milestone banner — when a collection reaches 100%, a trophy banner fires with animated floating dots, a share button that copies a pre-formatted achievement message and the page URL to the clipboard; dismissed state stored in `sessionStorage` so it appears once per browser session
+
+### Sharing
+
+- Public share page — every completed ascent has a shareable URL (`/share/log/:id`) displaying stats, photo and notes with no login required; only completed logs are accessible via this endpoint
+- Share buttons on mountain detail pages copy either the public ascent URL (if a completed log exists) or the mountain page URL to the clipboard, with a "Copied!" confirmation
+- Collection milestone share — the 100% completion banner includes a button that copies a pre-formatted message (`🏔️ I just completed all N {Collection}!`) and the page URL
+- Dynamic document title on share pages — set to `{Mountain} — DD Mon YYYY · SummitLog UK` for meaningful social link preview text; resets to `SummitLog UK` on unmount
 
 ### Account
 
@@ -263,6 +286,8 @@ The design system uses CSS custom properties for a consistent visual language:
 - Profile editing with bio and avatar upload
 - Quick links to Dashboard, Journal, Gallery when logged in
 - Completed and planned counts
+- CSV bulk import — upload a spreadsheet to import historical mountain logs; client-side preview of the first 5 rows before importing; flexible column name matching; duplicate guard; skipped row report with reasons per row
+- Email reminder notifications — opt-in toggle to receive email reminders before planned summits; configurable lead time (1, 2, 3 or 7 days); preferences auto-save on toggle; powered by a Django management command (`send_summit_reminders`) designed for daily cron or GitHub Actions scheduling
 
 ### Route Logging
 
@@ -274,6 +299,7 @@ The design system uses CSS custom properties for a consistent visual language:
 - Edit mode — update route name, date and cumulative stats at `/log-route/:id/edit`; mountain list is intentionally fixed after logging
 - Delete route — removes the `RouteLog` and all linked `UserMountainLog` entries with a confirm modal
 - Journal groups route logs together under a gold-bordered route entry showing the route name, cumulative stats and a collapsible summit list with edit and delete actions
+- GPX file import in the route form — same client-side parser as the single-ascent form; auto-fills cumulative distance, duration and steps
 - "Log a route" CTA in the navbar (gold outlined pill), Explore dropdown and footer
 
 ---
@@ -362,6 +388,10 @@ SummitLog UK uses a decoupled architecture. The React frontend communicates enti
 
 **Route Log Data Model (Approach A)** — Multi-mountain routes create one `RouteLog` record plus individual `UserMountainLog` entries per summit, all linked via a `route_group` FK and a shared `route_group_id_ref` UUID. Cumulative stats (distance, duration, steps) are stored on the primary summit only rather than split evenly across summits — this is intentionally honest, avoiding fabricated per-summit distances. The benefit is that every existing page (dashboard, map, collection, journal) reads individual logs as normal and requires no changes; the route relationship is additive context rather than a parallel data source.
 
+**GPX Client-side Parsing** — GPX files are parsed entirely in the browser using `DOMParser` (built-in, no npm dependency). Haversine distance is computed over all track points, duration is derived from `<time>` elements, and steps are estimated at 1300/km. The file is never uploaded to the server — only the extracted numeric values are saved.
+
+**Email Reminders via Management Command** — Notification delivery uses a Django management command (`send_summit_reminders`) rather than Celery or a third-party scheduler. The command is stateless and designed to be called by a daily cron job or GitHub Actions scheduled workflow (`schedule: cron`). This avoids a broker dependency (Redis/RabbitMQ) while still delivering reliable daily reminders.
+
 ---
 
 ## 🔌 API Reference
@@ -397,6 +427,8 @@ SummitLog UK uses a decoupled architecture. The React frontend communicates enti
 | DELETE | `/api/progress/logs/:id/` | Required | Delete log (returns 200 with detail message) |
 | GET | `/api/progress/export/?format=csv` | Required | Export as CSV |
 | GET | `/api/progress/export/?format=gpx` | Required | Export as GPX |
+| POST | `/api/progress/import/` | Required | Bulk import logs from a CSV file |
+| GET | `/api/progress/share/log/:id/` | Public | Read-only public view of a completed log |
 
 **Auth scoping** — all progress log endpoints are fully user-scoped. Users can only see and modify their own logs. Attempting to access another user's log returns 404.
 
@@ -429,6 +461,22 @@ SummitLog UK uses a decoupled architecture. The React frontend communicates enti
 
 **Validation rules:** minimum 2 mountains; `primary_mountain_id` must be present in `mountain_ids`; date cannot be in the future.
 
+### Collection Notes
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/progress/collection-notes/?collection=<id>` | Required | Get notes for a collection |
+| POST | `/api/progress/collection-notes/` | Required | Create or upsert a note by `collection_id_ref` |
+| PATCH | `/api/progress/collection-notes/:id/` | Required | Update note body |
+| DELETE | `/api/progress/collection-notes/:id/` | Required | Delete note |
+
+### Notification Preferences
+
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| GET | `/api/progress/notifications/` | Required | Get preferences (creates defaults on first access) |
+| PATCH | `/api/progress/notifications/` | Required | Update `email_reminders_enabled` and/or `reminder_days_before` |
+
 ---
 
 ## 📂 Project Structure
@@ -455,12 +503,15 @@ summitlog-uk/
 │   │   └── urls.py
 │   │
 │   ├── progress/
-│   │   ├── models.py               # UserMountainLog, RouteLog
-│   │   ├── serializers.py          # Log serializer with validation
-│   │   ├── views.py                # Log CRUD, Route CRUD + Export
+│   │   ├── models.py               # UserMountainLog, RouteLog, UserCollectionNote, NotificationPreference
+│   │   ├── serializers.py          # Log serializer with validation, NotificationPreferenceSerializer
+│   │   ├── views.py                # Log CRUD, Route CRUD, Share, Import, Export, Notifications
 │   │   ├── urls.py
 │   │   ├── tests.py                # 45 progress tests
-│   │   └── tests_route_log.py      # 35 route log tests
+│   │   ├── tests_route_log.py      # 35 route log tests
+│   │   └── management/
+│   │       └── commands/
+│   │           └── send_summit_reminders.py  # Daily email reminder command
 │   │
 │   ├── config/
 │   │   ├── settings/
@@ -499,6 +550,7 @@ summitlog-uk/
 │   │   │   ├── CollectionDetailPage.jsx
 │   │   │   ├── RegionDetailPage.jsx
 │   │   │   ├── LogRoutePage.jsx
+│   │   │   ├── SharePage.jsx
 │   │   │   └── NotFoundPage.jsx
 │   │   │
 │   │   ├── lib/
@@ -590,6 +642,10 @@ AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 AWS_STORAGE_BUCKET_NAME=
 AWS_S3_CUSTOM_DOMAIN=
+
+# Email (optional — omit to use console backend in development)
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+DEFAULT_FROM_EMAIL=noreply@summitlog.uk
 ```
 
 #### Run migrations
@@ -637,6 +693,18 @@ Frontend runs at: `http://localhost:3000`
 ### 4. Verify setup
 
 Visit `http://localhost:3000` — you should see the SummitLog homepage. Navigate to `/mountains` to confirm the API connection is working.
+
+---
+
+### 5. Email reminders (optional)
+
+To test the summit reminder emails locally, set `EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend` in `.env`. Then run:
+
+```bash
+python manage.py send_summit_reminders
+```
+
+The full email body will print to the terminal instead of sending. For production, configure a real SMTP backend (SendGrid, Resend, Amazon SES) and schedule the command to run daily via cron or a GitHub Actions scheduled workflow.
 
 ---
 
@@ -783,6 +851,8 @@ Tests every exported function in `src/lib/api.js`:
 - Edit form shown on Edit profile click
 - Welcome back kicker text shown
 
+> **Note:** The `vi.mock('../lib/api')` factory includes `getNotificationPreferences` and `updateNotificationPreferences` with default resolved values so the `NotificationsPanel` component mounts cleanly without affecting existing assertions.
+
 **`CollectionDetailPage.test.jsx` — 23 tests**
 
 - Skeleton shown during loading
@@ -801,6 +871,8 @@ Tests every exported function in `src/lib/api.js`:
 - Unauthenticated: mountains shown without status colours
 - Error state shown when API fails
 - Not found state when slug doesn't match
+
+> **Note:** The `vi.mock('../lib/api')` factory includes `getCollectionNote`, `saveCollectionNote` and `deleteCollectionNote` with default resolved values so the `CollectionNotes` component mounts cleanly without affecting existing assertions.
 
 **`route_api.test.js` — 20 tests**
 
@@ -966,6 +1038,31 @@ expect(grid.textContent).toContain('Completed')
 
 ---
 
+### 🟡 Vitest mock factory missing newly added API functions
+
+**Symptom:** After adding `getCollectionNote`, `saveCollectionNote`, `deleteCollectionNote` to `CollectionDetailPage` and later `getNotificationPreferences`, `updateNotificationPreferences` to `AccountPage`, all tests in the respective test files threw `[vitest] No "X" export is defined on the "../lib/api" mock` and rendered `<body><div /></body>` — causing all logged-in tests to fail as a knock-on.
+
+**Root cause:** The `vi.mock('../lib/api', () => ({ ... }))` factory in each test file explicitly lists every mocked function. When new functions are added to the component but not to the mock factory, Vitest throws on mount because the mock returns `undefined` for the missing export.
+
+**Solution:** Added the missing functions to each test file's `vi.mock` factory with sensible default resolved values:
+
+```javascript
+// CollectionDetailPage.test.jsx
+getCollectionNote: vi.fn().mockResolvedValue([]),
+saveCollectionNote: vi.fn().mockResolvedValue({ id: 1, body: '', updated_at: null }),
+deleteCollectionNote: vi.fn().mockResolvedValue(true),
+
+// AccountPage.test.jsx
+getNotificationPreferences: vi.fn().mockResolvedValue({
+  id: 1, email_reminders_enabled: false, reminder_days_before: 3, updated_at: null,
+}),
+updateNotificationPreferences: vi.fn().mockResolvedValue({
+  id: 1, email_reminders_enabled: true, reminder_days_before: 3, updated_at: null,
+}),
+```
+
+---
+
 ## ✅ Manual Testing
 
 ### Authentication
@@ -991,6 +1088,7 @@ expect(grid.textContent).toContain('Completed')
 | Delete a log | Confirm modal shown, log deleted on confirm | ✅ Pass |
 | Log same mountain twice | Both ascents shown in history list | ✅ Pass |
 | Upload summit photo | Image stored in R2, shown in form preview | ✅ Pass |
+| Upload GPX file | Distance, duration and steps auto-filled, hint shown | ✅ Pass |
 
 ### Dashboard
 
@@ -1002,6 +1100,8 @@ expect(grid.textContent).toContain('Completed')
 | Click region card | Navigates to region detail page | ✅ Pass |
 | Export CSV | CSV file downloaded | ✅ Pass |
 | Export GPX | GPX file downloaded | ✅ Pass |
+| Earn a new badge tier | Toast notification fires bottom-right | ✅ Pass |
+| View activity heatmap | 52-week calendar renders with correct intensity | ✅ Pass |
 
 ### Map
 
@@ -1023,6 +1123,8 @@ expect(grid.textContent).toContain('Completed')
 | Escape key closes lightbox | Lightbox closes | ✅ Pass |
 | Journal filter by status | Only matching entries shown | ✅ Pass |
 | Journal search | Matching mountain names shown | ✅ Pass |
+| Enable select mode in journal | Checkboxes appear on entries | ✅ Pass |
+| Apply bulk status update | Selected entries updated, bar dismisses | ✅ Pass |
 
 ### Collections
 
@@ -1032,6 +1134,17 @@ expect(grid.textContent).toContain('Completed')
 | Filter collection by Planned | Only planned mountains shown | ✅ Pass |
 | Filter returns no results | Empty state with Show all button | ✅ Pass |
 | Show all mountains resets filter | All mountains shown again | ✅ Pass |
+| Save a collection note | Note saved with timestamp shown | ✅ Pass |
+| 100% collection complete | Milestone banner fires with trophy and share button | ✅ Pass |
+
+### Sharing
+
+| Test | Expected | Result |
+|---|---|---|
+| Share button on completed ascent | Copies public share URL to clipboard | ✅ Pass |
+| Visit share URL logged out | Share page renders with stats and photo | ✅ Pass |
+| Visit share URL for planned log | 404 / not found state shown | ✅ Pass |
+| Share page document title | Set to mountain name and date | ✅ Pass |
 
 ### Mobile Responsiveness
 
@@ -1059,6 +1172,14 @@ expect(grid.textContent).toContain('Completed')
 | Delete route | Confirm modal shown, route and all logs removed | ✅ Pass |
 | Route name appears in journal search | Search by route name returns route entry | ✅ Pass |
 | Route count shown in journal stats | "N routes logged" stat card shown | ✅ Pass |
+
+### Email Reminders
+
+| Test | Expected | Result |
+|---|---|---|
+| Enable reminders in Account | Toggle switches to On, saves immediately | ✅ Pass |
+| Change days-before dropdown | New value saved, confirmation shown | ✅ Pass |
+| Run send_summit_reminders command | Finds matching planned logs, prints email body | ✅ Pass |
 
 ---
 
@@ -1118,12 +1239,34 @@ AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 AWS_STORAGE_BUCKET_NAME=
 AWS_S3_CUSTOM_DOMAIN=
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.sendgrid.net
+EMAIL_PORT=587
+EMAIL_HOST_USER=apikey
+EMAIL_HOST_PASSWORD=your-sendgrid-api-key
+DEFAULT_FROM_EMAIL=noreply@summitlog.uk
 ```
 
 **Pre-deploy steps:**
 ```bash
 python manage.py collectstatic --noinput
 python manage.py migrate
+```
+
+**Scheduled email reminders:**
+
+Add a daily scheduled workflow to `.github/workflows/reminders.yml` (or a server cron job):
+
+```yaml
+on:
+  schedule:
+    - cron: '0 7 * * *'  # 07:00 UTC daily
+jobs:
+  reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python manage.py send_summit_reminders
 ```
 
 ---
@@ -1158,9 +1301,13 @@ python manage.py migrate
 
 ### APIs & Services
 
-- **[Open-Meteo](https://open-meteo.com/)** — Free weather forecast API used for the 4-day mountain weather panel. No API key required.
+- **[Open-Meteo](https://open-meteo.com/)** — Free weather forecast API used for the 4-day mountain weather panel and the historical weather archive for journal entries. No API key required.
+- **[Wikipedia REST API](https://en.wikipedia.org/api/rest_v1/)** — Used to fetch mountain summaries displayed on each mountain detail page. No API key required.
 - **[OpenStreetMap](https://www.openstreetmap.org/)** — Map tile provider used via Leaflet. © OpenStreetMap contributors.
 - **[Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/)** — S3-compatible object storage for user-uploaded summit photos.
+- **[OS Maps](https://explore.osmaps.com/)** — Deep-linked from mountain detail pages with coordinates pre-loaded for route planning.
+- **[Komoot](https://www.komoot.com/)** — Linked from mountain detail pages for community route discovery.
+- **[WalkHighlands](https://www.walkhighlands.co.uk/)** — Linked from Scottish mountain detail pages for route guides.
 
 ### Libraries & Frameworks
 
@@ -1201,4 +1348,3 @@ Built for hillwalkers, by a hillwalker.
 *Track the peaks. Own the journey.*
 
 </div>
-
