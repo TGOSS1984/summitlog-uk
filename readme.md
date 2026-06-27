@@ -31,6 +31,8 @@ A full-stack mountain tracking application for UK hillwalkers — log Wainwright
 
 </div>
 
+![Website Mockup](frontend/public/images/screenshots/site_mockup.PNG)
+
 ---
 
 ## 📚 Table of Contents
@@ -62,56 +64,56 @@ A full-stack mountain tracking application for UK hillwalkers — log Wainwright
 
 ### 🏠 Homepage
 
-![Homepage Screenshot](frontend/public/images/screenshots/homepage.png)
+![Homepage Screenshot](frontend/public/images/screenshots/homepage.PNG)
 > *Hero section with mountain imagery, elevation ruler and progress snapshot*
 
 ---
 
 ### 🏔️ Mountains Page
 
-![Mountains Screenshot](frontend/public/images/screenshots/mountains.png)
+![Mountains Screenshot](frontend/public/images/screenshots/mountains.PNG)
 > *Filterable mountain database with contour tide cards, region gradients and height markers*
 
 ---
 
 ### 📊 Dashboard
 
-![Dashboard Screenshot](frontend/public/images/screenshots/dashboard.png)
+![Dashboard Screenshot](frontend/public/images/screenshots/dashboard.PNG)
 > *Personal stats, charts, achievements, personal bests and collection progress*
 
 ---
 
 ### 🗺️ Map Page
 
-![Map Screenshot](frontend/public/images/screenshots/map.png)
+![Map Screenshot](frontend/public/images/screenshots/map.PNG)
 > *Interactive Leaflet map with colour-coded status markers and my ascents toggle*
 
 ---
 
 ### 🏔️ Mountain Detail Page
 
-![Mountain Detail Screenshot](frontend/public/images/screenshots/mountain_detail.png)
+![Mountain Detail Screenshot](frontend/public/images/screenshots/mountain_detail.PNG)
 > *Stat cards, 4-day weather forecast, ascent history and tracking form*
 
 ---
 
 ### 📖 Journal
 
-![Journal Screenshot](frontend/public/images/screenshots/journal.png)
+![Journal Screenshot](frontend/public/images/screenshots/journal.PNG)
 > *Chronological mountain diary grouped by month with filters*
 
 ---
 
 ### 🖼️ Gallery
 
-![Gallery Screenshot](frontend/public/images/screenshots/gallery.png)
+![Gallery Screenshot](frontend/public/images/screenshots/gallery.PNG)
 > *Masonry photo gallery with lightbox viewer*
 
 ---
 
 ### 📱 Mobile
 
-![Mobile Screenshot](frontend/public/images/screenshots/mobile.png)
+![Mobile Screenshot](frontend/public/images/screenshots/mobile.PNG)
 > *Responsive layout across all screen sizes*
 
 ---
