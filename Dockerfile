@@ -22,8 +22,8 @@ RUN pip install --upgrade pip \
 # Copy project
 COPY backend/ .
 
-# Collect static files
-RUN python manage.py collectstatic --noinput --settings=config.settings.production
-
-# Run gunicorn
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+# collectstatic and migrate need real env vars (SECRET_KEY, DATABASE_URL)
+# which Render only injects at container runtime, not during the build step
+# above — so both run here, right before gunicorn starts, on every deploy.
+# $PORT is supplied by Render (defaults to 8000 for local `docker run`).
+CMD ["sh", "-c", "python manage.py collectstatic --noinput --settings=config.settings.production && python manage.py migrate --noinput --settings=config.settings.production && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 3"]
