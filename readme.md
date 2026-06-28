@@ -15,6 +15,10 @@
 
 A full-stack mountain tracking application for UK hillwalkers — log Wainwrights, Munros, Nuttalls and more with routes, photos, stats and weather forecasts.
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-View_Site-2EA44F?style=for-the-badge&logo=vercel&logoColor=white)](https://summitlog-uk.vercel.app)
+
+*First load may take ~30s if the demo's been idle — Render's free tier spins down when inactive.*
+
 [![React](https://img.shields.io/badge/Frontend-React_+_Vite-61DAFB?style=for-the-badge&logo=react&logoColor=white)]()
 [![Django](https://img.shields.io/badge/Backend-Django_4.2-092E20?style=for-the-badge&logo=django&logoColor=white)]()
 [![DRF](https://img.shields.io/badge/API-Django_REST_Framework-ff1709?style=for-the-badge&logo=django&logoColor=white)]()
