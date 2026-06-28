@@ -22,7 +22,7 @@ RUN pip install --upgrade pip \
 # Copy project
 COPY backend/ .
 
-# TEMPORARY: one-time cleanup of demo-fixture mountains duplicated by the
-# DOBIH import. Remove the cleanup_demo_duplicates step once you've
-# confirmed it ran successfully — no need to repeat this on every deploy.
-CMD ["sh", "-c", "python manage.py collectstatic --noinput --settings=config.settings.production && python manage.py migrate --noinput --settings=config.settings.production && python manage.py loaddata initial_mountain_data --settings=config.settings.production && python manage.py cleanup_demo_duplicates --settings=config.settings.production && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 3"]
+# TEMPORARY: wipe all mountain/collection/region data, then import ONLY
+# the real DOBIH dataset — no demo fixture involved at all. Revert this
+# CMD once you've confirmed the import succeeded.
+CMD ["sh", "-c", "python manage.py collectstatic --noinput --settings=config.settings.production && python manage.py migrate --noinput --settings=config.settings.production && python manage.py shell -c 'from mountains.models import Mountain, MountainCollection, SubRegion, Region; Mountain.objects.all().delete(); MountainCollection.objects.all().delete(); SubRegion.objects.all().delete(); Region.objects.all().delete(); print(\"Mountain data wiped clean\")' --settings=config.settings.production && python manage.py import_mountains mountains/data/dobih.csv --dobih --settings=config.settings.production && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 3"]
