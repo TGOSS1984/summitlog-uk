@@ -21,16 +21,6 @@
   },
   {
     "model": "mountains.mountaincollection",
-    "pk": 3,
-    "fields": {
-      "name": "Welsh Nuttalls",
-      "slug": "welsh-nuttalls",
-      "description": "Welsh mountains over 2,000 feet with sufficient prominence.",
-      "expected_total": 190
-    }
-  },
-  {
-    "model": "mountains.mountaincollection",
     "pk": 4,
     "fields": {
       "name": "Peak District Summits",
@@ -171,82 +161,6 @@
       "slug": "western-fells",
       "region": 1,
       "description": "A dramatic western group including Pillar, Red Pike and the Buttermere fells."
-    }
-  },
-  {
-    "model": "mountains.mountain",
-    "pk": 1,
-    "fields": {
-      "name": "Scafell Pike",
-      "slug": "scafell-pike",
-      "collection": 1,
-      "region": 1,
-      "subregion": 4,
-      "height_m": "978.00",
-      "height_ft": 3209,
-      "prominence_m": "912.00",
-      "rank_in_collection": 1,
-      "latitude": "54.454167",
-      "longitude": "-3.211389",
-      "summary": "The highest mountain in England and one of the most iconic Lake District objectives.",
-      "image_placeholder": "/images/mountains/scafell-pike.jpg"
-    }
-  },
-  {
-    "model": "mountains.mountain",
-    "pk": 2,
-    "fields": {
-      "name": "Helvellyn",
-      "slug": "helvellyn",
-      "collection": 1,
-      "region": 1,
-      "subregion": 1,
-      "height_m": "950.00",
-      "height_ft": 3117,
-      "prominence_m": "712.00",
-      "rank_in_collection": 3,
-      "latitude": "54.526944",
-      "longitude": "-3.017500",
-      "summary": "A famous Lake District summit known for Striding Edge and Swirral Edge.",
-      "image_placeholder": "/images/mountains/helvellyn.jpg"
-    }
-  },
-  {
-    "model": "mountains.mountain",
-    "pk": 3,
-    "fields": {
-      "name": "Ben Nevis",
-      "slug": "ben-nevis",
-      "collection": 2,
-      "region": 2,
-      "subregion": null,
-      "height_m": "1345.00",
-      "height_ft": 4413,
-      "prominence_m": "1345.00",
-      "rank_in_collection": 1,
-      "latitude": "56.796850",
-      "longitude": "-5.003508",
-      "summary": "The highest mountain in the UK and a flagship Munro.",
-      "image_placeholder": "/images/mountains/ben-nevis.jpg"
-    }
-  },
-  {
-    "model": "mountains.mountain",
-    "pk": 4,
-    "fields": {
-      "name": "Snowdon / Yr Wyddfa",
-      "slug": "snowdon-yr-wyddfa",
-      "collection": 3,
-      "region": 3,
-      "subregion": null,
-      "height_m": "1085.00",
-      "height_ft": 3560,
-      "prominence_m": "1039.00",
-      "rank_in_collection": 1,
-      "latitude": "53.068504",
-      "longitude": "-4.076277",
-      "summary": "The highest mountain in Wales and one of the most visited summits in the UK.",
-      "image_placeholder": "/images/mountains/snowdon-yr-wyddfa.jpg"
     }
   },
   {
