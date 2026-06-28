@@ -927,10 +927,19 @@ function DashboardPage() {
 
   useEffect(() => {
     async function loadDashboard() {
+      let currentUser = null;
       try {
         const userData = await getCurrentUser();
-        setUser(userData.user || userData);
+        currentUser = userData.user;
+        setUser(currentUser);
       } catch { setStatus("demo"); return; }
+
+      // getCurrentUser() succeeds (200) even when nobody's logged in — it
+      // just returns { user: null }. That's not an error, so the catch
+      // above never fires for it. Treat a confirmed logged-out visitor
+      // the same as a network failure: show the demo preview instead of
+      // calling endpoints that require auth and would just 403.
+      if (!currentUser) { setStatus("demo"); return; }
 
       try {
         const [mountainData, collectionData, logData] = await Promise.all([
