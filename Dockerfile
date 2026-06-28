@@ -22,7 +22,11 @@ RUN pip install --upgrade pip \
 # Copy project
 COPY backend/ .
 
-# TEMPORARY: wipe all mountain/collection/region data, then import ONLY
-# the real DOBIH dataset — no demo fixture involved at all. Revert this
-# CMD once you've confirmed the import succeeded.
-CMD ["sh", "-c", "python manage.py collectstatic --noinput --settings=config.settings.production && python manage.py migrate --noinput --settings=config.settings.production && python manage.py shell -c 'from mountains.models import Mountain, MountainCollection, SubRegion, Region; Mountain.objects.all().delete(); MountainCollection.objects.all().delete(); SubRegion.objects.all().delete(); Region.objects.all().delete(); print(\"Mountain data wiped clean\")' --settings=config.settings.production && python manage.py import_mountains mountains/data/dobih.csv --dobih --settings=config.settings.production && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 3"]
+# collectstatic and migrate need real env vars (SECRET_KEY, DATABASE_URL)
+# which Render only injects at container runtime, not during the build
+# step above — so both run here, right before gunicorn starts, on every
+# deploy. Mountain data is already loaded from the DOBIH dataset and
+# persists in the database — no need to reload or reseed it on future
+# deploys.
+# $PORT is supplied by Render (defaults to 8000 for local `docker run`).
+CMD ["sh", "-c", "python manage.py collectstatic --noinput --settings=config.settings.production && python manage.py migrate --noinput --settings=config.settings.production && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 3"]
