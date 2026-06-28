@@ -22,8 +22,7 @@ RUN pip install --upgrade pip \
 # Copy project
 COPY backend/ .
 
-# TEMPORARY: one-time import of the full DOBIH dataset (~21k rows, filtered
-# down to Wainwrights/Munros/Nuttalls). Remove the import_mountains line
-# once you've confirmed it ran successfully — no need to repeat this on
-# every future deploy.
-CMD ["sh", "-c", "python manage.py collectstatic --noinput --settings=config.settings.production && python manage.py migrate --noinput --settings=config.settings.production && python manage.py loaddata initial_mountain_data --settings=config.settings.production && python manage.py import_mountains mountains/data/dobih.csv --dobih --settings=config.settings.production && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 3"]
+# TEMPORARY: one-time cleanup of demo-fixture mountains duplicated by the
+# DOBIH import. Remove the cleanup_demo_duplicates step once you've
+# confirmed it ran successfully — no need to repeat this on every deploy.
+CMD ["sh", "-c", "python manage.py collectstatic --noinput --settings=config.settings.production && python manage.py migrate --noinput --settings=config.settings.production && python manage.py loaddata initial_mountain_data --settings=config.settings.production && python manage.py cleanup_demo_duplicates --settings=config.settings.production && gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 3"]
