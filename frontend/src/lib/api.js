@@ -128,6 +128,19 @@ export async function updateUserProfile(formData) {
   return data;
 }
 
+export async function getShareSettings() {
+  return request("/auth/share-settings/");
+}
+
+export async function updateShareSettings(payload) {
+  const csrfToken = await getCsrfToken();
+  return request("/auth/share-settings/", {
+    method: "PATCH",
+    headers: { "X-CSRFToken": csrfToken },
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function exportLogs(format = "csv") {
   const url = `${API_BASE}/progress/export/?format=${format}`;
   const response = await fetch(url, {

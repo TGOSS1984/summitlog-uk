@@ -10,10 +10,12 @@ import {
   getCsrfToken,
   getNotificationPreferences,
   updateNotificationPreferences,
+  getShareSettings,
+  updateShareSettings,
 } from "../lib/api";
 import {
   TbBook, TbPhoto, TbLayoutDashboard,
-  TbUpload, TbCheck, TbX, TbAlertTriangle, TbFileSpreadsheet, TbBell,
+  TbUpload, TbCheck, TbX, TbAlertTriangle, TbFileSpreadsheet, TbBell, TbShare2,
 } from "react-icons/tb";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
@@ -291,6 +293,133 @@ function NotificationsPanel({ userEmail }) {
   );
 }
 
+// ── Public sharing panel ─────────────────────────────────────────────────────
+
+function SharingPanel() {
+  const [settings,  setSettings]  = useState(null);
+  const [saving,    setSaving]    = useState(false);
+  const [saveMsg,   setSaveMsg]   = useState(null);
+  const [copiedKey, setCopiedKey] = useState(null);
+  const saveMsgTimer = useRef(null);
+
+  useEffect(() => {
+    getShareSettings()
+      .then((data) => setSettings(data))
+      .catch(() => {}); // non-fatal — panel stays hidden if endpoint unavailable
+  }, []);
+
+  function showSaved() {
+    setSaveMsg("Saved");
+    clearTimeout(saveMsgTimer.current);
+    saveMsgTimer.current = setTimeout(() => setSaveMsg(null), 2000);
+  }
+
+  async function handleToggle() {
+    if (!settings || saving) return;
+    setSaving(true);
+    try {
+      const result = await updateShareSettings({ sharing_enabled: !settings.sharing_enabled });
+      setSettings(result);
+      showSaved();
+    } catch { /* non-fatal */ } finally { setSaving(false); }
+  }
+
+  async function handleRegenerate() {
+    if (!settings || saving) return;
+    const confirmed = window.confirm(
+      "This replaces your share link with a new one — anyone with the old link will no longer be able to view it. Continue?"
+    );
+    if (!confirmed) return;
+    setSaving(true);
+    try {
+      const result = await updateShareSettings({ regenerate: true });
+      setSettings(result);
+      showSaved();
+    } catch { /* non-fatal */ } finally { setSaving(false); }
+  }
+
+  function handleCopy(url, key) {
+    navigator.clipboard?.writeText(url).then(() => {
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2500);
+    });
+  }
+
+  if (!settings) return null;
+
+  const links = [
+    { key: "dashboard", label: "Dashboard",     path: "/share/dashboard" },
+    { key: "progress",  label: "Progress list", path: "/share/progress" },
+  ];
+
+  return (
+    <div className="account-notifications">
+      <div className="account-notifications__header">
+        <TbShare2 size={15} strokeWidth={2} />
+        <strong>Public sharing</strong>
+        {saveMsg && <span className="account-notifications__save-msg">{saveMsg}</span>}
+      </div>
+      <p className="account-notifications__desc">
+        {settings.sharing_enabled
+          ? "Anyone with these links can view your dashboard and progress, read-only."
+          : "Turn on to get read-only links to your dashboard and progress list that anyone can view, no account needed."}
+      </p>
+      <div className="account-notifications__controls">
+        <button
+          type="button"
+          className={`account-notifications__toggle${settings.sharing_enabled ? " account-notifications__toggle--on" : ""}`}
+          onClick={handleToggle}
+          disabled={saving}
+          aria-label={settings.sharing_enabled ? "Turn off public sharing" : "Turn on public sharing"}
+        >
+          <span className="account-notifications__toggle-knob" />
+          {settings.sharing_enabled ? "On" : "Off"}
+        </button>
+      </div>
+
+      {settings.sharing_enabled && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", marginTop: "0.75rem" }}>
+          {links.map(({ key, label, path }) => {
+            const url = `${window.location.origin}${path}/${settings.share_token}`;
+            return (
+              <div key={key} style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                <span style={{ fontSize: "0.72rem", fontWeight: 700, minWidth: 80 }}>{label}</span>
+                <code
+                  style={{
+                    fontSize: "0.7rem", background: "rgba(4,57,59,0.06)", padding: "0.3rem 0.5rem",
+                    borderRadius: 6, flex: "1 1 140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}
+                >
+                  {url}
+                </code>
+                <button
+                  type="button"
+                  className={`share-card__copy${copiedKey === key ? " share-card__copy--copied" : ""}`}
+                  onClick={() => handleCopy(url, key)}
+                >
+                  <TbShare2 size={14} strokeWidth={2} />
+                  {copiedKey === key ? "Copied!" : "Copy link"}
+                </button>
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            onClick={handleRegenerate}
+            disabled={saving}
+            style={{
+              fontSize: "0.72rem", background: "none", border: "none", color: "var(--color-text-soft)",
+              textDecoration: "underline", cursor: "pointer", padding: 0, alignSelf: "flex-start", marginTop: "0.25rem",
+            }}
+          >
+            Regenerate link (invalidates the old one)
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 function AccountPage() {
@@ -499,6 +628,9 @@ function AccountPage() {
 
                     {/* Email reminder notifications */}
                     <NotificationsPanel userEmail={user.email} />
+
+                    {/* Public sharing toggle */}
+                    <SharingPanel />
 
                     {/* Import toggle */}
                     <button

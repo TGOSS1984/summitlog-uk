@@ -39,6 +39,14 @@ vi.mock('../lib/api', () => ({
     reminder_days_before: 3,
     updated_at: null,
   }),
+  getShareSettings: vi.fn().mockResolvedValue({
+    sharing_enabled: false,
+    share_token: '00000000-0000-0000-0000-000000000000',
+  }),
+  updateShareSettings: vi.fn().mockResolvedValue({
+    sharing_enabled: true,
+    share_token: '00000000-0000-0000-0000-000000000000',
+  }),
 }))
 
 // ---------------------------------------------------------------------------
