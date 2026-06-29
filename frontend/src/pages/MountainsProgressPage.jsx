@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getMountains, getProgressLogs, getCollections, getRegions } from "../lib/api";
 import { TbMountain, TbCheck, TbFlag } from "react-icons/tb";
 import {
@@ -8,6 +8,7 @@ import {
 } from "../components/mountains/mountainProgress";
 import MountainProgressRow from "../components/mountains/MountainProgressRow";
 import RowSkeleton from "../components/mountains/RowSkeleton";
+import { PdfDownloadButton } from "../components/ui/PdfDownloadButton";
 
 function mountainBelongsToCollection(mountain, collectionSlug) {
   return (
@@ -38,6 +39,7 @@ function MountainsProgressPage() {
   // Display filters — these change how the (already scoped) list is shown
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortOrder,    setSortOrder]    = useState("height_desc");
+  const pdfRef = useRef(null);
 
   useEffect(() => {
     async function load() {
@@ -158,7 +160,7 @@ function MountainsProgressPage() {
   }
 
   return (
-    <main className="page mountains-page">
+    <main className="page mountains-page" ref={pdfRef}>
       <section className="section section-dark mountains-hero">
         <div className="container mountains-hero__grid">
           <div>
@@ -179,6 +181,13 @@ function MountainsProgressPage() {
 
       <section className="section section-light mountains-explorer">
         <div className="container">
+
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
+            <PdfDownloadButton
+              targetRef={pdfRef}
+              filename={`summitlog-progress-${new Date().toISOString().slice(0, 10)}.pdf`}
+            />
+          </div>
 
           <div className="mountains-toolbar">
             <div>

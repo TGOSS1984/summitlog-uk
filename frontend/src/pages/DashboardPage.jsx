@@ -26,6 +26,7 @@ import {
 import { AchievementPanel, RegionProgressPanel, CollectionProgressPanel } from "../components/dashboard/DashboardPanels";
 import { OverviewCharts } from "../components/dashboard/DashboardCharts";
 import { RecentActivityAndPhotos } from "../components/dashboard/DashboardStoryPanels";
+import { PdfDownloadButton } from "../components/ui/PdfDownloadButton";
 
 const STAT_ICONS = {
   "Completed":       { icon: TbMountain, color: "var(--color-teal-deep)" },
@@ -602,6 +603,7 @@ function DashboardPage() {
   const [showAllProgress, setShowAllProgress] = useState(false);
   const MAX_VISIBLE = 5;
   const [exporting, setExporting] = useState(null);
+  const pdfRef = useRef(null);
 
   async function handleExport(format) {
     try { setExporting(format); await exportLogs(format); }
@@ -661,7 +663,7 @@ function DashboardPage() {
   const userName = user?.username || user?.user?.username || user?.first_name || null;
 
   return (
-    <main className="dashboard-page">
+    <main className="dashboard-page" ref={pdfRef}>
       {/* Achievement toast notification */}
       <AchievementNotification badge={currentBadge} onDismiss={dismissBadge} />
 
@@ -703,6 +705,15 @@ function DashboardPage() {
 
           {(status === "success" || status === "demo") && (
             <>
+              {!isDemo && (
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "1rem" }}>
+                  <PdfDownloadButton
+                    targetRef={pdfRef}
+                    filename={`summitlog-dashboard-${new Date().toISOString().slice(0, 10)}.pdf`}
+                  />
+                </div>
+              )}
+
               {isDemo && (
                 <div className="dashboard-demo-banner">
                   <TbUser size={16} strokeWidth={2} />
