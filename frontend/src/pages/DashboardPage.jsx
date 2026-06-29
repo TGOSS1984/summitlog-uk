@@ -36,6 +36,8 @@ const STAT_ICONS = {
   "Height total":    { icon: TbRuler,    color: "var(--color-accent)" },
   "Steps":           { icon: TbWalk,     color: "var(--color-teal)" },
   "Flights climbed": { icon: TbStairs,   color: "var(--color-teal-deep)" },
+  "Total progress":  { icon: TbTargetArrow, color: "var(--color-teal)" },
+  "% Completed":     { icon: TbTrophy,      color: "var(--color-accent)" },
 };
 
 // ── Tiered achievement definitions ──────────────────────────────────────────
@@ -590,12 +592,15 @@ function useCountUp(target, duration = 1200, trigger = true) {
 function StatCard({ label, rawValue, sub, loaded }) {
   const meta = STAT_ICONS[label] || { icon: TbStar, color: "var(--color-teal)" };
   const Icon = meta.icon;
+  const isFraction = typeof rawValue === "string" && rawValue.includes("/");
   const numericTarget = parseFloat(String(rawValue).replace(/[^0-9.]/g, "")) || 0;
   const suffix  = String(rawValue).replace(/[0-9.,]/g, "").trim();
-  const counted = useCountUp(numericTarget, 1400, loaded);
-  const display = numericTarget > 0
-    ? (Number.isInteger(numericTarget) ? counted.toLocaleString() : counted.toFixed(1)) + (suffix || "")
-    : rawValue;
+  const counted = useCountUp(numericTarget, 1400, loaded && !isFraction);
+  const display = isFraction
+    ? rawValue
+    : numericTarget > 0
+      ? (Number.isInteger(numericTarget) ? counted.toLocaleString() : counted.toFixed(1)) + (suffix || "")
+      : rawValue;
   return (
     <article className="dashboard-stat-card">
       <div className="dashboard-stat-card__icon" style={{ color: meta.color }}>
@@ -1133,6 +1138,18 @@ function DashboardPage() {
                 <StatCard label="Height total"    rawValue={`${Math.round(stats.totalHeight)}m`}    sub="summit height completed"  loaded={loaded} />
                 <StatCard label="Steps"           rawValue={stats.totalSteps}                       sub="steps logged"             loaded={loaded} />
                 <StatCard label="Flights climbed" rawValue={stats.totalFlightsClimbed}              sub="flights recorded"         loaded={loaded} />
+                <StatCard
+                  label="Total progress"
+                  rawValue={`${stats.completed} / ${stats.totalVisible}`}
+                  sub="completed of all UK mountains"
+                  loaded={loaded}
+                />
+                <StatCard
+                  label="% Completed"
+                  rawValue={`${stats.totalVisible ? Math.round((stats.completed / stats.totalVisible) * 100) : 0}%`}
+                  sub="of all UK mountains tracked"
+                  loaded={loaded}
+                />
               </div>
 
               <PersonalBests personalBests={stats.personalBests} />
