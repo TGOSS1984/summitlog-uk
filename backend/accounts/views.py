@@ -1,3 +1,5 @@
+import uuid as uuid_lib
+
 from django.contrib.auth import authenticate, login, logout
 from django.middleware.csrf import get_token
 from rest_framework import permissions, status
@@ -105,3 +107,46 @@ class CsrfTokenView(APIView):
             {"csrfToken": get_token(request)},
             status=status.HTTP_200_OK,
         )
+
+
+class ShareSettingsView(APIView):
+    """
+    GET /api/auth/share-settings/
+        Returns whether sharing is currently on and the token used to
+        build share links. Creates a profile (and its token) on first call
+        if the user doesn't have one yet.
+
+    PATCH /api/auth/share-settings/
+        Body: { "sharing_enabled": true|false } — turns sharing on/off.
+        Body: { "regenerate": true } — issues a new token, which
+        immediately invalidates any previously shared link. Can be
+        combined with sharing_enabled in the same request.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _serialize(self, profile):
+        return {
+            "sharing_enabled": profile.sharing_enabled,
+            "share_token": str(profile.share_token),
+        }
+
+    def get(self, request):
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        return Response(self._serialize(profile))
+
+    def patch(self, request):
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        update_fields = []
+
+        if "sharing_enabled" in request.data:
+            profile.sharing_enabled = bool(request.data["sharing_enabled"])
+            update_fields.append("sharing_enabled")
+
+        if request.data.get("regenerate"):
+            profile.share_token = uuid_lib.uuid4()
+            update_fields.append("share_token")
+
+        if update_fields:
+            profile.save(update_fields=update_fields)
+
+        return Response(self._serialize(profile))

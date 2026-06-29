@@ -6,6 +6,7 @@ from .views import (
     LoginView,
     LogoutView,
     RegisterView,
+    ShareSettingsView,
     UpdateProfileView,
 )
 
@@ -16,4 +17,5 @@ urlpatterns = [
     path("logout/", LogoutView.as_view(), name="logout"),
     path("me/", CurrentUserView.as_view(), name="current-user"),
     path("profile/", UpdateProfileView.as_view(), name="update-profile"),
+    path("share-settings/", ShareSettingsView.as_view(), name="share-settings"),
 ]

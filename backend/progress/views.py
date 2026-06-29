@@ -10,7 +10,9 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from mountains.models import Mountain
+from accounts.models import UserProfile
+from mountains.models import Mountain, MountainCollection, Region
+from mountains.serializers import MountainCollectionSerializer, MountainSerializer, RegionSerializer
 
 from .models import NotificationPreference, RouteLog, UserCollectionNote, UserMountainLog
 from .serializers import (
@@ -21,6 +23,47 @@ from .serializers import (
     UserCollectionNoteSerializer,
     UserMountainLogSerializer,
 )
+
+
+def _serialize_route_log(route):
+    """Shared shape used by both the authenticated route list and the
+    public shared-dashboard endpoint — kept in one place so they can't
+    silently drift apart."""
+    mountains = [
+        {
+            "id":         log.mountain.id,
+            "name":       log.mountain.name,
+            "slug":       log.mountain.slug,
+            "height_m":   log.mountain.height_m,
+            "is_primary": log.is_route_primary,
+        }
+        for log in route.mountain_logs.select_related("mountain").order_by(
+            "-is_route_primary", "mountain__name"
+        )
+    ]
+    return {
+        "id":              route.id,
+        "name":            route.name,
+        "description":     route.description,
+        "status":          route.status,
+        "completed_date":  route.completed_date,
+        "mountains":       mountains,
+        "mountains_count": len(mountains),
+        "created_at":      route.created_at,
+    }
+
+
+def _get_shared_user(token):
+    """Resolves a share token to its owning user, but only if that user
+    currently has sharing turned on — returns None otherwise (disabled,
+    or the token doesn't exist)."""
+    try:
+        profile = UserProfile.objects.select_related("user").get(
+            share_token=token, sharing_enabled=True,
+        )
+    except UserProfile.DoesNotExist:
+        return None
+    return profile.user
 
 
 # ── Individual mountain log CRUD ─────────────────────────────────────────────
@@ -100,6 +143,73 @@ class ShareLogView(APIView):
             )
         serializer = ShareLogSerializer(log, context={"request": request})
         return Response(serializer.data)
+
+
+class SharedDashboardDataView(APIView):
+    """
+    GET /api/progress/share/dashboard/<token>/
+    Public, read-only bundle of everything the real dashboard fetches —
+    mountains, collections, logs and route logs — for whichever user owns
+    this token, provided they currently have sharing turned on.
+
+    Deliberately returns the same raw shapes the authenticated dashboard
+    already fetches (rather than pre-computed stats) so the frontend can
+    run the exact same stats calculation against this data. That's what
+    keeps the public view and the real dashboard from ever silently
+    drifting apart from each other.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, token):
+        user = _get_shared_user(token)
+        if not user:
+            return Response(
+                {"detail": "Not found or sharing is turned off."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        logs = UserMountainLog.objects.filter(user=user).select_related(
+            "mountain", "mountain__region", "mountain__collection", "route_group",
+        )
+        route_logs = RouteLog.objects.filter(user=user).prefetch_related(
+            "mountain_logs", "mountain_logs__mountain", "mountain_logs__mountain__region",
+        )
+
+        return Response({
+            "username":    user.username,
+            "mountains":   MountainSerializer(Mountain.objects.all(), many=True, context={"request": request}).data,
+            "collections": MountainCollectionSerializer(MountainCollection.objects.all(), many=True).data,
+            "logs":        UserMountainLogSerializer(logs, many=True, context={"request": request}).data,
+            "route_logs":  [_serialize_route_log(route) for route in route_logs],
+        })
+
+
+class SharedProgressListDataView(APIView):
+    """
+    GET /api/progress/share/progress/<token>/
+    Public, read-only mountains + logs (plus collections/regions, for the
+    filter dropdowns) for the Total progress list view — same gating as
+    the dashboard share above.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, token):
+        user = _get_shared_user(token)
+        if not user:
+            return Response(
+                {"detail": "Not found or sharing is turned off."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        logs = UserMountainLog.objects.filter(user=user).select_related("mountain")
+
+        return Response({
+            "username":    user.username,
+            "mountains":   MountainSerializer(Mountain.objects.all(), many=True, context={"request": request}).data,
+            "collections": MountainCollectionSerializer(MountainCollection.objects.all(), many=True).data,
+            "regions":     RegionSerializer(Region.objects.all(), many=True).data,
+            "logs":        UserMountainLogSerializer(logs, many=True, context={"request": request}).data,
+        })
 
 
 # ── CSV bulk import ──────────────────────────────────────────────────────────
@@ -509,30 +619,7 @@ class UserRouteLogListView(generics.ListAPIView):
         if status_filter in ("planned", "completed"):
             queryset = queryset.filter(status=status_filter)
 
-        data = []
-        for route in queryset:
-            mountains = [
-                {
-                    "id":         log.mountain.id,
-                    "name":       log.mountain.name,
-                    "slug":       log.mountain.slug,
-                    "height_m":   log.mountain.height_m,
-                    "is_primary": log.is_route_primary,
-                }
-                for log in route.mountain_logs.select_related("mountain").order_by(
-                    "-is_route_primary", "mountain__name"
-                )
-            ]
-            data.append({
-                "id":              route.id,
-                "name":            route.name,
-                "description":     route.description,
-                "status":          route.status,
-                "completed_date":  route.completed_date,
-                "mountains":       mountains,
-                "mountains_count": len(mountains),
-                "created_at":      route.created_at,
-            })
+        data = [_serialize_route_log(route) for route in queryset]
         return Response(data)
 
 

@@ -7,6 +7,8 @@ from .views import (
     RouteLogCreateView,
     RouteLogDetailView,
     ShareLogView,
+    SharedDashboardDataView,
+    SharedProgressListDataView,
     UserCollectionNoteDetailView,
     UserCollectionNoteListCreateView,
     UserMountainLogDetailView,
@@ -26,7 +28,9 @@ urlpatterns = [
     path("import/", CsvImportView.as_view(), name="csv-import"),
 
     # Public share (no auth)
-    path("share/log/<int:pk>/", ShareLogView.as_view(), name="share-log"),
+    path("share/log/<int:pk>/",          ShareLogView.as_view(),              name="share-log"),
+    path("share/dashboard/<uuid:token>/", SharedDashboardDataView.as_view(),   name="share-dashboard"),
+    path("share/progress/<uuid:token>/",  SharedProgressListDataView.as_view(), name="share-progress"),
 
     # Multi-mountain routes
     path("routes/",            RouteLogCreateView.as_view(),   name="route-log-create"),
