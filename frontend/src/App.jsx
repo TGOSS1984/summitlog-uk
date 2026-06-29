@@ -15,6 +15,8 @@ import MountainsProgressPage from "./pages/MountainsProgressPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import RegionDetailPage from "./pages/RegionDetailPage";
 import SharePage from "./pages/SharePage";
+import SharedProgressPage from "./pages/SharedProgressPage";
+import SharedDashboardPage from "./pages/SharedDashboardPage";
 
 const router = createBrowserRouter([
   {
@@ -36,6 +38,8 @@ const router = createBrowserRouter([
       { path: "log-route/:id/edit",     element: <LogRoutePage /> },
       { path: "*",                      element: <NotFoundPage /> },
       { path: "/share/log/:id",         element: <SharePage /> },
+      { path: "/share/progress/:token", element: <SharedProgressPage /> },
+      { path: "/share/dashboard/:token", element: <SharedDashboardPage /> },
     ],
   },
 ]);
