@@ -182,7 +182,11 @@ function WikiSummary({ mountainName }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.extract && data.type !== "disambiguation") {
-          const result = { text: data.extract, url: data.content_urls?.desktop?.page };
+          const result = {
+            text:      data.extract,
+            url:       data.content_urls?.desktop?.page,
+            thumbnail: data.thumbnail?.source || null,
+          };
           setWikiData(result);
           sessionStorage.setItem(cacheKey, JSON.stringify(result));
         }
@@ -201,19 +205,35 @@ function WikiSummary({ mountainName }) {
 
   return (
     <div className="mountain-wiki">
-      <p className="section-kicker"><span className="kicker-line" />About this mountain</p>
-      <p className="mountain-wiki__text">{display}</p>
-      <div className="mountain-wiki__footer">
-        {isLong && (
-          <button className="mountain-wiki__expand" onClick={() => setExpanded(!expanded)}>
-            {expanded ? "Show less" : "Read more"}
-          </button>
+      <div
+        className="mountain-wiki__inner"
+        style={{ display: "flex", gap: "1.25rem", flexWrap: "wrap", alignItems: "flex-start" }}
+      >
+        {wikiData.thumbnail && (
+          <img
+            src={wikiData.thumbnail}
+            alt={mountainName}
+            className="mountain-wiki__thumbnail"
+            style={{ width: 140, height: 140, objectFit: "cover", borderRadius: 12, flexShrink: 0 }}
+            onError={(e) => { e.target.style.display = "none"; }}
+          />
         )}
-        {wikiData.url && (
-          <a href={wikiData.url} target="_blank" rel="noopener noreferrer" className="mountain-wiki__link">
-            <TbExternalLink size={13} strokeWidth={2} /> Wikipedia
-          </a>
-        )}
+        <div style={{ flex: "1 1 240px", minWidth: 0 }}>
+          <p className="section-kicker"><span className="kicker-line" />About this mountain</p>
+          <p className="mountain-wiki__text">{display}</p>
+          <div className="mountain-wiki__footer">
+            {isLong && (
+              <button className="mountain-wiki__expand" onClick={() => setExpanded(!expanded)}>
+                {expanded ? "Show less" : "Read more"}
+              </button>
+            )}
+            {wikiData.url && (
+              <a href={wikiData.url} target="_blank" rel="noopener noreferrer" className="mountain-wiki__link">
+                <TbExternalLink size={13} strokeWidth={2} /> Wikipedia
+              </a>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
