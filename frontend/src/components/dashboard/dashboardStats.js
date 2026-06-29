@@ -79,6 +79,8 @@ export const TIERED_ACHIEVEMENTS = [
 
 export const TOTAL_POSSIBLE_BADGES = TIERED_ACHIEVEMENTS.length * 3;
 
+export const TIER_COLORS = { Bronze: "#c97c3a", Silver: "#8b9493", Gold: "var(--color-accent)" };
+
 export function buildTieredAchievements({ completedCount, wainwrightsCompleted, munrosCompleted, totalDistance, totalSteps, totalHeight, routeCount }) {
   const values = {
     summits: completedCount, wainwrights: wainwrightsCompleted, munros: munrosCompleted,
