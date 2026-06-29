@@ -1379,6 +1379,15 @@ color:var(--color-teal);
   text-decoration: none;
   color: inherit;
   box-shadow: var(--shadow-soft);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+
+.collection-mountain-row:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-large);
 }
 
 .collection-mountain-row span {
@@ -3364,6 +3373,10 @@ h2 em {
 
 .collection-mountain-row--planned:hover {
   background: rgba(208, 170, 98, 0.09);
+}
+
+.collection-mountain-row--not_started:hover {
+  background: rgba(139, 148, 147, 0.08);
 }
 
 /* ── 3: Rank badge — gold for top 3 ── */
