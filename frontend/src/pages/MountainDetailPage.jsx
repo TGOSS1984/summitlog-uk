@@ -164,7 +164,62 @@ function weatherEmoji(code) {
 
 // ── Wikipedia summary ────────────────────────────────────────────────────────
 
-function WikiSummary({ mountainName }) {
+// Mirrors the same landform keyword check used in the backend's
+// fetch_wikipedia_summaries command — catches a real Wikipedia article
+// that happens to share the mountain's exact name but is about something
+// else entirely (e.g. "Pillar" the architectural element, not the fell).
+const MOUNTAIN_KEYWORDS = [
+  "mountain", "hill", "peak", "summit", "fell", "munro", "ridge",
+  "massif", "highland", "highest point", "metres above sea level",
+  "feet above sea level", "corbett", "nuttall", "elevation of",
+];
+
+function looksLikeMountain(data) {
+  const haystack = `${data.description || ""} ${(data.extract || "").slice(0, 300)}`.toLowerCase();
+  return MOUNTAIN_KEYWORDS.some((kw) => haystack.includes(kw));
+}
+
+async function fetchWikiSummaryData(title) {
+  const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (data.type === "disambiguation" || !data.extract) return null;
+  return data;
+}
+
+async function searchBestWikiTitle(query) {
+  // origin=* is required for the MediaWiki action API to allow a
+  // cross-origin GET from the browser — the REST summary endpoint above
+  // doesn't need it, but this one does.
+  const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=3&srsearch=${encodeURIComponent(query)}`;
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  const data = await res.json();
+  const results = data?.query?.search;
+  return results && results.length > 0 ? results[0].title : null;
+}
+
+// Tries the exact title first; if that's missing, ambiguous, or resolves
+// to the wrong topic, falls back to a full-text search seeded with the
+// region for context — same approach as the backend enrichment command,
+// just run live in the browser instead of pre-computed.
+async function findWikiData(mountainName, regionName) {
+  const wikiName = mountainName.replace(/\s*\[.*?\]\s*/g, "").trim();
+
+  let data = await fetchWikiSummaryData(wikiName);
+  if (data && looksLikeMountain(data)) return data;
+
+  const searchQuery = `${wikiName} mountain${regionName ? ` ${regionName}` : ""}`;
+  const bestTitle = await searchBestWikiTitle(searchQuery);
+  if (bestTitle) {
+    data = await fetchWikiSummaryData(bestTitle);
+    if (data && looksLikeMountain(data)) return data;
+  }
+
+  return null;
+}
+
+function WikiSummary({ mountainName, regionName }) {
   const [wikiData, setWikiData] = useState(null);
   const [expanded, setExpanded] = useState(false);
   const [loading,  setLoading]  = useState(true);
@@ -172,20 +227,19 @@ function WikiSummary({ mountainName }) {
   useEffect(() => {
     if (!mountainName) return;
     const wikiName = mountainName.replace(/\s*\[.*?\]\s*/g, "").trim();
-    // v2: bumped because the cached shape gained a `thumbnail` field —
-    // this guarantees anyone with an old-shape cached entry (from before
-    // that field existed) gets a fresh fetch instead of stale data with
-    // no thumbnail.
-    const cacheKey = `wiki-v2-${wikiName}`;
+    // v3: bumped because matches are now content-validated with a search
+    // fallback — anyone with a v2-or-earlier cached entry (including a
+    // wrong-topic match like the Pillar/building mismatch) gets a fresh,
+    // validated fetch instead of stale or incorrect data.
+    const cacheKey = `wiki-v3-${wikiName}`;
     const cached   = sessionStorage.getItem(cacheKey);
     if (cached) {
       try { setWikiData(JSON.parse(cached)); setLoading(false); return; } catch {}
     }
     setLoading(true);
-    fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(wikiName)}`)
-      .then((r) => (r.ok ? r.json() : null))
+    findWikiData(mountainName, regionName)
       .then((data) => {
-        if (data?.extract && data.type !== "disambiguation") {
+        if (data) {
           const result = {
             text:      data.extract,
             url:       data.content_urls?.desktop?.page,
@@ -197,7 +251,7 @@ function WikiSummary({ mountainName }) {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [mountainName]);
+  }, [mountainName, regionName]);
 
   if (loading || !wikiData) return null;
 
@@ -700,7 +754,7 @@ function MountainDetailPage() {
       {/* Wikipedia */}
       <section className="section section-light" style={{ paddingTop: 0 }}>
         <div className="container">
-          <WikiSummary mountainName={mountain.name} />
+          <WikiSummary mountainName={mountain.name} regionName={mountain.region?.name} />
         </div>
       </section>
 
