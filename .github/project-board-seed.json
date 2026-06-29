@@ -1,0 +1,104 @@
+{
+  "labels": [
+    { "name": "must-have", "color": "d73a4a", "description": "Core MVP functionality" },
+    { "name": "should-have", "color": "fbca04", "description": "High value, not core" },
+    { "name": "could-have", "color": "0e8a16", "description": "Nice-to-have polish" }
+  ],
+  "issues": [
+    {
+      "title": "User registration, login & logout",
+      "body": "Session + CSRF based authentication.\n\n- Register with username/email/password\n- Login/logout\n- Session persists across requests (cross-origin cookie support between Vercel frontend and Render backend)",
+      "labels": ["must-have"]
+    },
+    {
+      "title": "Mountain database (Wainwrights, Munros, Nuttalls)",
+      "body": "Full UK hill dataset sourced from DOBIH, organised into regions and subregions, grouped into collections (Wainwrights, Munros, Nuttalls).",
+      "labels": ["must-have"]
+    },
+    {
+      "title": "Explore mountains \u2014 search & filter",
+      "body": "Browse the mountain database with search, and filters by collection and region.",
+      "labels": ["must-have"]
+    },
+    {
+      "title": "Mountain detail page",
+      "body": "Dedicated page per mountain showing height, prominence, region, and a summary.",
+      "labels": ["must-have"]
+    },
+    {
+      "title": "Log a summit (completed / planned)",
+      "body": "Mark a mountain as completed or planned, with a date and notes.",
+      "labels": ["must-have"]
+    },
+    {
+      "title": "Dashboard \u2014 progress stats",
+      "body": "Completion stats and progress breakdowns by collection and region.",
+      "labels": ["must-have"]
+    },
+    {
+      "title": "Interactive UK map",
+      "body": "Leaflet-based map of the UK showing pins for mountains, filterable by completion status.",
+      "labels": ["should-have"]
+    },
+    {
+      "title": "Multi-mountain route logging",
+      "body": "Group several summits completed on the same outing into a single logged route.",
+      "labels": ["should-have"]
+    },
+    {
+      "title": "Detailed hike tracking per log",
+      "body": "Capture distance, duration, steps, flights climbed, conditions and season for each logged summit.",
+      "labels": ["should-have"]
+    },
+    {
+      "title": "Photo upload & gallery",
+      "body": "Attach a photo to a summit log, with a dedicated gallery page to browse them.",
+      "labels": ["should-have"]
+    },
+    {
+      "title": "Tiered achievements / badges",
+      "body": "Bronze/Silver/Gold achievement tiers across summit count, distance, steps, elevation and routes logged.",
+      "labels": ["should-have"]
+    },
+    {
+      "title": "Activity heatmap",
+      "body": "Calendar heatmap visualising logged activity over time on the dashboard.",
+      "labels": ["should-have"]
+    },
+    {
+      "title": "CSV bulk import of existing logs",
+      "body": "Import previously recorded summit logs in bulk from a CSV file.",
+      "labels": ["should-have"]
+    },
+    {
+      "title": "CSV / GPX export",
+      "body": "Export completed logs as CSV or GPX for use in other tools.",
+      "labels": ["should-have"]
+    },
+    {
+      "title": "Email reminders for planned summits",
+      "body": "Optional email reminder sent ahead of a planned summit date, toggled per-user via a notification preference.",
+      "labels": ["should-have"]
+    },
+    {
+      "title": "Collection notes / journal",
+      "body": "Free-text journal notes attached to a mountain collection.",
+      "labels": ["could-have"]
+    },
+    {
+      "title": "Public share link for a single log",
+      "body": "Read-only, no-auth-required share page for an individual summit log.",
+      "labels": ["could-have"]
+    },
+    {
+      "title": "Demo dashboard preview for logged-out visitors",
+      "body": "Curated placeholder stats shown on the dashboard when nobody is logged in, so visitors get a feel for the product.",
+      "labels": ["could-have"]
+    },
+    {
+      "title": "Account profile editing",
+      "body": "Update profile details (name, email) from the account page.",
+      "labels": ["could-have"]
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+name: Seed project board
+
+# Manual trigger only — run this once from the Actions tab after pushing
+# this workflow, then there's no need to run it again. It's safe to
+# re-run though: labels are upserted, and issues are skipped if an issue
+# with the same title already exists (open or closed).
+on:
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create labels
+        run: |
+          jq -c '.labels[]' .github/project-board-seed.json | while read -r label; do
+            name=$(echo "$label" | jq -r '.name')
+            color=$(echo "$label" | jq -r '.color')
+            description=$(echo "$label" | jq -r '.description')
+            echo "Upserting label: $name"
+            gh label create "$name" --color "$color" --description "$description" --force
+          done
+
+      - name: Create issues (skipping any that already exist)
+        run: |
+          jq -c '.issues[]' .github/project-board-seed.json | while read -r issue; do
+            title=$(echo "$issue" | jq -r '.title')
+            body=$(echo "$issue" | jq -r '.body')
+            labels=$(echo "$issue" | jq -r '.labels | join(",")')
+
+            existing=$(gh issue list --state all --search "\"$title\" in:title" --json title --jq '.[0].title // empty')
+
+            if [ -n "$existing" ]; then
+              echo "Skipping (already exists): $title"
+            else
+              echo "Creating: $title"
+              gh issue create --title "$title" --body "$body" --label "$labels"
+            fi
+          done
