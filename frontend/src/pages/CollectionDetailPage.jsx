@@ -2,46 +2,17 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getCollections, getMountains, getProgressLogs, getCollectionNote, saveCollectionNote, deleteCollectionNote } from "../lib/api";
 import {
-  TbCheck, TbFlag, TbMountain, TbRepeat, TbNotes, TbTrash,
+  TbCheck, TbFlag, TbMountain, TbNotes, TbTrash,
   TbDeviceFloppy, TbTrophy, TbShare2, TbX,
 } from "react-icons/tb";
-
-function getCollectionRank(mountain, collectionSlug) {
-  const membership = mountain.collection_memberships?.find(
-    (item) => item.collection?.slug === collectionSlug
-  );
-  return membership?.rank_in_collection || mountain.rank_in_collection || "—";
-}
-
-function getMountainLogStatus(mountain, logs) {
-  const log = logs.find((item) => item.mountain === mountain.id);
-  return log?.status || "not_started";
-}
-
-function getStatusLabel(status) {
-  if (status === "completed") return "Completed";
-  if (status === "planned")   return "Planned";
-  return "Not started";
-}
-
-function getRankStyle(rank) {
-  const n = Number(rank);
-  if (n >= 1 && n <= 3) return "collection-rank--gold";
-  return "";
-}
-
-function RowSkeleton() {
-  return (
-    <div className="collection-mountain-row collection-row-skeleton">
-      <div className="skeleton-pill" style={{ width: 42, height: 42, borderRadius: "50%" }} />
-      <div style={{ flex: 1, display: "grid", gap: 6 }}>
-        <div className="skeleton-line skeleton-line--title" style={{ width: "45%" }} />
-        <div className="skeleton-line skeleton-line--short" style={{ width: "25%" }} />
-      </div>
-      <div className="skeleton-pill" style={{ width: 80 }} />
-    </div>
-  );
-}
+import {
+  computeCompletionCountById,
+  computeScopedStats,
+  getMountainLogStatus,
+  getCollectionRank,
+} from "../components/mountains/mountainProgress";
+import MountainProgressRow from "../components/mountains/MountainProgressRow";
+import RowSkeleton from "../components/mountains/RowSkeleton";
 
 // ── Milestone banner ─────────────────────────────────────────────────────────
 
@@ -296,14 +267,7 @@ function CollectionDetailPage() {
 
   const collection = collections.find((item) => item.slug === slug);
 
-  const completionCountById = useMemo(() => {
-    return logs.reduce((acc, log) => {
-      if (log.status === "completed") {
-        acc[log.mountain] = (acc[log.mountain] || 0) + 1;
-      }
-      return acc;
-    }, {});
-  }, [logs]);
+  const completionCountById = useMemo(() => computeCompletionCountById(logs), [logs]);
 
   const orderedMountains = useMemo(() => {
     const sorted = [...mountains];
@@ -323,15 +287,10 @@ function CollectionDetailPage() {
     return orderedMountains.filter((m) => getMountainLogStatus(m, logs) === statusFilter);
   }, [orderedMountains, logs, statusFilter]);
 
-  const stats = useMemo(() => {
-    const completedIds = new Set(logs.filter((l) => l.status === "completed").map((l) => l.mountain));
-    const plannedIds   = new Set(logs.filter((l) => l.status === "planned").map((l) => l.mountain));
-    const completed    = mountains.filter((m) => completedIds.has(m.id)).length;
-    const planned      = mountains.filter((m) => plannedIds.has(m.id)).length;
-    const total        = collection?.expected_total || mountains.length || 0;
-    const percent      = total ? Math.round((completed / total) * 100) : 0;
-    return { completed, planned, total, percent };
-  }, [collection, logs, mountains]);
+  const stats = useMemo(
+    () => computeScopedStats({ mountains, logs, expectedTotal: collection?.expected_total }),
+    [collection, logs, mountains]
+  );
 
   // Show milestone banner when 100% complete and not previously dismissed this session
   useEffect(() => {
@@ -512,30 +471,16 @@ function CollectionDetailPage() {
             </div>
           ) : (
             <div className="collection-mountain-list">
-              {filteredMountains.map((mountain) => {
-                const mountainStatus  = getMountainLogStatus(mountain, logs);
-                const rank            = getCollectionRank(mountain, slug);
-                const completionCount = completionCountById[mountain.id] || 0;
-                return (
-                  <Link
-                    to={`/mountains/${mountain.slug}`}
-                    className={`collection-mountain-row collection-mountain-row--${mountainStatus}`}
-                    key={mountain.id}
-                  >
-                    <span className={`collection-rank ${getRankStyle(rank)}`}>{rank}</span>
-                    <strong>{mountain.name}</strong>
-                    <small>{mountain.height_m}m</small>
-                    {completionCount > 0 && (
-                      <span className="collection-completion-count" title={`Summited ${completionCount} ${completionCount === 1 ? "time" : "times"}`}>
-                        <TbRepeat size={11} strokeWidth={2} />×{completionCount}
-                      </span>
-                    )}
-                    <em className={`collection-status collection-status--${mountainStatus}`}>
-                      {getStatusLabel(mountainStatus)}
-                    </em>
-                  </Link>
-                );
-              })}
+              {filteredMountains.map((mountain, index) => (
+                <MountainProgressRow
+                  key={mountain.id}
+                  mountain={mountain}
+                  logs={logs}
+                  completionCountById={completionCountById}
+                  getSubtitle={(m) => m.region?.name || null}
+                  rank={index + 1}
+                />
+              ))}
             </div>
           )}
 

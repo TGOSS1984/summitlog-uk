@@ -1,31 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { getMountains, getProgressLogs, getRegions } from "../lib/api";
-import { TbCheck, TbFlag, TbMountain, TbRepeat } from "react-icons/tb";
-
-function getMountainLogStatus(mountain, logs) {
-  const log = logs.find((item) => item.mountain === mountain.id);
-  return log?.status || "not_started";
-}
-
-function getStatusLabel(status) {
-  if (status === "completed") return "Completed";
-  if (status === "planned") return "Planned";
-  return "Not started";
-}
-
-function RowSkeleton() {
-  return (
-    <div className="collection-mountain-row collection-row-skeleton">
-      <div className="skeleton-pill" style={{ width: 42, height: 42, borderRadius: "50%" }} />
-      <div style={{ flex: 1, display: "grid", gap: 6 }}>
-        <div className="skeleton-line skeleton-line--title" style={{ width: "45%" }} />
-        <div className="skeleton-line skeleton-line--short" style={{ width: "25%" }} />
-      </div>
-      <div className="skeleton-pill" style={{ width: 80 }} />
-    </div>
-  );
-}
+import { TbCheck, TbFlag, TbMountain } from "react-icons/tb";
+import {
+  getMountainLogStatus,
+  computeCompletionCountById,
+  computeScopedStats,
+} from "../components/mountains/mountainProgress";
+import MountainProgressRow from "../components/mountains/MountainProgressRow";
+import RowSkeleton from "../components/mountains/RowSkeleton";
 
 function RegionDetailPage() {
   const { slug } = useParams();
@@ -62,23 +45,10 @@ function RegionDetailPage() {
 
   const region = regions.find((item) => item.slug === slug);
 
-  // Completion count per mountain id (completed logs only)
-  const completionCountById = useMemo(() => {
-    return logs.reduce((acc, log) => {
-      if (log.status === "completed") {
-        acc[log.mountain] = (acc[log.mountain] || 0) + 1;
-      }
-      return acc;
-    }, {});
-  }, [logs]);
+  const completionCountById = useMemo(() => computeCompletionCountById(logs), [logs]);
 
   const stats = useMemo(() => {
-    const completedIds = new Set(logs.filter((l) => l.status === "completed").map((l) => l.mountain));
-    const plannedIds = new Set(logs.filter((l) => l.status === "planned").map((l) => l.mountain));
-    const completed = mountains.filter((m) => completedIds.has(m.id)).length;
-    const planned = mountains.filter((m) => plannedIds.has(m.id)).length;
-    const total = mountains.length;
-    const percent = total ? Math.round((completed / total) * 100) : 0;
+    const { completed, planned, total, percent } = computeScopedStats({ mountains, logs });
     const highest = mountains.reduce((h, m) => Math.max(h, Number(m.height_m || 0)), 0);
     return { completed, planned, total, percent, highest };
   }, [logs, mountains]);
@@ -257,45 +227,18 @@ function RegionDetailPage() {
             </div>
           ) : (
             <div className="collection-mountain-list">
-              {filteredMountains.map((mountain) => {
-                const mountainStatus = getMountainLogStatus(mountain, logs);
-                const completionCount = completionCountById[mountain.id] || 0;
-                // Show collection membership as a subtle label inside the row
-                const collectionName = mountain.collection_memberships?.[0]?.collection?.name
-                  || mountain.collection?.name
-                  || null;
-                return (
-                  <Link
-                    to={`/mountains/${mountain.slug}`}
-                    className={`collection-mountain-row collection-mountain-row--${mountainStatus}`}
-                    key={mountain.id}
-                  >
-                    {/* Height badge replaces rank for regions */}
-                    <span className="region-height-badge">
-                      {mountain.height_m}
-                      <small>m</small>
-                    </span>
-                    <div className="region-mountain-info">
-                      <strong>{mountain.name}</strong>
-                      {collectionName && (
-                        <small className="region-mountain-collection">{collectionName}</small>
-                      )}
-                    </div>
-                    {completionCount > 0 && (
-                      <span
-                        className="collection-completion-count"
-                        title={`Summited ${completionCount} ${completionCount === 1 ? "time" : "times"}`}
-                      >
-                        <TbRepeat size={11} strokeWidth={2} />
-                        ×{completionCount}
-                      </span>
-                    )}
-                    <em className={`collection-status collection-status--${mountainStatus}`}>
-                      {getStatusLabel(mountainStatus)}
-                    </em>
-                  </Link>
-                );
-              })}
+              {filteredMountains.map((mountain, index) => (
+                <MountainProgressRow
+                  key={mountain.id}
+                  mountain={mountain}
+                  logs={logs}
+                  completionCountById={completionCountById}
+                  getSubtitle={(m) =>
+                    m.collection_memberships?.[0]?.collection?.name || m.collection?.name || null
+                  }
+                  rank={index + 1}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -305,4 +248,3 @@ function RegionDetailPage() {
 }
 
 export default RegionDetailPage;
-

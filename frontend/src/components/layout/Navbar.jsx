@@ -117,7 +117,7 @@ function Navbar() {
                     <span><strong>Map</strong><small>Interactive summit map</small></span>
                   </NavLink>
                   <div className="dropdown-divider" />
-                  <NavLink to="/dashboard" className="dropdown-item" onClick={() => setExploreOpen(false)}>
+                  <NavLink to="/mountains" className="dropdown-item" onClick={() => setExploreOpen(false)}>
                     <span className="dropdown-item__icon"><TbTrophy size={18} strokeWidth={1.5} /></span>
                     <span><strong>Collections</strong><small>Wainwrights, Munros & more</small></span>
                   </NavLink>
