@@ -117,9 +117,9 @@ function Navbar() {
                     <span><strong>Map</strong><small>Interactive summit map</small></span>
                   </NavLink>
                   <div className="dropdown-divider" />
-                  <NavLink to="/mountains" className="dropdown-item" onClick={() => setExploreOpen(false)}>
+                  <NavLink to="/mountains/progress" className="dropdown-item" onClick={() => setExploreOpen(false)}>
                     <span className="dropdown-item__icon"><TbTrophy size={18} strokeWidth={1.5} /></span>
-                    <span><strong>Collections</strong><small>Wainwrights, Munros & more</small></span>
+                    <span><strong>Collections</strong><small>See your full completion list</small></span>
                   </NavLink>
                   <NavLink to="/journal" className="dropdown-item" onClick={() => setExploreOpen(false)}>
                     <span className="dropdown-item__icon"><TbBook size={18} strokeWidth={1.5} /></span>
@@ -220,6 +220,10 @@ function Navbar() {
               <NavLink to="/mountains" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
                 <TbMountain size={18} strokeWidth={1.5} />
                 Mountains
+              </NavLink>
+              <NavLink to="/mountains/progress" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
+                <TbTrophy size={18} strokeWidth={1.5} />
+                Collections
               </NavLink>
               <NavLink to="/map" className="mobile-nav__link" onClick={() => setMobileOpen(false)}>
                 <TbMap2 size={18} strokeWidth={1.5} />

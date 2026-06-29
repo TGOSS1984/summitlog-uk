@@ -11,6 +11,7 @@ import LogRoutePage from "./pages/LogRoutePage";
 import MapPage from "./pages/MapPage";
 import MountainDetailPage from "./pages/MountainDetailPage";
 import MountainsPage from "./pages/MountainsPage";
+import MountainsProgressPage from "./pages/MountainsProgressPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import RegionDetailPage from "./pages/RegionDetailPage";
 import SharePage from "./pages/SharePage";
@@ -22,6 +23,7 @@ const router = createBrowserRouter([
     children: [
       { index: true,                    element: <HomePage /> },
       { path: "mountains",              element: <MountainsPage /> },
+      { path: "mountains/progress",     element: <MountainsProgressPage /> },
       { path: "mountains/:slug",        element: <MountainDetailPage /> },
       { path: "dashboard",              element: <DashboardPage /> },
       { path: "map",                    element: <MapPage /> },
