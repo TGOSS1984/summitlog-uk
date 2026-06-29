@@ -172,7 +172,11 @@ function WikiSummary({ mountainName }) {
   useEffect(() => {
     if (!mountainName) return;
     const wikiName = mountainName.replace(/\s*\[.*?\]\s*/g, "").trim();
-    const cacheKey = `wiki-${wikiName}`;
+    // v2: bumped because the cached shape gained a `thumbnail` field —
+    // this guarantees anyone with an old-shape cached entry (from before
+    // that field existed) gets a fresh fetch instead of stale data with
+    // no thumbnail.
+    const cacheKey = `wiki-v2-${wikiName}`;
     const cached   = sessionStorage.getItem(cacheKey);
     if (cached) {
       try { setWikiData(JSON.parse(cached)); setLoading(false); return; } catch {}

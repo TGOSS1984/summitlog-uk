@@ -15,11 +15,13 @@ than the generic auto-generated text, so a partial run can be resumed.
 
 import json
 import re
+import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import certifi
 from django.core.management.base import BaseCommand
 
 from mountains.models import Mountain
@@ -28,6 +30,12 @@ WIKI_SUMMARY_URL = "https://en.wikipedia.org/api/rest_v1/page/summary/{}"
 USER_AGENT = "SummitLogUK/1.0 (https://github.com/TGOSS1984/summitlog-uk)"
 GENERIC_SUMMARY_MARKER = "is listed in the"
 MAX_WORKERS = 8
+
+# Use certifi's independently-maintained certificate bundle rather than
+# whatever the OS trust store happens to have — avoids platform-specific
+# SSL issues (e.g. a stale/intercepted store on some Windows machines)
+# that have nothing to do with Wikipedia's actual certificate.
+SSL_CONTEXT = ssl.create_default_context(cafile=certifi.where())
 
 
 def strip_bracketed(name):
@@ -49,7 +57,7 @@ def fetch_wiki_first_sentence(mountain_name):
     url = WIKI_SUMMARY_URL.format(urllib.parse.quote(wiki_name))
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
-        with urllib.request.urlopen(request, timeout=10) as response:
+        with urllib.request.urlopen(request, timeout=10, context=SSL_CONTEXT) as response:
             data = json.loads(response.read().decode("utf-8"))
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, ValueError):
         return None
