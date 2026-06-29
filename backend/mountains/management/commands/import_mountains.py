@@ -220,7 +220,11 @@ class Command(BaseCommand):
             )
             mountain.latitude = self.to_decimal(row.get("latitude"))
             mountain.longitude = self.to_decimal(row.get("longitude"))
-            mountain.summary = row.get("summary", "")
+            # Don't clobber a Wikipedia-enriched summary (set by
+            # fetch_wikipedia_summaries) with the generic auto-generated
+            # one on a future re-import.
+            if not mountain.summary or "is listed in the" in mountain.summary:
+                mountain.summary = row.get("summary", "")
             mountain.image_placeholder = f"/images/mountains/{mountain_slug}.jpg"
             mountain.save()
         else:
