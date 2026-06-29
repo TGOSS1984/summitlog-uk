@@ -32,6 +32,7 @@ A full-stack mountain tracking application for UK hillwalkers — log Wainwright
 [![Frontend Tests](https://img.shields.io/badge/Frontend_Tests-105_passing-brightgreen?style=for-the-badge)]()
 [![CI](https://img.shields.io/badge/CI-GitHub_Actions-2088FF?style=for-the-badge&logo=githubactions&logoColor=white)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)]()
+[![Project Board](https://img.shields.io/badge/Project_Board-GitHub_Projects-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/users/TGOSS1984/projects/6)
 
 </div>
 
