@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
-  Bar, BarChart, CartesianGrid, Cell, Pie, PieChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis, Line, LineChart,
-  Area, AreaChart, Scatter, ScatterChart, ReferenceLine,
+  Bar, BarChart, CartesianGrid,
+  ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import {
   TbMountain, TbRoute, TbRuler, TbStairs, TbWalk,
   TbTrophy, TbFlag, TbStar,
   TbTargetArrow, TbUser,
-  TbCalendar, TbArrowUp, TbRepeat, TbMap2, TbChevronRight,
+  TbCalendar, TbArrowUp, TbMap2, TbChevronRight,
   TbX, TbFlame, TbMapPin,
 } from "react-icons/tb";
 
@@ -20,17 +19,13 @@ import {
   buildTieredAchievements,
   countEarnedBadges,
   getLogCollectionNames,
+  formatDate,
   TIER_COLORS,
   TOTAL_POSSIBLE_BADGES,
 } from "../components/dashboard/dashboardStats";
 import { AchievementPanel, RegionProgressPanel, CollectionProgressPanel } from "../components/dashboard/DashboardPanels";
-
-const CHART_COLORS = {
-  completed: "var(--color-teal)",
-  planned:   "var(--color-accent)",
-  remaining: "#d9dedc",
-  text:      "var(--color-teal-deep)",
-};
+import { OverviewCharts } from "../components/dashboard/DashboardCharts";
+import { RecentActivityAndPhotos } from "../components/dashboard/DashboardStoryPanels";
 
 const STAT_ICONS = {
   "Completed":       { icon: TbMountain, color: "var(--color-teal-deep)" },
@@ -539,80 +534,7 @@ export function ActivityHeatmap({ logs }) {
   );
 }
 
-// ── Most summited horizontal bar chart ──────────────────────────────────────
-export function MostSummitedChart({ data }) {
-  if (!data || data.length === 0) return null;
-  const chartHeight = Math.max(200, data.length * 52);
-  return (
-    <article className="dashboard-chart-card dashboard-chart-card--most-summited">
-      <div>
-        <p className="section-kicker">
-          <TbRepeat size={13} strokeWidth={2} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />
-          Summit repeats
-        </p>
-        <h3>Most summited mountains</h3>
-      </div>
-      <ResponsiveContainer width="100%" height={chartHeight}>
-        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 48, left: 8, bottom: 4 }} barCategoryGap="30%">
-          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(4,57,59,0.10)" />
-          <XAxis type="number" allowDecimals={false} tick={{ fontSize: 11, fill: "#667573" }} axisLine={false} tickLine={false} label={{ value: "ascents", position: "insideBottomRight", offset: -4, fontSize: 10, fill: "#8b9493" }} />
-          <YAxis type="category" dataKey="name" tick={{ fontSize: 12, fill: "#243b3a", fontWeight: 700 }} axisLine={false} tickLine={false} width={120} />
-          <Tooltip formatter={(value) => [`${value} ${value === 1 ? "ascent" : "ascents"}`, "Times summited"]} cursor={{ fill: "rgba(4,57,59,0.05)" }} />
-          <Bar dataKey="count" fill="var(--color-accent)" radius={[0, 6, 6, 0]} label={{ position: "right", fontSize: 12, fill: "#243b3a", fontWeight: 700 }} />
-        </BarChart>
-      </ResponsiveContainer>
-    </article>
-  );
-}
-
-// ── Height vs Distance scatter chart ────────────────────────────────────────
-export function HeightVsDistanceChart({ data }) {
-  if (!data || data.length === 0) return null;
-  const avgDistance = data.length ? Math.round((data.reduce((s, d) => s + d.y, 0) / data.length) * 10) / 10 : 0;
-  const avgHeight   = data.length ? Math.round(data.reduce((s, d) => s + d.x, 0) / data.length) : 0;
-  return (
-    <article className="dashboard-chart-card dashboard-chart-card--scatter">
-      <div>
-        <p className="section-kicker">
-          <TbRoute size={13} strokeWidth={2} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />
-          Ascent profile
-        </p>
-        <h3>Height vs distance</h3>
-      </div>
-      <ResponsiveContainer width="100%" height={300}>
-        <ScatterChart margin={{ top: 12, right: 16, bottom: 28, left: 4 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(4,57,59,0.10)" />
-          <XAxis type="number" dataKey="x" name="Height" unit="m" tick={{ fontSize: 11, fill: "#667573" }} axisLine={false} tickLine={false} label={{ value: "Summit height (m)", position: "insideBottom", offset: -14, fontSize: 11, fill: "#8b9493" }} />
-          <YAxis type="number" dataKey="y" name="Distance" unit="km" tick={{ fontSize: 11, fill: "#667573" }} axisLine={false} tickLine={false} label={{ value: "Distance (km)", angle: -90, position: "insideLeft", offset: 14, fontSize: 11, fill: "#8b9493" }} />
-          <Tooltip cursor={{ strokeDasharray: "3 3", stroke: "rgba(4,57,59,0.2)" }} content={({ payload }) => {
-            if (!payload?.length) return null;
-            const d = payload[0]?.payload;
-            if (!d) return null;
-            return (
-              <div style={{ background: "#fff", border: "1px solid #e0e4e3", borderRadius: 8, padding: "8px 12px", fontSize: 12, boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}>
-                <strong style={{ display: "block", color: "#04393b", marginBottom: 2 }}>{d.name}</strong>
-                <span style={{ color: "#667573" }}>{d.x}m elevation · {d.y}km</span>
-              </div>
-            );
-          }} />
-          <ReferenceLine y={avgDistance} stroke="var(--color-accent)" strokeDasharray="5 4" strokeWidth={1.5} label={{ value: `avg ${avgDistance}km`, position: "insideTopRight", fontSize: 10, fontWeight: 700, fill: "var(--color-accent)" }} />
-          <ReferenceLine x={avgHeight}   stroke="var(--color-teal)"   strokeDasharray="5 4" strokeWidth={1.5} label={{ value: `avg ${avgHeight}m`,   position: "insideTopLeft",  fontSize: 10, fontWeight: 700, fill: "var(--color-teal)" }} />
-          <Scatter data={data} fill="var(--color-teal)" fillOpacity={0.75} stroke="var(--color-teal-deep)" strokeWidth={1} r={6} />
-        </ScatterChart>
-      </ResponsiveContainer>
-      <p style={{ fontSize: "0.75rem", color: "var(--color-text-soft)", marginTop: "0.5rem" }}>
-        Each dot is one completed ascent. Dashed line shows your average distance. Hover for details.
-      </p>
-    </article>
-  );
-}
-
 // ────────────────────────────────────────────────────────────────────────────
-
-function formatDate(dateValue) {
-  if (!dateValue) return "No date";
-  return new Date(dateValue).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-}
 
 export function ElevationRidge({ percent }) {
   const h = 120, w = 280;
@@ -677,7 +599,6 @@ function DashboardPage() {
   const [status,      setStatus]      = useState("loading");
   const loaded  = status === "success" || status === "demo";
   const isDemo  = status === "demo";
-  const [showAllLogs,     setShowAllLogs]     = useState(false);
   const [showAllProgress, setShowAllProgress] = useState(false);
   const MAX_VISIBLE = 5;
   const [exporting, setExporting] = useState(null);
@@ -737,17 +658,7 @@ function DashboardPage() {
     isDemo,
   );
 
-  const userName      = user?.username || user?.user?.username || user?.first_name || null;
-  const showBottomRow = (stats.mostSummited?.length > 0) || (stats.scatterData?.length > 0);
-
-  const activityFeed = useMemo(() => {
-    const logEntries   = (stats.recentLogs   || []).map((l) => ({ type: "log",   date: l.completed_date || l.updated_at, data: l }));
-    const routeEntries = (stats.recentRoutes || []).map((r) => ({ type: "route", date: r.completed_date,                data: r }));
-    const all = [...logEntries, ...routeEntries].sort((a, b) => new Date(b.date) - new Date(a.date));
-    return showAllLogs ? all : all.slice(0, MAX_VISIBLE);
-  }, [stats.recentLogs, stats.recentRoutes, showAllLogs]);
-
-  const totalActivityCount = (stats.recentLogs?.length || 0) + (stats.recentRoutes?.length || 0);
+  const userName = user?.username || user?.user?.username || user?.first_name || null;
 
   return (
     <main className="dashboard-page">
@@ -858,123 +769,14 @@ function DashboardPage() {
                 <ComingUpPanel upcomingPlanned={stats.upcomingPlanned} isDemo={isDemo} />
               )}
 
-              <div className="dashboard-chart-grid">
-                <article className="dashboard-chart-card dashboard-chart-card--status">
-                  <div><p className="section-kicker">Overview</p><h3>Progress status</h3></div>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie data={stats.statusChartData} dataKey="value" nameKey="name" innerRadius={72} outerRadius={108} paddingAngle={5} stroke="white" strokeWidth={4}>
-                        {stats.statusChartData.map((entry) => (
-                          <Cell key={entry.name} fill={entry.name === "Completed" ? CHART_COLORS.completed : entry.name === "Planned" ? CHART_COLORS.planned : CHART_COLORS.remaining} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <text x="50%" y="47%" textAnchor="middle" dominantBaseline="middle" className="dashboard-chart-center-value">{stats.completed}</text>
-                      <text x="50%" y="57%" textAnchor="middle" dominantBaseline="middle" className="dashboard-chart-center-label">completed</text>
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="dashboard-chart-legend">
-                    <span><i className="legend-dot legend-dot--completed" />Completed</span>
-                    <span><i className="legend-dot legend-dot--planned" />Planned</span>
-                    <span><i className="legend-dot legend-dot--not-started" />Remaining</span>
-                  </div>
-                </article>
-                <article className="dashboard-chart-card dashboard-chart-card--collections">
-                  <div><p className="section-kicker">Collections</p><h3>Completed vs remaining</h3></div>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={stats.collectionChartData} barCategoryGap="24%">
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(4,57,59,0.12)" />
-                      <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#243b3a", fontWeight: 700 }} axisLine={false} tickLine={false} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#667573" }} axisLine={false} tickLine={false} />
-                      <Tooltip />
-                      <Bar dataKey="completed" stackId="a" fill={CHART_COLORS.completed} radius={[8, 8, 0, 0]} />
-                      <Bar dataKey="remaining"  stackId="a" fill={CHART_COLORS.remaining}  radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                  <div className="dashboard-chart-legend">
-                    <span><i className="legend-dot legend-dot--completed" />Completed</span>
-                    <span><i className="legend-dot legend-dot--not-started" />Remaining</span>
-                  </div>
-                </article>
-                <article className="dashboard-chart-card dashboard-chart-card--timeline">
-                  <div><p className="section-kicker">Timeline</p><h3>Mountains completed over time</h3></div>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={stats.completionTimelineData}>
-                      <defs>
-                        <linearGradient id="timelineGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="var(--color-teal)" stopOpacity={0.25} />
-                          <stop offset="95%" stopColor="var(--color-teal)" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(4,57,59,0.12)" />
-                      <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#243b3a", fontWeight: 700 }} axisLine={false} tickLine={false} />
-                      <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#667573" }} axisLine={false} tickLine={false} />
-                      <Tooltip />
-                      <Area type="monotone" dataKey="completed" stroke={CHART_COLORS.completed} strokeWidth={3} fill="url(#timelineGrad)" dot={{ r: 5, fill: "var(--color-teal)", stroke: "#fff", strokeWidth: 2 }} activeDot={{ r: 7 }} />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </article>
-                {showBottomRow && (
-                  <div className="dashboard-chart-row">
-                    {stats.mostSummited?.length > 0 && <MostSummitedChart data={stats.mostSummited} />}
-                    {stats.scatterData?.length > 0    && <HeightVsDistanceChart data={stats.scatterData} />}
-                  </div>
-                )}
-              </div>
+              <OverviewCharts stats={stats} />
 
-              <div className="dashboard-story-grid">
-                <article className="dashboard-story-card">
-                  <p className="section-kicker">Recent activity</p>
-                  <h3>Latest mountain logs</h3>
-                  <div className="dashboard-timeline">
-                    {activityFeed.length === 0 && <p>No recent activity yet.</p>}
-                    {activityFeed.map((item) => {
-                      if (item.type === "route") {
-                        const route = item.data;
-                        return (
-                          <Link to="/journal" className="dashboard-timeline-item dashboard-timeline-item--route" key={`route-${route.id}`}>
-                            <span className="dashboard-timeline-route-icon"><TbRoute size={11} strokeWidth={2.5} /></span>
-                            <div>
-                              <strong>{route.name}</strong>
-                              <small>Route · {route.mountains_count} summits · {formatDate(route.completed_date)}</small>
-                            </div>
-                          </Link>
-                        );
-                      }
-                      const log = item.data;
-                      return (
-                        <Link to={log.mountain_detail?.slug ? `/mountains/${log.mountain_detail.slug}` : "#"} className="dashboard-timeline-item" key={log.id}>
-                          <span>{log.status === "completed" ? "✓" : "○"}</span>
-                          <div>
-                            <strong>
-                              {log.mountain_detail?.name}
-                              {log.route_name && <span className="dashboard-timeline-route-badge">{log.route_name}</span>}
-                            </strong>
-                            <small>{log.status} / {formatDate(log.completed_date)}</small>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                    {totalActivityCount > MAX_VISIBLE && (
-                      <button className="dashboard-show-more" onClick={() => setShowAllLogs(!showAllLogs)}>
-                        {showAllLogs ? "Show less" : `Show ${totalActivityCount - MAX_VISIBLE} more`}
-                      </button>
-                    )}
-                  </div>
-                </article>
-                <article className="dashboard-story-card">
-                  <p className="section-kicker">Summit memories</p>
-                  <h3>Recent photos</h3>
-                  <div className="dashboard-photo-strip">
-                    {stats.photoLogs.length === 0 && <p>{isDemo ? "Sign in to see your summit photos." : "No uploaded summit photos yet."}</p>}
-                    {stats.photoLogs.map((log) => (
-                      <Link to={`/mountains/${log.mountain_detail?.slug}`} key={log.id}>
-                        <img src={log.uploaded_image} alt={log.mountain_detail?.name} />
-                      </Link>
-                    ))}
-                  </div>
-                </article>
-              </div>
+              <RecentActivityAndPhotos
+                recentLogs={stats.recentLogs}
+                recentRoutes={stats.recentRoutes}
+                photoLogs={stats.photoLogs}
+                noPhotosMessage={isDemo ? "Sign in to see your summit photos." : "No uploaded summit photos yet."}
+              />
 
               {/* Activity heatmap */}
               {stats.heatmapLogs && <ActivityHeatmap logs={stats.heatmapLogs} />}

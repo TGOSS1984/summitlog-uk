@@ -81,6 +81,18 @@ export const TOTAL_POSSIBLE_BADGES = TIERED_ACHIEVEMENTS.length * 3;
 
 export const TIER_COLORS = { Bronze: "#c97c3a", Silver: "#8b9493", Gold: "var(--color-accent)" };
 
+export const CHART_COLORS = {
+  completed: "var(--color-teal)",
+  planned:   "var(--color-accent)",
+  remaining: "#d9dedc",
+  text:      "var(--color-teal-deep)",
+};
+
+export function formatDate(dateValue) {
+  if (!dateValue) return "No date";
+  return new Date(dateValue).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
 export function buildTieredAchievements({ completedCount, wainwrightsCompleted, munrosCompleted, totalDistance, totalSteps, totalHeight, routeCount }) {
   const values = {
     summits: completedCount, wainwrights: wainwrightsCompleted, munros: munrosCompleted,
