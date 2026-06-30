@@ -2501,6 +2501,35 @@ h2 em {
   border-color: rgba(255,255,255,0.35);
 }
 
+/* ── PDF download button — for use on light/white sections ── */
+.pdf-download-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 40px;
+  padding: 0 1rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.01em;
+  border: 1px solid rgba(4, 57, 59, 0.18);
+  color: var(--color-teal-deep);
+  background: #ffffff;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.pdf-download-button:hover:not(:disabled) {
+  background: rgba(4, 57, 59, 0.04);
+  border-color: rgba(4, 57, 59, 0.3);
+  transform: translateY(-1px);
+}
+
+.pdf-download-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 /* ── Stat Band ── */
 .stat-band {
   background: var(--color-bg-dark);

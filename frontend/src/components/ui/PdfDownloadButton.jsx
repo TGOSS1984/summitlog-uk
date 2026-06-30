@@ -2,7 +2,7 @@ import { useState } from "react";
 import { TbDownload } from "react-icons/tb";
 import { downloadElementAsPdf } from "../../lib/pdfExport";
 
-export function PdfDownloadButton({ targetRef, filename, label = "Download as PDF", className = "button-secondary" }) {
+export function PdfDownloadButton({ targetRef, filename, label = "Download as PDF", className = "pdf-download-button" }) {
   const [generating, setGenerating] = useState(false);
 
   async function handleClick() {
