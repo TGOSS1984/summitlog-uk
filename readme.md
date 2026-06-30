@@ -1343,8 +1343,8 @@ Both served via Google Fonts.
 
 ## 📬 Contact
 
-- **GitHub:** [https://github.com/your-username](https://github.com/your-username)
-- **LinkedIn:** [https://linkedin.com/in/your-profile](https://linkedin.com/in/your-profile)
+- **GitHub:** [https://github.com/TGOSS1984](https://github.com/TGOSS1984)
+- **LinkedIn:** [https://www.linkedin.com/in/tom-goss-449677b0/](https://www.linkedin.com/in/tom-goss-449677b0/)
 
 ---
 
