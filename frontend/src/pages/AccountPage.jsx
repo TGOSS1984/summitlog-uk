@@ -445,9 +445,11 @@ function AccountPage() {
         setProfileForm({ bio: data.user.bio || "" });
         loadStats();
       }
+      return data.user || null;
     } catch {
       setUser(null);
       setStats({ completed: 0, planned: 0 });
+      return null;
     }
   }
 
@@ -484,8 +486,12 @@ function AccountPage() {
       } else {
         await registerUser(form);
       }
-      await loadUser();
-      resetForm();
+      const loggedInUser = await loadUser();
+      if (loggedInUser) {
+        resetForm();
+      } else {
+        setAuthError("Signed in but could not establish a session — your browser may be blocking cross-site cookies. Try a different browser, or disable Safari's 'Prevent Cross-Site Tracking' setting.");
+      }
     } catch (error) {
       setAuthError(error.message || "Something went wrong. Please try again.");
     }
