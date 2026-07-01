@@ -17,6 +17,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         write_only=True,
         min_length=8,
     )
+    # Django's default User model does NOT enforce email uniqueness at the
+    # DB level, so this needs an explicit check here. Case-insensitive so
+    # "Tom@Example.com" and "tom@example.com" are treated as the same
+    # account (mirrors how most auth providers behave).
+    email = serializers.EmailField(required=False, allow_blank=True)
 
     class Meta:
         model = User
@@ -26,6 +31,13 @@ class RegisterSerializer(serializers.ModelSerializer):
             "email",
             "password",
         ]
+
+    def validate_email(self, value):
+        if value and User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                "An account with this email already exists."
+            )
+        return value
 
     def create(self, validated_data):
         user = User.objects.create_user(
@@ -72,11 +84,27 @@ class UserSerializer(serializers.ModelSerializer):
 
 class UpdateProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source="user.username", required=False)
-    email = serializers.EmailField(source="user.email", required=False)
+    email = serializers.EmailField(source="user.email", required=False, allow_blank=True)
 
     class Meta:
         model = UserProfile
         fields = ["avatar", "bio", "username", "email"]
+
+    def validate_username(self, value):
+        current_user = self.instance.user
+        if User.objects.exclude(pk=current_user.pk).filter(username__iexact=value).exists():
+            raise serializers.ValidationError(
+                "A user with that username already exists."
+            )
+        return value
+
+    def validate_email(self, value):
+        current_user = self.instance.user
+        if value and User.objects.exclude(pk=current_user.pk).filter(email__iexact=value).exists():
+            raise serializers.ValidationError(
+                "An account with this email already exists."
+            )
+        return value
 
     def update(self, instance, validated_data):
         user_data = validated_data.pop("user", {})
