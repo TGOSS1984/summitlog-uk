@@ -598,7 +598,7 @@ function AccountPage() {
                 ) : (
                   <>
                     <p className="section-kicker">Welcome back</p>
-                    <h2>{user.username}</h2>
+                    <h2 className="account-username">{user.username}</h2>
                     <p className="account-email">{user.email}</p>
                     {user.bio && <p className="account-bio">{user.bio}</p>}
 

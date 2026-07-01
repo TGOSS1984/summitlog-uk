@@ -1913,6 +1913,13 @@ color:var(--color-teal);
   margin-top: 1.5rem;
 }
 
+.account-username {
+  font-size: clamp(1.5rem, 6vw, 2.75rem);
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+}
+
 .account-email {
   margin-top: 0.4rem;
   color: rgba(248, 250, 252, 0.66);
