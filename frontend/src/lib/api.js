@@ -1,5 +1,29 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 
+// Extracts a human-readable message from a Django REST Framework error
+// response, handling every shape DRF can return:
+//   { detail: "..." }                    → top-level error string
+//   { non_field_errors: ["..."] }        → non-field validation errors
+//   { username: ["..."], email: [...] }  → field-level validation errors
+//   null / empty body                    → generic fallback
+function extractErrorMessage(data) {
+  if (!data) return "Something went wrong. Please try again.";
+  if (typeof data === "string") return data;
+  if (data.detail) return data.detail;
+  if (data.non_field_errors?.length) return data.non_field_errors.join(" ");
+
+  // Field-level validation errors — collect all and join with a space
+  const fieldMessages = Object.entries(data)
+    .filter(([, v]) => Array.isArray(v))
+    .map(([field, msgs]) => {
+      const label = field.charAt(0).toUpperCase() + field.slice(1).replace(/_/g, " ");
+      return `${label}: ${msgs.join(", ")}`;
+    });
+  if (fieldMessages.length) return fieldMessages.join(" ");
+
+  return "Something went wrong. Please try again.";
+}
+
 async function request(endpoint, options = {}) {
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
@@ -14,12 +38,7 @@ async function request(endpoint, options = {}) {
 
   if (!response.ok) {
     console.error("API error:", response.status, data);
-    throw new Error(
-      data?.detail ||
-        data?.non_field_errors?.join(" ") ||
-        JSON.stringify(data) ||
-        "Something went wrong."
-    );
+    throw new Error(extractErrorMessage(data));
   }
 
   return data;
